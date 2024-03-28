@@ -1,10 +1,10 @@
 using LinearAlgebra, Random, Distributions, StatsBase, DataFrames
-s
+
 ####################################
-# Network Game Functions
+# Game Functions
 ####################################
 
-include("NetworkGameStructs.jl")
+include("CoopConflGameStructs.jl")
 
 ###############################
 # Population Simulation Funcs #
@@ -14,11 +14,13 @@ include("NetworkGameStructs.jl")
     # format output
 
 function population_construction(parameters::simulation_parameters)
-    ## constructs a population array when supplied with parameters
+    # constructs a population array when supplied with parameters
     return population(parameters, zeros(Float64, parameters.N),zeros(Float64, parameters.N),zeros(Float64, parameters.N),zeros(Float64, parameters.N),zeros(Float64, parameters.N),0)
 end
 
 function output(t::Int64, pop::population, outputs::DataFrame)
+
+end
 
 ##################
 # Pairwise fitness
@@ -27,7 +29,7 @@ function output(t::Int64, pop::population, outputs::DataFrame)
     # pair individuals with the possibiliy of pairing more than once
     # everyone has the same chance of picking a partner / getting picked
     # at the end of the day everyone is picked roughly an equal number of times aka bootstrap
-    # calculate payoff, keep a running average of payoff for each individual
+    # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
 function benefit(pop::population)
@@ -87,7 +89,7 @@ function simulation(pop::population)
     for t in 1:pop.parameters.tmax
     
         # execute social interactions and calculate payoffs
-        social_interactions!(pop)
+        social_interactions(pop)
     
         # reproduction function to produce new population
         reproduce(pop)
