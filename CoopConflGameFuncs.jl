@@ -18,7 +18,7 @@ function population_construction(parameters::simulation_parameters)
     
     individuals_dict = Dict{Int64, agent}()
     for i in 1:parameters.N
-        individual = agent(i, 0, 0, 0, 0, 0, 0, 0)
+        individual = agent(i, parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0, 0, 0)
         individuals_dict[i] = individual
     end
     
@@ -41,16 +41,26 @@ end
     # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-function benefit(pairing::pair)
-
-end
-
-function cost(pairing::pair)
-
-end
-
 function payoff(pairing::pair)
+    benefit1 = √pairing.individual1.action
+    benefit2 = √pairing.individual2.action
 
+    cost1 = pairing.individual1.action^2
+    cost2 = pairing.individual2.action^2
+
+    payoff1 = benefit2 - cost1
+    payoff2 = benefit1 - cost2
+
+    pairing.individual1.payoff = payoff1
+    pairing.individual2.payoff = payoff2
+
+    pairing.individual1.run_avg_payoff = (pairing.individual1.payoff + pairing.individual1.interactions * pairing.individual1.run_avg_payoff) / (pairing.individual1.interactions + 1)
+    pairing.individual2.run_avg_payoff = (pairing.individual2.payoff + pairing.individual2.interactions * pairing.individual2.run_avg_payoff) / (pairing.individual2.interactions + 1)
+
+    pairing.individual1.interactions += 1
+    pairing.individual2.interactions += 1
+    
+    return pairing
 end
 
 function social_interactions(pop::population)
@@ -107,7 +117,7 @@ function simulation(pop::population)
         reproduce(pop)
 
         # mutation function  iterates over population and mutates at chance probability μ
-        if pop.parameters.μ > 0
+        if pop.parameters.u > 0
             mutate(pop)
         end
 
