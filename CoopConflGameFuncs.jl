@@ -21,11 +21,11 @@ function population_construction(parameters::simulation_parameters)
         individual = agent(i, parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0, 0, 0)
         individuals_dict[i] = individual
     end
-    
+
     return population(parameters, individuals_dict, [], 0)
 end
 
-function output(t::Int64, pop::population, outputs::DataFrame)
+function output!(t::Int64, pop::population, outputs::DataFrame)
 
 end
 
@@ -41,15 +41,21 @@ end
     # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-function payoff(pairing::pair)
+function payoff!(pairing::pair)
     benefit1 = √pairing.individual1.action
     benefit2 = √pairing.individual2.action
 
     cost1 = pairing.individual1.action^2
     cost2 = pairing.individual2.action^2
 
-    payoff1 = benefit2 - cost1
-    payoff2 = benefit1 - cost2
+    norm_pool = mean([pairing.individual1.a, pairing.individual2.a])
+    punishment_pool = mean([pairing.individual1.p, pairing.individual2.p])
+
+    punishment1 = punishment_pool * (pairing.individual1.action - norm_pool)^2
+    punishment2 = punishment_pool * (pairing.individual2.action - norm_pool)^2
+
+    payoff1 = benefit2 - cost1 - punishment1
+    payoff2 = benefit1 - cost2 - punishment2
 
     pairing.individual1.payoff = payoff1
     pairing.individual2.payoff = payoff2
@@ -63,8 +69,23 @@ function payoff(pairing::pair)
     return pairing
 end
 
-function social_interactions(pop::population)
+function social_interactions!(pop::population)
+    individuals_value = collect(value(pop.individuals))
+    individuals_shuffle = shuffle(individuals_value)
 
+    if pop.parameters.N % 2 != 0
+        push!(individuals_shuffle, individuals_value[rand(1:pop.parameters.N)])
+    end
+
+    for i in 1:2:(length(individuals_shuffle)-1)
+        push!(pop.pairings, pair(individuals_shuffle[i], individuals_shuffle[i+1]))
+    end
+
+    for i in 1:length(pop.pairings)
+        payoff!(pop.pairings[i])
+        pop.individuals[pop.pairings[i].individual1.id] = pop.pairings.individual1
+        pop.individuals[pop.pairings[i].individual2.id] = pop.pairings.individual2
+    end
 end
 
 ##################
@@ -75,7 +96,7 @@ end
     # only need one parent
     # number of individuals in population remains the same
 
-function reproduce(pop::population)
+function reproduce!(pop::population)
     
 end
 
@@ -85,7 +106,7 @@ end
 
     # mutate?
 
-function mutate(pop::population)
+function mutate!(pop::population)
 
 end
 
@@ -107,23 +128,20 @@ function simulation(pop::population)
       
     for t in 1:pop.parameters.tmax
 
-        # update population struct 
-        update_population(pop)
-
         # execute social interactions and calculate payoffs
-        social_interactions(pop)
+        social_interactions!(pop)
 
         # reproduction function to produce and save t+1 population array
-        reproduce(pop)
+        reproduce!(pop)
 
         # mutation function  iterates over population and mutates at chance probability μ
         if pop.parameters.u > 0
-            mutate(pop)
+            mutate!(pop)
         end
 
         # per-timestep counters, outputs going to disk
         if t % pop.parameters.output_save_tick == 0
-            output(t, copy(pop), outputs)
+            output!(t, copy(pop), outputs)
         end
 
     end
