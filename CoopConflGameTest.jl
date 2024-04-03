@@ -5,45 +5,39 @@ include("CoopConflGameFuncs.jl")
 # population_construction
 ##################
 
-my_parameter = simulation_parameters(20,5000,10,0.7,0.45,0.5,0.4,0.0)
+my_parameter = simulation_parameters(20,5000,11,0.7,0.45,0.5,0.4,0.0)
 
 my_population = population_construction(my_parameter)
 
-my_population.individuals[867]
+my_population.individuals[8]
 
 social_interactions!(my_population)
 
-my_population.pairings
-
+my_population.individuals
 
 ##################
 # pairing & payoff
 ##################
 
-individuals_dict = Dict{Int64, agent}()
-individuals_dict[1] = agent(1, 0.4, 0.67, 0.54, 0, 0, 0, 0)
-individuals_dict[2] = agent(2, 0.6, 0.36, 0.45, 0, 0, 0, 0)
-individuals_dict[3] = agent(3, 0.5, 0.75, 0.63, 0, 0, 0, 0)
-individuals_dict[4] = agent(4, 0.3, 0.24, 0.43, 0, 0, 0, 0)
-
-my_pairing = [pair(individuals_dict[1], individuals_dict[2]), pair(individuals_dict[3], individuals_dict[4])]
-
-payoff!(my_pairing[1])
-payoff!(my_pairing[2])
+individuals_dict = Dict{Int64, individual}()
+individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
+individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
+individuals_dict[3] = individual(0.5, 0.75, 0.63, 0, 0, 0)
+individuals_dict[4] = individual(0.3, 0.24, 0.43, 0, 0, 0)
 
 individuals_dict
 
-individuals_copy = collect(values(copy(individuals_dict)))
-shuffle!(individuals_copy)
+individuals_key = collect(keys(copy(individuals_dict)))
+individuals_shuffle = shuffle(individuals_key)
 
-individuals_copy[2]
-my_population.pairings = []
+individuals_shuffle[2]
 
-for i in 1:2:(length(individuals_copy)-1)
-    push!(my_population.pairings, pair(individuals_copy[i], individuals_copy[i+1]))
+if length(individuals_dict) % 2 != 0
+    push!(individuals_shuffle, individuals_key[rand(1:length(individuals_dict))])
 end
 
-my_population.pairings
-my_population.pairings[1].individual1.id
-my_population.individuals
-my_population.individuals[my_population.pairings[1].individual1.id] = my_population.pairings[1].individual1
+for i in 1:2:(length(individuals_shuffle)-1)
+    total_payoff!(individuals_dict[individuals_shuffle[i]], individuals_dict[individuals_shuffle[i+1]])
+end
+
+individuals_dict

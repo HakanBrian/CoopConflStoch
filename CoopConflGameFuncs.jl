@@ -16,13 +16,12 @@ include("CoopConflGameStructs.jl")
 function population_construction(parameters::simulation_parameters)
     # constructs a population array when supplied with parameters
     
-    individuals_dict = Dict{Int64, agent}()
+    individuals_dict = Dict{Int64, individual}()
     for i in 1:parameters.N
-        individual = agent(i, parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0, 0, 0)
-        individuals_dict[i] = individual
+        individuals_dict[i] = individual(parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0, 0)
     end
 
-    return population(parameters, individuals_dict, [], 0)
+    return population(parameters, individuals_dict, 0)
 end
 
 function output!(t::Int64, pop::population, outputs::DataFrame)
@@ -41,50 +40,68 @@ end
     # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-function payoff!(pairing::pair)
-    benefit1 = √pairing.individual1.action
-    benefit2 = √pairing.individual2.action
+function benefit(action::Float64)
+    return √action
+end
 
-    cost1 = pairing.individual1.action^2
-    cost2 = pairing.individual2.action^2
+function cost(action::Float64)
+    return action^2
+end
 
-    norm_pool = mean([pairing.individual1.a, pairing.individual2.a])
-    punishment_pool = mean([pairing.individual1.p, pairing.individual2.p])
+function norm_pool(a1::Float64, a2::Float64)
+    return mean([a1, a2])
+end
 
-    punishment1 = punishment_pool * (pairing.individual1.action - norm_pool)^2
-    punishment2 = punishment_pool * (pairing.individual2.action - norm_pool)^2
+function punishment_pool(p1::Float64, p2::Float64)
+    return mean([p1, p2])
+end
 
-    payoff1 = benefit2 - cost1 - punishment1
-    payoff2 = benefit1 - cost2 - punishment2
+function external_punishment(action::Float64, norm_pool::Float64, punishment_pool::Float64)
+    return punishment_pool * (action - norm_pool)^2
+end
 
-    pairing.individual1.payoff = payoff1
-    pairing.individual2.payoff = payoff2
+function payoff(benefit::Float64, cost::Float64, punishment::Float64)
+    return benefit - cost - punishment
+end
 
-    pairing.individual1.run_avg_payoff = (pairing.individual1.payoff + pairing.individual1.interactions * pairing.individual1.run_avg_payoff) / (pairing.individual1.interactions + 1)
-    pairing.individual2.run_avg_payoff = (pairing.individual2.payoff + pairing.individual2.interactions * pairing.individual2.run_avg_payoff) / (pairing.individual2.interactions + 1)
+function total_payoff!(individual1::individual, individual2::individual)
+    benefit1 = benefit(individual1.action)
+    benefit2 = benefit(individual2.action)
 
-    pairing.individual1.interactions += 1
-    pairing.individual2.interactions += 1
+    cost1 = cost(individual1.action)
+    cost2 = cost(individual2.action)
+
+    group_norm = norm_pool(individual1.a, individual2.a)
+    group_punishment = punishment_pool(individual1.p, individual2.p)
+
+    punishment1 = external_punishment(individual1.action, group_norm, group_punishment)
+    punishment2 = external_punishment(individual2.action, group_norm, group_punishment)
+
+    payoff1 = payoff(benefit2, cost1, punishment1)
+    payoff2 = payoff(benefit1, cost2, punishment2)
+
+    individual1.payoff = (payoff1 + individual1.interactions * individual1.payoff) / (individual1.interactions + 1)
+    individual2.payoff = (payoff2 + individual2.interactions * individual2.payoff) / (individual2.interactions + 1)
+
+    individual1.interactions += 1
+    individual2.interactions += 1
+end
+
+function behav_eq!(individual1::individual, individual2::individual)
     
-    return pairing
 end
 
 function social_interactions!(pop::population)
-    individuals_value = collect(value(pop.individuals))
-    individuals_shuffle = shuffle(individuals_value)
+    individuals_key = collect(keys(copy(pop.individuals)))
+    individuals_shuffle = shuffle(individuals_key)
 
     if pop.parameters.N % 2 != 0
-        push!(individuals_shuffle, individuals_value[rand(1:pop.parameters.N)])
+        push!(individuals_shuffle, individuals_key[rand(1:pop.parameters.N)])
     end
 
     for i in 1:2:(length(individuals_shuffle)-1)
-        push!(pop.pairings, pair(individuals_shuffle[i], individuals_shuffle[i+1]))
-    end
-
-    for i in 1:length(pop.pairings)
-        payoff!(pop.pairings[i])
-        pop.individuals[pop.pairings[i].individual1.id] = pop.pairings.individual1
-        pop.individuals[pop.pairings[i].individual2.id] = pop.pairings.individual2
+        behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
+        total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
     end
 end
 

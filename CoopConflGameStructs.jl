@@ -14,23 +14,13 @@ end
 
 # sadly individual is used by Julia, so I have opted to use "agent" instead
 # neatly organizes values for each individual so we don't have to deal with these values spread across different vectors
-mutable struct agent
-    id::Int64
+mutable struct individual
     action::Float64
     a::Float64
     p::Float64
     T::Float64
     payoff::Float64
-    run_avg_payoff::Float64
     interactions::Int64
-end
-
-# maybe we should just have functions that requre "pair" to just take 2 "agent"s
-# using "pair" may provide clearity, but may also introduce inefficiencies
-# idk I think its ok
-struct pair
-    individual1::agent
-    individual2::agent
 end
 
 # using dict to keep track of individuals, but this may not be necessary
@@ -39,7 +29,6 @@ end
 # at least for now
 mutable struct population
     parameters::simulation_parameters
-    individuals::Dict{Int64, agent}
-    pairings::Vector{pair}
+    individuals::Dict{Int64, individual}
     mean_w::Float64
 end
