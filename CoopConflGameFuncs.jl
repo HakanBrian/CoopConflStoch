@@ -61,29 +61,25 @@ function punishment_pool(p1::Float64, p2::Float64)
     return mean([p1, p2])
 end
 
-function external_punishment(action::Float64, norm_pool::Float64, punishment_pool::Float64)
-    return punishment_pool * (action - norm_pool)^2
+function external_punishment(action::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64)
+    return punishment_pool(p1, p2) * (action - norm_pool(a1, a2))^2
 end
 
-function payoff(benefit::Float64, cost::Float64, punishment::Float64)
-    return benefit - cost - punishment
+function internal_punishment(action::Float64, a1::Float64, a2::Float64, T::Float64)
+    return T * (action - norm_pool(a1, a2))^2
+end
+
+function payoff(individual1::individual, individual2::individual)
+    return benefit(individual2.action) - cost(indiviual1.action) - external_punishment(individual1.action, individual1.a, individual2.a, individual1.p, individual2.p)
+end
+
+function objective(individual1::individual, individual2::individual)
+    return payoff(individual1, individual2) - internal_punishment(individual1.action, individual1.a, individual2.a, individual1.T)
 end
 
 function total_payoff!(individual1::individual, individual2::individual)
-    benefit1 = benefit(individual1.action)
-    benefit2 = benefit(individual2.action)
-
-    cost1 = cost(individual1.action)
-    cost2 = cost(individual2.action)
-
-    group_norm = norm_pool(individual1.a, individual2.a)
-    group_punishment = punishment_pool(individual1.p, individual2.p)
-
-    punishment1 = external_punishment(individual1.action, group_norm, group_punishment)
-    punishment2 = external_punishment(individual2.action, group_norm, group_punishment)
-
-    payoff1 = payoff(benefit2, cost1, punishment1)
-    payoff2 = payoff(benefit1, cost2, punishment2)
+    payoff1 = payoff(individual1, individual2)
+    payoff2 = payoff(individual2, individual1)
 
     individual1.payoff = (payoff1 + individual1.interactions * individual1.payoff) / (individual1.interactions + 1)
     individual2.payoff = (payoff2 + individual2.interactions * individual2.payoff) / (individual2.interactions + 1)
