@@ -1,4 +1,4 @@
-using LinearAlgebra, Random, Distributions, StatsBase, DataFrames
+using Optimization, OptimizationOptimJL, LinearAlgebra, Random, Distributions, StatsBase, DataFrames
 
 ####################################
 # Game Functions
@@ -16,9 +16,14 @@ include("CoopConflGameStructs.jl")
 function population_construction(parameters::simulation_parameters)
     # constructs a population array when supplied with parameters
     
+    action0_dist = Truncated(Normal(parameters.action0, parameters.var), 0, 1)
+    a0_dist = Truncated(Normal(parameters.a0, parameters.var), 0, 1)
+    p0_dist = Truncated(Normal(parameters.p0, parameters.var), 0, 1)
+    T0_dist = Truncated(Normal(parameters.T0, parameters.var), 0, 1)
+
     individuals_dict = Dict{Int64, individual}()
     for i in 1:parameters.N
-        individuals_dict[i] = individual(parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0, 0)
+        individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
     end
 
     return population(parameters, individuals_dict, 0)
@@ -88,7 +93,8 @@ function total_payoff!(individual1::individual, individual2::individual)
 end
 
 function behav_eq!(individual1::individual, individual2::individual)
-    
+    action10 = individual1.action
+    action20 = individual2.action
 end
 
 function social_interactions!(pop::population)
@@ -114,7 +120,9 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    
+    payoffs = [individual.payoff for individual in values(pop.individuals)]
+    pop.mean_w = mean(payoffs)
+    genotype_array = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true)
 end
 
 ##################

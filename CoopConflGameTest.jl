@@ -5,7 +5,11 @@ include("CoopConflGameFuncs.jl")
 # population_construction
 ##################
 
-my_parameter = simulation_parameters(20,5000,11,0.7,0.45,0.5,0.4,0.0)
+my_parameter = simulation_parameters(20,5000,11,0.7,0.05,0.45,0.5,0.4,0.0)
+
+action0_dist = Truncated(Normal(0.45, 0.05), 0, 1)
+
+rand(action0_dist)
 
 my_population = population_construction(my_parameter)
 
@@ -41,3 +45,5 @@ for i in 1:2:(length(individuals_shuffle)-1)
 end
 
 individuals_dict
+
+payoffs = [individual.payoff for individual in values(individuals_dict)]
