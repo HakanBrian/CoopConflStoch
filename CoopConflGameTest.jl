@@ -47,3 +47,18 @@ end
 individuals_dict
 
 payoffs = [individual.payoff for individual in values(individuals_dict)]
+
+##################
+# Optimization
+##################
+
+# Define the problem to solve
+using Optimization, ForwardDiff, Zygote
+
+rosenbrock(x, p) = (p[1] - x[1])^2 + p[2] * (x[2] - x[1]^2)^2
+x0 = zeros(2)
+_p = [1.0, 100.0]
+
+f = OptimizationFunction(rosenbrock, Optimization.AutoForwardDiff())
+l1 = rosenbrock(x0, _p)
+prob = OptimizationProblem(f, x0, _p)

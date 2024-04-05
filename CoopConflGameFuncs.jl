@@ -1,4 +1,4 @@
-using Optimization, OptimizationOptimJL, LinearAlgebra, Random, Distributions, StatsBase, DataFrames
+using Optimization, OptimizationOptimJL, ForwardDiff, LinearAlgebra, Random, Distributions, StatsBase, DataFrames
 
 ####################################
 # Game Functions
@@ -69,17 +69,17 @@ function internal_punishment(action::Float64, a1::Float64, a2::Float64, T::Float
     return T * (action - norm_pool(a1, a2))^2
 end
 
-function payoff(individual1::individual, individual2::individual)
-    return benefit(individual2.action) - cost(indiviual1.action) - external_punishment(individual1.action, individual1.a, individual2.a, individual1.p, individual2.p)
+function payoff(action1::Float64, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64)
+    return benefit(action2) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-function objective(individual1::individual, individual2::individual)
-    return payoff(individual1, individual2) - internal_punishment(individual1.action, individual1.a, individual2.a, individual1.T)
+function objective(action1::Float64, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, T::Float64)
+    return payoff(action1, action2, a1, a2, p1, p2) - internal_punishment(action1, a1, a2, T)
 end
 
 function total_payoff!(individual1::individual, individual2::individual)
-    payoff1 = payoff(individual1, individual2)
-    payoff2 = payoff(individual2, individual1)
+    payoff1 = payoff(individual1.action, individual2.action, individual1.a, individual2.a, individual1.p, individual2.p)
+    payoff2 = payoff(individual2.action, individual1.action, individual2.a, individual1.a, individual2.p, individual1.p)
 
     individual1.payoff = (payoff1 + individual1.interactions * individual1.payoff) / (individual1.interactions + 1)
     individual2.payoff = (payoff2 + individual2.interactions * individual2.payoff) / (individual2.interactions + 1)
