@@ -1,4 +1,4 @@
-using Optimization, OptimizationOptimJL, ForwardDiff, LinearAlgebra, Random, Distributions, StatsBase, DataFrames
+using LinearAlgebra, Random, Distributions, StatsBase, DataFrames
 
 ####################################
 # Game Functions
@@ -45,35 +45,35 @@ end
     # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-function benefit(action::Float64)
-    return √action
+function benefit(action1::Any, action2::Any)
+    return √action1 + √action2
 end
 
-function cost(action::Float64)
+function cost(action::Any)
     return action^2
 end
 
-function norm_pool(a1::Float64, a2::Float64)
+function norm_pool(a1::Any, a2::Any)
     return mean([a1, a2])
 end
 
-function punishment_pool(p1::Float64, p2::Float64)
+function punishment_pool(p1::Any, p2::Any)
     return mean([p1, p2])
 end
 
-function external_punishment(action::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64)
+function external_punishment(action::Any, a1::Any, a2::Any, p1::Any, p2::Any)
     return punishment_pool(p1, p2) * (action - norm_pool(a1, a2))^2
 end
 
-function internal_punishment(action::Float64, a1::Float64, a2::Float64, T::Float64)
+function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
     return T * (action - norm_pool(a1, a2))^2
 end
 
-function payoff(action1::Float64, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64)
-    return benefit(action2) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
+function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any)
+    return benefit(action1, action2) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-function objective(action1::Float64, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, T::Float64)
+function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any)
     return payoff(action1, action2, a1, a2, p1, p2) - internal_punishment(action1, a1, a2, T)
 end
 
@@ -89,8 +89,7 @@ function total_payoff!(individual1::individual, individual2::individual)
 end
 
 function behav_eq!(individual1::individual, individual2::individual)
-    action10 = individual1.action
-    action20 = individual2.action
+
 end
 
 function social_interactions!(pop::population)

@@ -52,13 +52,31 @@ payoffs = [individual.payoff for individual in values(individuals_dict)]
 # Optimization
 ##################
 
-# Define the problem to solve
-using Optimization, ForwardDiff, Zygote
+# ModelingToolkit
+# Need to get the derivative of objective for it to work properly
+using ModelingToolkit, OrdinaryDiffEq, Optimization, OptimizationOptimJL
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
-rosenbrock(x, p) = (p[1] - x[1])^2 + p[2] * (x[2] - x[1]^2)^2
-x0 = zeros(2)
-_p = [1.0, 100.0]
+@variables action1(t) action2(t)
+@parameters a1 a2 p1 p2 T1 T2
 
-f = OptimizationFunction(rosenbrock, Optimization.AutoForwardDiff())
-l1 = rosenbrock(x0, _p)
-prob = OptimizationProblem(f, x0, _p)
+eqs = [D(action1) ~ objective(action1, action2, a1, a2, p1, p2, T1)
+       D(action2) ~ objective(action2, action1, a2, a1, p2, p1, T2)]
+
+@mtkbuild sys = ODESystem(eqs, t)
+prob = ODEProblem(sys, [action1 => 0.2, action2 => 0.3], (0, 20), [a1 => 0.4, a2 => 0.5, p1 => 0.1, p2 => 0.2, T1 => 0.5, T2 => 0.5])
+sol = solve(prob, Tsit5())
+
+
+# Not working
+behav(x, p) = [objective(x[1], x[2], p[1], p[2], p[3], p[4], p[5])
+                objective(x[2], x[1], p[1], p[2], p[3], p[4], p[6])]
+
+u0 = [0.2, 0.3]
+p = [0.4, 0.4, 0.5, 0.5, 0.6, 0.7]
+
+optf = OptimizationFunction(behav, Optimization.AutoForwardDiff())
+prob = OptimizationProblem(optf, u0, p, lb = [0, 0], ub = [1, 1])
+sol = solve(prob, NelderMead())
+
+behav_eq!(individual(0.2, 0.4, 0.1, 0.5, 0, 0), individual(0.3, 0.5, 0.2, 0.5, 0, 0))
