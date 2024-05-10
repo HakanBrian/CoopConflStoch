@@ -54,9 +54,6 @@ payoffs = [individual.payoff for individual in values(individuals_dict)]
 # Optimization
 ##################
 
-using ModelingToolkit, DifferentialEquations, ForwardDiff
-using ModelingToolkit: t_nounits as t, D_nounits as D
-
 @variables action1(t) action2(t)
 @parameters a1 a2 p1 p2 T1 T2
 

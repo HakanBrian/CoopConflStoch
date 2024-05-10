@@ -1,4 +1,5 @@
 using LinearAlgebra, Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
 ####################################
 # Game Functions
