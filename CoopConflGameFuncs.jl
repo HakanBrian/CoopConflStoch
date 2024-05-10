@@ -1,4 +1,4 @@
-using LinearAlgebra, Random, Distributions, StatsBase, DataFrames
+using LinearAlgebra, Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff
 
 ####################################
 # Game Functions
@@ -77,6 +77,10 @@ function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::An
     return payoff(action1, action2, a1, a2, p1, p2) - internal_punishment(action1, a1, a2, T)
 end
 
+function objective_derivative(action1, action2, a1, a2, p1, p2, T)
+    return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T), action1)
+end
+
 function total_payoff!(individual1::individual, individual2::individual)
     payoff1 = payoff(individual1.action, individual2.action, individual1.a, individual2.a, individual1.p, individual2.p)
     payoff2 = payoff(individual2.action, individual1.action, individual2.a, individual1.a, individual2.p, individual1.p)
@@ -89,7 +93,18 @@ function total_payoff!(individual1::individual, individual2::individual)
 end
 
 function behav_eq!(individual1::individual, individual2::individual)
-
+    @variables action1(t) action2(t)
+    @parameters a1 a2 p1 p2 T1 T2
+    
+    eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1)
+           D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2)]
+    
+    @mtkbuild sys = ODESystem(eqs, t)
+    prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, 20), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T])
+    sol = solve(prob, Tsit5())
+    
+    individual1.action = sol[20][1]
+    individual2.action = sol[20][2]
 end
 
 function social_interactions!(pop::population)
