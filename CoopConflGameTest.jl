@@ -5,7 +5,7 @@ include("CoopConflGameFuncs.jl")
 # population_construction
 ##################
 
-my_parameter = simulation_parameters(20,5000,11,0.7,0.05,0.45,0.5,0.4,0.0)
+my_parameter = simulation_parameters(20,11,0.7,0.05,0.45,0.5,0.4,0.0)
 
 action0_dist = Truncated(Normal(0.45, 0.05), 0, 1)
 
@@ -100,7 +100,13 @@ end
 old_individuals
 my_population.individuals
 
+
+reproduce!(my_population)
+
 ##################
 # mutation
 ##################
 
+mutate!(my_population)
+
+my_population.individuals

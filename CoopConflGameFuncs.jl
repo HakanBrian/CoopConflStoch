@@ -148,7 +148,19 @@ end
     # everyone mutates? I would assume only a certain or random subset
 
 function mutate!(pop::population)
+    for key in keys(pop.individuals)
+        if rand() <= pop.parameters.u
+            action_dist = Truncated(Normal(0, 1), 0 - pop.individuals[key].action, 1 - pop.individuals[key].action)
+            a_dist = Truncated(Normal(0, 1), 0 - pop.individuals[key].a, 1 - pop.individuals[key].a)
+            p_dist = Truncated(Normal(0, 1), 0 - pop.individuals[key].p, 1 - pop.individuals[key].p)
+            T_dist = Truncated(Normal(0, 1), 0 - pop.individuals[key].T, 1 - pop.individuals[key].T)
 
+            pop.individuals[key].action += rand(action_dist)
+            pop.individuals[key].a += rand(a_dist)
+            pop.individuals[key].p += rand(p_dist)
+            pop.individuals[key].T += rand(T_dist)
+        end
+    end
 end
 
 #######################

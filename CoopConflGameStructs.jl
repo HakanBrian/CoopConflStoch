@@ -2,7 +2,6 @@
 mutable struct simulation_parameters
     #popgen params
     tmax::Int64
-    nreps::Int64
     N::Int64
     u::Float64
     var::Float64
