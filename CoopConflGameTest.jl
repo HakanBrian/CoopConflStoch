@@ -132,10 +132,11 @@ println(original_individual.action == 0.1)  # Should print false
 println(copied_individual.action == 0.9)  # Should print false
 println(copied_individual.action == 0.1)  # Should print true
 
-# Modify some fields in the original and copied objects
+
 original_individuals_dict = Dict{Int64, individual}()
 original_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
 original_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
+
 copy_individuals_dict = copy(original_individuals_dict)
 
 # Modify some fields in the original and copied objects
@@ -144,13 +145,13 @@ original_individuals_dict[2].action = 0.8
 copy_individuals_dict[1].action = 0.1
 copy_individuals_dict[2].action = 0.2
 
-# Check if modifications affect the original population
+# Check if modifications affect the original individual
 println(original_individuals_dict[1].action == 0.9)  # Should print true
 println(original_individuals_dict[1].action == 0.1)  # Should print false
 println(original_individuals_dict[2].action == 0.8)  # Should print true
 println(original_individuals_dict[2].action == 0.2)  # Should print false
 
-# Check if modifications affect the copied population
+# Check if modifications affect the copied individual
 println(copy_individuals_dict[1].action == 0.1)  # Should print true
 println(copy_individuals_dict[1].action == 0.9)  # Should print false
 println(copy_individuals_dict[2].action == 0.2)  # Should print true
