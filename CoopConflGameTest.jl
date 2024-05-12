@@ -73,35 +73,89 @@ sol = solve(prob, Tsit5())
 # behav_eq
 ##################
 
+# define starting parameters
 individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
+# calculate behave eq
 behav_eq!(individual1, individual2)
 
-individual1
-individual2
+# Compare values with mathematica code
+individual1  # should be around 0.41303
+individual2  # individual 1 and 2 should have nearly identical values
 
 
 ##################
 # reproduce
 ##################
 
+# Have the population interact
 social_interactions!(my_population)
 
+# Calculate the payoffs after interaction
 my_population
 payoffs = [individual.payoff for individual in values(my_population.individuals)]
 
+# Reproduce after payoffs calculated
 my_population.mean_w = mean(payoffs)
 genotype_array = sample(1:my_population.parameters.N, ProbabilityWeights(payoffs), my_population.parameters.N, replace=true)
 old_individuals = copy(my_population.individuals)
 for (res_i, offspring_i) in zip(1:my_population.parameters.N, genotype_array)
     my_population.individuals[res_i] = old_individuals[genotype_array[offspring_i]]
 end
+
+# Check to see if the offspring are correctly selected
 old_individuals
 my_population.individuals
 
+# same as before but through the completed function
+reproduce!(my_population)  # compare with previous results to ensure the function in use is correct
 
-reproduce!(my_population)
+
+##################
+# individual copy
+##################
+
+original_individual = individual(0.5, 0.4, 0.3, 0.2, 0.0, 0.0)
+
+copied_individual = copy(original_individual)
+
+# Modify some fields in the original and copied objects
+original_individual.action = 0.9
+copied_individual.action = 0.1
+
+# Check if modifications affect the original individual
+println(original_individual.action == 0.9)  # Should print true
+println(original_individual.action == 0.1)  # Should print false
+
+# Check if modifications affect the copied individual
+println(copied_individual.action == 0.9)  # Should print false
+println(copied_individual.action == 0.1)  # Should print true
+
+# Modify some fields in the original and copied objects
+original_individuals_dict = Dict{Int64, individual}()
+original_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
+original_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
+copy_individuals_dict = copy(original_individuals_dict)
+
+# Modify some fields in the original and copied objects
+original_individuals_dict[1].action = 0.9
+original_individuals_dict[2].action = 0.8
+copy_individuals_dict[1].action = 0.1
+copy_individuals_dict[2].action = 0.2
+
+# Check if modifications affect the original population
+println(original_individuals_dict[1].action == 0.9)  # Should print true
+println(original_individuals_dict[1].action == 0.1)  # Should print false
+println(original_individuals_dict[2].action == 0.8)  # Should print true
+println(original_individuals_dict[2].action == 0.2)  # Should print false
+
+# Check if modifications affect the copied population
+println(copy_individuals_dict[1].action == 0.1)  # Should print true
+println(copy_individuals_dict[1].action == 0.9)  # Should print false
+println(copy_individuals_dict[2].action == 0.2)  # Should print true
+println(copy_individuals_dict[2].action == 0.8)  # Should print false
+
 
 ##################
 # mutation

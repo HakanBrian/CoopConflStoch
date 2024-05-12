@@ -145,7 +145,7 @@ end
 ##################
 
     # offspring have slightly different trait values from their parents
-    # everyone mutates? I would assume only a certain or random subset
+    # use and independent draw function for each of the traits that could mutate
 
 function mutate!(pop::population)
     for key in keys(pop.individuals)
