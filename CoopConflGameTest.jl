@@ -80,3 +80,27 @@ behav_eq!(individual1, individual2)
 
 individual1
 individual2
+
+
+##################
+# reproduce
+##################
+
+social_interactions!(my_population)
+
+my_population
+payoffs = [individual.payoff for individual in values(my_population.individuals)]
+
+my_population.mean_w = mean(payoffs)
+genotype_array = sample(1:my_population.parameters.N, ProbabilityWeights(payoffs), my_population.parameters.N, replace=true)
+old_individuals = copy(my_population.individuals)
+for (res_i, offspring_i) in zip(1:my_population.parameters.N, genotype_array)
+    my_population.individuals[res_i] = old_individuals[genotype_array[offspring_i]]
+end
+old_individuals
+my_population.individuals
+
+##################
+# mutation
+##################
+

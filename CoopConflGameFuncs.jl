@@ -78,7 +78,7 @@ function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::An
     return payoff(action1, action2, a1, a2, p1, p2) - internal_punishment(action1, a1, a2, T)
 end
 
-function objective_derivative(action1, action2, a1, a2, p1, p2, T)
+function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any)
     return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T), action1)
 end
 
@@ -134,13 +134,18 @@ function reproduce!(pop::population)
     payoffs = [individual.payoff for individual in values(pop.individuals)]
     pop.mean_w = mean(payoffs)
     genotype_array = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true)
+    old_individuals = copy(pop.individuals)
+    for (res_i, offspring_i) in zip(1:pop.parameters.N, genotype_array)
+        pop.individuals[res_i] = old_individuals[genotype_array[offspring_i]]
+    end
 end
 
 ##################
 #  Mutation Function 
 ##################
 
-    # mutate?
+    # offspring have slightly different trait values from their parents
+    # everyone mutates? I would assume only a certain or random subset
 
 function mutate!(pop::population)
 

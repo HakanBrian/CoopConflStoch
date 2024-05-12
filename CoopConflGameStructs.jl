@@ -23,6 +23,14 @@ mutable struct individual
     interactions::Int64
 end
 
+function Base.copy(ind::individual)
+    return individual(ind.action, ind.a, ind.p, ind.T, ind.payoff, ind.interactions)
+end
+
+function Base.copy(inds::Dict{Int64, individual})
+    return Dict{Int64, individual}(key => copy(value) for (key, value) in inds)
+end
+
 mutable struct population
     parameters::simulation_parameters
     individuals::Dict{Int64, individual}
