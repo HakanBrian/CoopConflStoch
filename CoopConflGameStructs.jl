@@ -2,9 +2,9 @@
 mutable struct simulation_parameters
     #popgen params
     tmax::Int64
-    N::Int64
-    u::Float64
-    var::Float64
+    N::Int64  # population size
+    u::Float64  # mutation rate
+    var::Float64  # trait variance
     #game params
     action0::Float64
     a0::Float64
@@ -33,5 +33,5 @@ end
 mutable struct population
     parameters::simulation_parameters
     individuals::Dict{Int64, individual}
-    mean_w::Float64
+    mean_weight::Float64
 end

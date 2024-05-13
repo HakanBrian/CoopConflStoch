@@ -132,7 +132,7 @@ end
 
 function reproduce!(pop::population)
     payoffs = [individual.payoff for individual in values(pop.individuals)]
-    pop.mean_w = mean(payoffs)
+    pop.mean_weight = mean(payoffs)
     genotype_array = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true)
     old_individuals = copy(pop.individuals)
     for (res_i, offspring_i) in zip(1:pop.parameters.N, genotype_array)
