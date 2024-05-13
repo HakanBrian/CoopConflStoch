@@ -96,12 +96,13 @@ social_interactions!(my_population)
 my_population
 payoffs = [individual.payoff for individual in values(my_population.individuals)]
 
-# Reproduce after payoffs calculated
-my_population.mean_w = mean(payoffs)
-genotype_array = sample(1:my_population.parameters.N, ProbabilityWeights(payoffs), my_population.parameters.N, replace=true)
+# sample individuals which reproduce based on payoff
+genotype_array = sample(collect(keys(my_population.individuals)), ProbabilityWeights(payoffs), my_population.parameters.N, replace=true)
 old_individuals = copy(my_population.individuals)
-for (res_i, offspring_i) in zip(1:my_population.parameters.N, genotype_array)
-    my_population.individuals[res_i] = old_individuals[genotype_array[offspring_i]]
+
+# Introduce new individuals
+for (res_i, offspring_i) in zip(collect(keys(my_population.individuals)), genotype_array)
+    my_population.individuals[res_i] = old_individuals[offspring_i]
 end
 
 # Check to see if the offspring are correctly selected
@@ -110,7 +111,7 @@ my_population.individuals
 
 # same as before but through the completed function
 reproduce!(my_population)  # compare with previous results to ensure the function in use is correct
-
+my_population.individuals
 
 ##################
 # individual copy

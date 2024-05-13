@@ -27,12 +27,9 @@ function population_construction(parameters::simulation_parameters)
         individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
     end
 
-    return population(parameters, individuals_dict, 0)
+    return population(parameters, individuals_dict)
 end
 
-function output!(t::Int64, pop::population, outputs::DataFrame)
-
-end
 
 ##################
 # Pairwise fitness
@@ -93,6 +90,7 @@ function total_payoff!(individual1::individual, individual2::individual)
     individual2.interactions += 1
 end
 
+# Consider looking at t max here
 function behav_eq!(individual1::individual, individual2::individual)
     @variables action1(t) action2(t)
     @parameters a1 a2 p1 p2 T1 T2
@@ -122,6 +120,7 @@ function social_interactions!(pop::population)
     end
 end
 
+
 ##################
 # Reproduction function
 ##################
@@ -131,14 +130,15 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    payoffs = [individual.payoff for individual in values(pop.individuals)]
-    pop.mean_weight = mean(payoffs)
-    genotype_array = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true)
+    payoffs = [(individual.payoff) for individual in values(pop.individuals)]
+    keys = collect(keys(pop.individuals))
+    genotype_array = sample(keys, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
     old_individuals = copy(pop.individuals)
-    for (res_i, offspring_i) in zip(1:pop.parameters.N, genotype_array)
-        pop.individuals[res_i] = old_individuals[genotype_array[offspring_i]]
+    for (res_i, offspring_i) in zip(keys, genotype_array)
+        pop.individuals[res_i] = old_individuals[offspring_i]
     end
 end
+
 
 ##################
 #  Mutation Function 
@@ -167,6 +167,7 @@ function mutate!(pop::population)
         end
     end
 end
+
 
 #######################
 # Simulation Function #

@@ -33,5 +33,4 @@ end
 mutable struct population
     parameters::simulation_parameters
     individuals::Dict{Int64, individual}
-    mean_weight::Float64
 end
