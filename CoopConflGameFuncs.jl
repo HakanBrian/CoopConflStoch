@@ -22,12 +22,14 @@ function population_construction(parameters::simulation_parameters)
     p0_dist = Truncated(Normal(parameters.p0, parameters.var), 0, 1)
     T0_dist = Truncated(Normal(parameters.T0, parameters.var), 0, 1)
 
-    individuals_dict = Dict{Int64, individual}()
+    old_individuals_dict = Dict{Int64, individual}()
+    new_individuals_dict = Dict{Int64, individual}()
     for i in 1:parameters.N
-        individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
+        old_individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
+        new_individuals_dict[i] = copy(old_individuals_dict[i])
     end
 
-    return population(parameters, individuals_dict)
+    return population(parameters, old_individuals_dict, new_individuals_dict)
 end
 
 
@@ -133,9 +135,9 @@ function reproduce!(pop::population)
     payoffs = [(individual.payoff) for individual in values(pop.individuals)]
     keys = collect(keys(pop.individuals))
     genotype_array = sample(keys, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
-    old_individuals = copy(pop.individuals)
+    copy!(pop.old_individuals, pop.individuals)
     for (res_i, offspring_i) in zip(keys, genotype_array)
-        pop.individuals[res_i] = old_individuals[offspring_i]
+        pop.individuals[res_i] = pop.old_individuals[offspring_i]
     end
 end
 
@@ -150,19 +152,15 @@ end
 function mutate!(pop::population)
     for key in keys(pop.individuals)
         if rand() <= pop.parameters.u
-            action_dist = Truncated(Normal(0, 1), -pop.individuals[key].action, 1 - pop.individuals[key].action)
-            pop.individuals[key].action += rand(action_dist)
-        end
-        if rand() <= pop.parameters.u
-            a_dist = Truncated(Normal(0, 1), -pop.individuals[key].a, 1 - pop.individuals[key].a)
+            a_dist = Truncated(Normal(0, pop.parameters.var), -pop.individuals[key].a, Inf)
             pop.individuals[key].a += rand(a_dist)
         end
         if rand() <= pop.parameters.u
-            p_dist = Truncated(Normal(0, 1), -pop.individuals[key].p, 1 - pop.individuals[key].p)
+            p_dist = Truncated(Normal(0, pop.parameters.var), -pop.individuals[key].p, Inf)
             pop.individuals[key].p += rand(p_dist)
         end
         if rand() <= pop.parameters.u
-            T_dist = Truncated(Normal(0, 1), -pop.individuals[key].T, 1 - pop.individuals[key].T)
+            T_dist = Truncated(Normal(0, pop.parameters.var), -pop.individuals[key].T, Inf)
             pop.individuals[key].T += rand(T_dist)
         end
     end

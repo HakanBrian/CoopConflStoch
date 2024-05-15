@@ -26,11 +26,26 @@ function Base.copy(ind::individual)
     return individual(ind.action, ind.a, ind.p, ind.T, ind.payoff, ind.interactions)
 end
 
+function Base.copy!(old_ind::individual, new_ind::individual)
+    old_ind.action = new_ind.action
+    old_ind.a = new_ind.a
+    old_ind.p = new_ind.p
+    old_ind.T = new_ind.T
+end
+
 function Base.copy(inds::Dict{Int64, individual})
     return Dict{Int64, individual}(key => copy(value) for (key, value) in inds)
 end
 
+function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, individual})
+    for key in keys(old_inds)
+        copy!(old_inds[key], new_inds[key])
+    end
+end
+
+# Add old individuals
 mutable struct population
     parameters::simulation_parameters
     individuals::Dict{Int64, individual}
+    old_individuals::Dict{Int64, individual}
 end
