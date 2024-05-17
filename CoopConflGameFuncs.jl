@@ -32,6 +32,9 @@ function population_construction(parameters::simulation_parameters)
     return population(parameters, old_individuals_dict, new_individuals_dict)
 end
 
+function output!(t::Int64, pop::population, outputs::DataFrame)
+    
+end
 
 ##################
 # Pairwise fitness

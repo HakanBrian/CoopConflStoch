@@ -49,3 +49,7 @@ mutable struct population
     individuals::Dict{Int64, individual}
     old_individuals::Dict{Int64, individual}
 end
+
+function Base.copy(pop::population)
+    
+end
