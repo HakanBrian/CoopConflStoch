@@ -113,6 +113,7 @@ my_population.individuals
 reproduce!(my_population)  # compare with previous results to ensure the function in use is correct
 my_population.individuals
 
+
 ##################
 # individual copy
 ##################
@@ -157,6 +158,81 @@ println(copy_individuals_dict[1].action == 0.1)  # Should print true
 println(copy_individuals_dict[1].action == 0.9)  # Should print false
 println(copy_individuals_dict[2].action == 0.2)  # Should print true
 println(copy_individuals_dict[2].action == 0.8)  # Should print false
+
+
+##################
+# parameter copy
+##################
+
+old_parameters = simulation_parameters(20,11,0.7,0.05,0.45,0.5,0.4,0.0)
+new_parameters = simulation_parameters(21,12,0.3,0.45,0.15,0.15,0.34,0.2)
+
+# Perform copying operations
+copied_parameters = copy(new_parameters)
+copy!(old_parameters, new_parameters)
+
+# Modify some fields in the original and copied objects
+new_parameters.N = 423
+old_parameters.N = 4
+copied_parameters.N = 2
+
+# Check if modifications affect the copied individual
+println(old_parameters.N == 423)  # Should print false
+println(old_parameters.N == 4)  # Should print true
+
+println(copied_parameters.N == 423)  # Should print false
+println(copied_parameters.N == 2)  # Should print true
+
+
+##################
+# population copy
+##################
+
+old_new_individuals_dict = Dict{Int64, individual}()
+old_new_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
+old_new_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
+
+old_old_individuals_dict = Dict{Int64, individual}()
+old_old_individuals_dict[1] = individual(0.5, 0.27, 0.64, 0.1, 0.3, 0)
+old_old_individuals_dict[2] = individual(0.65, 0.26, 0.75, 0.53, 0.12, 0)
+
+old_population = population(simulation_parameters(20,11,0.7,0.05,0.45,0.5,0.4,0.0), old_new_individuals_dict, old_old_individuals_dict)
+
+new_new_individuals_dict = Dict{Int64, individual}()
+new_new_individuals_dict[1] = individual(0.3, 0.57, 0.24, 0.6, 0.4, 0)
+new_new_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0.7, 0.44, 0)
+
+new_old_individuals_dict = Dict{Int64, individual}()
+new_old_individuals_dict[1] = individual(0.54, 0.27, 0.66, 0.12, 0.56, 0)
+new_old_individuals_dict[2] = individual(0.25, 0.98, 0.36, 0.86, 0.86, 0)
+
+new_population = population(simulation_parameters(21,12,0.3,0.45,0.15,0.15,0.34,0.2), new_new_individuals_dict, new_old_individuals_dict)
+
+# Perform copying operations
+copied_population = copy(new_population)
+copy!(old_population, new_population)
+
+# Modify some fields in the original and copied objects
+new_population.individuals[1].action = 0.0
+old_population.individuals[1].action = 0.1
+copied_population.individuals[1].action = 0.2
+
+new_population.parameters.N = 342
+old_population.parameters.N = 3
+copied_population.parameters.N = 4
+
+# Check if modifications affect the copied individual
+println(old_population.individuals[1].action == 0.0)  # Should print false
+println(old_population.individuals[1].action == 0.1)  # Should print true
+
+println(old_population.parameters.N == 342)  # Should print false
+println(old_population.parameters.N == 3)  # Should print true
+
+println(copied_population.individuals[1].action == 0.0)  # Should print false
+println(copied_population.individuals[1].action == 0.2)  # Should print true
+
+println(copied_population.parameters.N == 342)  # Should print false
+println(copied_population.parameters.N == 4)  # Should print true
 
 
 ##################
