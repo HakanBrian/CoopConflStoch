@@ -1,4 +1,7 @@
-# some simulation parameters
+##################
+# simulation parameters
+##################
+
 mutable struct simulation_parameters
     #popgen params
     tmax::Int64
@@ -10,6 +13,8 @@ mutable struct simulation_parameters
     a0::Float64
     p0::Float64
     T0::Float64
+    #file/simulation params
+    output_save_tick::Int64
 end
 
 function Base.copy(parameters::simulation_parameters)
@@ -24,7 +29,11 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     end
 end
 
-# organize values for each individual
+
+##################
+# individual
+##################
+
 mutable struct individual
     action::Float64
     a::Float64
@@ -55,6 +64,11 @@ function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, ind
         copy!(old_inds[key], new_inds[key])
     end
 end
+
+
+##################
+# population
+##################
 
 mutable struct population
     parameters::simulation_parameters

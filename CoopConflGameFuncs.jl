@@ -7,6 +7,7 @@ using ModelingToolkit: t_nounits as t, D_nounits as D
 
 include("CoopConflGameStructs.jl")
 
+
 ###############################
 # Population Simulation Funcs #
 ###############################
@@ -15,8 +16,6 @@ include("CoopConflGameStructs.jl")
     # format output
 
 function population_construction(parameters::simulation_parameters)
-    # constructs a population array when supplied with parameters
-    
     action0_dist = Truncated(Normal(parameters.action0, parameters.var), 0, 1)
     a0_dist = Truncated(Normal(parameters.a0, parameters.var), 0, 1)
     p0_dist = Truncated(Normal(parameters.p0, parameters.var), 0, 1)
@@ -33,8 +32,18 @@ function population_construction(parameters::simulation_parameters)
 end
 
 function output!(t::Int64, pop::population, outputs::DataFrame)
-    
+    ## Updates output dataframe
+    output_row = floor(Int64, t/pop.parameters.output_save_tick)
+    outputs.generation[output_row] = t
+
+    # Consider looking at the loops here
+    outputs.mean_action[output_row] = mean([(individual.action) for individual in values(pop.individuals)])
+    outputs.mean_a[output_row] = mean([(individual.a) for individual in values(pop.individuals)])
+    outputs.mean_p[output_row] = mean([(individual.p) for individual in values(pop.individuals)])
+    outputs.mean_T[output_row] = mean([(individual.T) for individual in values(pop.individuals)])
+    outputs.mean_payoff[output_row] = mean([(individual.payoff) for individual in values(pop.individuals)])
 end
+
 
 ##################
 # Pairwise fitness
@@ -99,14 +108,14 @@ end
 function behav_eq!(individual1::individual, individual2::individual)
     @variables action1(t) action2(t)
     @parameters a1 a2 p1 p2 T1 T2
-    
+
     eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1)
            D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2)]
-    
+
     @mtkbuild sys = ODESystem(eqs, t)
     prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, 20), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T])
     sol = solve(prob, Tsit5())
-    
+
     individual1.action = sol[20][1]
     individual2.action = sol[20][2]
 end
@@ -179,13 +188,19 @@ function simulation(pop::population)
     ############
     # Sim init #
     ############
-    
-    outputs = DataFrame()
-    
+
+    output_length = floor(Int64, pop.parameters.tmax/pop.parameters.output_save_tick)
+    outputs = DataFrame(generation = zeros(Int64, output_length),
+                        mean_action = zeros(Float64, output_length),
+                        mean_a = zeros(Float64, output_length),
+                        mean_p = zeros(Float64, output_length),
+                        mean_T = zeros(Float64, output_length),
+                        mean_payoff = zeros(Float64, output_length))
+
     ############
     # Sim Loop #
     ############
-      
+
     for t in 1:pop.parameters.tmax
 
         # execute social interactions and calculate payoffs
