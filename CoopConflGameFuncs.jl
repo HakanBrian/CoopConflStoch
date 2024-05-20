@@ -21,14 +21,14 @@ function population_construction(parameters::simulation_parameters)
     p0_dist = Truncated(Normal(parameters.p0, parameters.var), 0, 1)
     T0_dist = Truncated(Normal(parameters.T0, parameters.var), 0, 1)
 
+    individuals_dict = Dict{Int64, individual}()
     old_individuals_dict = Dict{Int64, individual}()
-    new_individuals_dict = Dict{Int64, individual}()
     for i in 1:parameters.N
-        old_individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
-        new_individuals_dict[i] = copy(old_individuals_dict[i])
+        individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
+        old_individuals_dict[i] = copy(individuals_dict[i])
     end
 
-    return population(parameters, old_individuals_dict, new_individuals_dict)
+    return population(parameters, individuals_dict, old_individuals_dict)
 end
 
 function output!(t::Int64, pop::population, outputs::DataFrame)
@@ -206,10 +206,10 @@ function simulation(pop::population)
         # execute social interactions and calculate payoffs
         social_interactions!(pop)
 
-        # reproduction function to produce and save t+1 population array
+        # reproduction function to produce new generation
         reproduce!(pop)
 
-        # mutation function  iterates over population and mutates at chance probability μ
+        # mutation function iterates over population and mutates at chance probability μ
         if pop.parameters.u > 0
             mutate!(pop)
         end
