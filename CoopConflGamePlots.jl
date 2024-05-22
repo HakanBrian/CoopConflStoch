@@ -1,6 +1,8 @@
 include("CoopConflGameStructs.jl")
 include("CoopConflGameFuncs.jl")
 
+using Plots
+
 ##################
 # population_construction
 ##################
@@ -15,3 +17,7 @@ my_population = population_construction(my_parameter)
 #######################
 
 my_simulation = simulation(my_population)
+
+my_simulation.generation
+
+plot(my_simulation.generation, my_simulation.mean_action)
