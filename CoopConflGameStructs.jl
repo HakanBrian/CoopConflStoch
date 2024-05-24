@@ -3,16 +3,17 @@
 ##################
 
 mutable struct simulation_parameters
-    #popgen params
-    tmax::Int64
-    N::Int64  # population size
-    u::Float64  # mutation rate
-    var::Float64  # trait variance
     #game params
     action0::Float64
     a0::Float64
     p0::Float64
     T0::Float64
+    #popgen params
+    tmax::Int64  # max generations
+    N::Int64  # population size
+    u::Float64  # mutation rate
+    trait_var::Float64  # trait variance
+    mut_Var::Float64  # mutation variance
     #file/simulation params
     output_save_tick::Int64
 end

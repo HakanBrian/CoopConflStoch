@@ -1,21 +1,25 @@
+##################
+# game functions
+##################
+
 include("CoopConflGameStructs.jl")
 include("CoopConflGameFuncs.jl")
+
 
 ##################
 # population_construction
 ##################
 
-my_parameter = simulation_parameters(20,11,0.7,0.05,0.45,0.5,0.4,0.0,20)
-
-action0_dist = Truncated(Normal(0.45, 0.05), 0, 1)
-
-rand(action0_dist)
+my_parameter = simulation_parameters(0.45,0.5,0.4,0.0,20,11,0.7,0.0,0.05,20)
 
 my_population = population_construction(my_parameter)
 
-my_population.individuals[8]
+# weird issue when truncated normal has 0 mean & variance
+norm_dist = Normal(0.0, 0)
+trunc_norm_dist = Truncated(Normal(0.0, 0), 0, 1)
 
-my_population.individuals
+rand(norm_dist)
+rand(trunc_norm_dist)  # will not evaluate
 
 
 ##################

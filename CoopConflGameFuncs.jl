@@ -1,6 +1,7 @@
 using LinearAlgebra, Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
+
 ####################################
 # Game Functions
 ####################################
@@ -16,16 +17,23 @@ include("CoopConflGameStructs.jl")
     # format output
 
 function population_construction(parameters::simulation_parameters)
-    action0_dist = Truncated(Normal(parameters.action0, parameters.var), 0, 1)
-    a0_dist = Truncated(Normal(parameters.a0, parameters.var), 0, 1)
-    p0_dist = Truncated(Normal(parameters.p0, parameters.var), 0, 1)
-    T0_dist = Truncated(Normal(parameters.T0, parameters.var), 0, 1)
-
     individuals_dict = Dict{Int64, individual}()
     old_individuals_dict = Dict{Int64, individual}()
-    for i in 1:parameters.N
-        individuals_dict[i] = individual(rand(action0_dist), rand(a0_dist), rand(p0_dist), rand(T0_dist), 0, 0)
-        old_individuals_dict[i] = copy(individuals_dict[i])
+
+    if parameters.trait_var == 0
+        for i in 1:parameters.N
+            individuals_dict[i] = individual(parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0.0, 0)
+            old_individuals_dict[i] = copy(individuals_dict[i])
+        end
+    else
+        dist_values = Dict{String, Any}()
+        for field_name in fieldnames(simulation_parameters)[1:end-6]
+            dist_values[String(field_name)] = Truncated(Normal(getfield(parameters, field_name), parameters.trait_var), 0, 1)
+        end
+        for i in 1:parameters.N
+            individuals_dict[i] = individual(rand(dist_values["action0"]), rand(dist_values["a0"]), rand(dist_values["p0"]), rand(dist_values["T0"]), 0.0, 0)
+            old_individuals_dict[i] = copy(individuals_dict[i])
+        end
     end
 
     return population(parameters, individuals_dict, old_individuals_dict)
@@ -165,15 +173,15 @@ end
 function mutate!(pop::population)
     for key in keys(pop.individuals)
         if rand() <= pop.parameters.u
-            a_dist = Truncated(Normal(0, pop.parameters.var), -pop.individuals[key].a, Inf)
+            a_dist = Truncated(Normal(0, pop.parameters.mut_Var), -pop.individuals[key].a, Inf)
             pop.individuals[key].a += rand(a_dist)
         end
         if rand() <= pop.parameters.u
-            p_dist = Truncated(Normal(0, pop.parameters.var), -pop.individuals[key].p, Inf)
+            p_dist = Truncated(Normal(0, pop.parameters.mut_Var), -pop.individuals[key].p, Inf)
             pop.individuals[key].p += rand(p_dist)
         end
         if rand() <= pop.parameters.u
-            T_dist = Truncated(Normal(0, pop.parameters.var), -pop.individuals[key].T, Inf)
+            T_dist = Truncated(Normal(0, pop.parameters.mut_Var), -pop.individuals[key].T, Inf)
             pop.individuals[key].T += rand(T_dist)
         end
     end
