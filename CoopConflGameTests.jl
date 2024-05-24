@@ -10,8 +10,7 @@ include("CoopConflGameFuncs.jl")
 # population_construction
 ##################
 
-my_parameter = simulation_parameters(0.45,0.5,0.4,0.0,20,11,0.7,0.0,0.05,20)
-
+my_parameter = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.7,0.0,0.05,20)
 my_population = population_construction(my_parameter)
 
 # weird issue when truncated normal has 0 mean & variance
@@ -80,7 +79,7 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
 # calculate behave eq
-behav_eq!(individual1, individual2)
+behav_eq!(individual1, individual2, my_parameter)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -167,8 +166,8 @@ println(copy_individuals_dict[2].action == 0.8)  # Should print false
 # parameter copy
 ##################
 
-old_parameters = simulation_parameters(20,11,0.7,0.05,0.45,0.5,0.4,0.0,20)
-new_parameters = simulation_parameters(21,12,0.3,0.45,0.15,0.15,0.34,0.2,20)
+old_parameters = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.7,0.05,0.05,20)
+new_parameters = simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.3,0.45,0.1,20)
 
 # Perform copying operations
 copied_parameters = copy(new_parameters)
@@ -199,7 +198,7 @@ old_old_individuals_dict = Dict{Int64, individual}()
 old_old_individuals_dict[1] = individual(0.5, 0.27, 0.64, 0.1, 0.3, 0)
 old_old_individuals_dict[2] = individual(0.65, 0.26, 0.75, 0.53, 0.12, 0)
 
-old_population = population(simulation_parameters(20,11,0.7,0.05,0.45,0.5,0.4,0.0,20), old_new_individuals_dict, old_old_individuals_dict)
+old_population = population(simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.7,0.05,0.05,20), old_new_individuals_dict, old_old_individuals_dict)
 
 new_new_individuals_dict = Dict{Int64, individual}()
 new_new_individuals_dict[1] = individual(0.3, 0.57, 0.24, 0.6, 0.4, 0)
@@ -209,7 +208,7 @@ new_old_individuals_dict = Dict{Int64, individual}()
 new_old_individuals_dict[1] = individual(0.54, 0.27, 0.66, 0.12, 0.56, 0)
 new_old_individuals_dict[2] = individual(0.25, 0.98, 0.36, 0.86, 0.86, 0)
 
-new_population = population(simulation_parameters(21,12,0.3,0.45,0.15,0.15,0.34,0.2,20), new_new_individuals_dict, new_old_individuals_dict)
+new_population = population(simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.3,0.45,0.2,20), new_new_individuals_dict, new_old_individuals_dict)
 
 # Perform copying operations
 copied_population = copy(new_population)

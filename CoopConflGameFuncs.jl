@@ -27,7 +27,7 @@ function population_construction(parameters::simulation_parameters)
         end
     else
         dist_values = Dict{String, Any}()
-        for field_name in fieldnames(simulation_parameters)[1:end-6]
+        for field_name in fieldnames(simulation_parameters)[1:end-7]
             dist_values[String(field_name)] = Truncated(Normal(getfield(parameters, field_name), parameters.trait_var), 0, 1)
         end
         for i in 1:parameters.N
@@ -113,7 +113,7 @@ function total_payoff!(individual1::individual, individual2::individual)
 end
 
 # Consider looking at t max here
-function behav_eq!(individual1::individual, individual2::individual)
+function behav_eq!(individual1::individual, individual2::individual, parameters::simulation_parameters)
     @variables action1(t) action2(t)
     @parameters a1 a2 p1 p2 T1 T2
 
@@ -121,11 +121,11 @@ function behav_eq!(individual1::individual, individual2::individual)
            D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2)]
 
     @mtkbuild sys = ODESystem(eqs, t)
-    prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, 20), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T])
+    prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, parameters.tmax), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T])
     sol = solve(prob, Tsit5())
 
-    individual1.action = sol[20][1]
-    individual2.action = sol[20][2]
+    individual1.action = sol[parameters.tmax-1][1]
+    individual2.action = sol[parameters.tmax-1][2]
 end
 
 function social_interactions!(pop::population)
@@ -137,7 +137,7 @@ function social_interactions!(pop::population)
     end
 
     for i in 1:2:(length(individuals_shuffle)-1)
-        behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
+        behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters)
         total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
     end
 end
@@ -147,7 +147,7 @@ end
 # Reproduction function
 ##################
 
-    # offspring inherit the payoff or traits of the parents?
+    # offspring inherit the payoff or traits of the parents
     # only need one parent
     # number of individuals in population remains the same
 
@@ -198,7 +198,7 @@ function simulation(pop::population)
     # Sim init #
     ############
 
-    output_length = floor(Int64, pop.parameters.tmax/pop.parameters.output_save_tick)
+    output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick)
     outputs = DataFrame(generation = zeros(Int64, output_length),
                         mean_action = zeros(Float64, output_length),
                         mean_a = zeros(Float64, output_length),
@@ -210,7 +210,7 @@ function simulation(pop::population)
     # Sim Loop #
     ############
 
-    for t in 1:pop.parameters.tmax
+    for t in 1:pop.parameters.gmax
 
         # execute social interactions and calculate payoffs
         social_interactions!(pop)
