@@ -27,8 +27,8 @@ function population_construction(parameters::simulation_parameters)
         end
     else
         dist_values = Dict{String, Any}()
-        for field_name in fieldnames(simulation_parameters)[1:end-7]
-            dist_values[String(field_name)] = Truncated(Normal(getfield(parameters, field_name), parameters.trait_var), 0, 1)
+        for name in fieldnames(simulation_parameters)[1:end-8]
+            dist_values[String(name)] = Truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
         end
         for i in 1:parameters.N
             individuals_dict[i] = individual(rand(dist_values["action0"]), rand(dist_values["a0"]), rand(dist_values["p0"]), rand(dist_values["T0"]), 0.0, 0)
@@ -65,8 +65,8 @@ end
     # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-function benefit(action1::Any, action2::Any)
-    return √action1 + √action2
+function benefit(action1::Any, action2::Any, v::Any)
+    return (1-v)*(√action1 + √action2) + v*√(action1 + action2)
 end
 
 function cost(action::Any)
@@ -89,21 +89,21 @@ function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
     return T * (action - norm_pool(a1, a2))^2
 end
 
-function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any)
-    return benefit(action1, action2) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
+function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, v::Any)
+    return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any)
-    return payoff(action1, action2, a1, a2, p1, p2) - internal_punishment(action1, a1, a2, T)
+function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+    return payoff(action1, action2, a1, a2, p1, p2, v) - internal_punishment(action1, a1, a2, T)
 end
 
-function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any)
-    return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T), action1)
+function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+    return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
 end
 
-function total_payoff!(individual1::individual, individual2::individual)
-    payoff1 = payoff(individual1.action, individual2.action, individual1.a, individual2.a, individual1.p, individual2.p)
-    payoff2 = payoff(individual2.action, individual1.action, individual2.a, individual1.a, individual2.p, individual1.p)
+function total_payoff!(individual1::individual, individual2::individual, parameters::simulation_parameters)
+    payoff1 = payoff(individual1.action, individual2.action, individual1.a, individual2.a, individual1.p, individual2.p, parameters.v)
+    payoff2 = payoff(individual2.action, individual1.action, individual2.a, individual1.a, individual2.p, individual1.p, parameters.v)
 
     individual1.payoff = (payoff1 + individual1.interactions * individual1.payoff) / (individual1.interactions + 1)
     individual2.payoff = (payoff2 + individual2.interactions * individual2.payoff) / (individual2.interactions + 1)
@@ -115,13 +115,13 @@ end
 # Consider looking at t max here
 function behav_eq!(individual1::individual, individual2::individual, parameters::simulation_parameters)
     @variables action1(t) action2(t)
-    @parameters a1 a2 p1 p2 T1 T2
+    @parameters a1 a2 p1 p2 T1 T2 v
 
-    eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1)
-           D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2)]
+    eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
+           D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)]
 
     @mtkbuild sys = ODESystem(eqs, t)
-    prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, parameters.tmax), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T])
+    prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, parameters.tmax), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T, v => parameters.v])
     sol = solve(prob, Tsit5())
 
     individual1.action = sol[parameters.tmax-1][1]
@@ -138,7 +138,7 @@ function social_interactions!(pop::population)
 
     for i in 1:2:(length(individuals_shuffle)-1)
         behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters)
-        total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
+        total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters)
     end
 end
 
@@ -229,5 +229,6 @@ function simulation(pop::population)
         end
 
     end
+
 return outputs
 end

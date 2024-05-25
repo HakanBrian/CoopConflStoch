@@ -10,7 +10,7 @@ include("CoopConflGameFuncs.jl")
 # population_construction
 ##################
 
-my_parameter = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.7,0.0,0.05,20)
+my_parameter = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.0,0.05,20)
 my_population = population_construction(my_parameter)
 
 # weird issue when truncated normal has 0 mean & variance
@@ -43,7 +43,7 @@ if length(individuals_dict) % 2 != 0
 end
 
 for i in 1:2:(length(individuals_shuffle)-1)
-    total_payoff!(individuals_dict[individuals_shuffle[i]], individuals_dict[individuals_shuffle[i+1]])
+    total_payoff!(individuals_dict[individuals_shuffle[i]], individuals_dict[individuals_shuffle[i+1]], my_parameter)
 end
 
 individuals_dict
@@ -56,17 +56,17 @@ payoffs = [individual.payoff for individual in values(individuals_dict)]
 ##################
 
 @variables action1(t) action2(t)
-@parameters a1 a2 p1 p2 T1 T2
+@parameters a1 a2 p1 p2 T1 T2 v
 
 function objective_derivative(action, other_action, a, other_a, p, other_p, T)
-    return ForwardDiff.derivative(action -> objective(action, other_action, a, other_a, p, other_p, T), action)
+    return ForwardDiff.derivative(action -> objective(action, other_action, a, other_a, p, other_p, T, v), action)
 end
 
-eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1)
-       D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2)]
+eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
+       D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)]
 
 @mtkbuild sys = ODESystem(eqs, t)
-prob = ODEProblem(sys, [action1 => 0.2, action2 => 0.3], (0, 20), [a1 => 0.4, a2 => 0.5, p1 => 0.1, p2 => 0.2, T1 => 0.5, T2 => 0.5])
+prob = ODEProblem(sys, [action1 => 0.2, action2 => 0.3], (0, 20), [a1 => 0.4, a2 => 0.5, p1 => 0.1, p2 => 0.2, T1 => 0.5, T2 => 0.5, v => 0.0])
 sol = solve(prob, Tsit5())
 
 
@@ -166,8 +166,8 @@ println(copy_individuals_dict[2].action == 0.8)  # Should print false
 # parameter copy
 ##################
 
-old_parameters = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.7,0.05,0.05,20)
-new_parameters = simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.3,0.45,0.1,20)
+old_parameters = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20)
+new_parameters = simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.0,0.3,0.45,0.1,20)
 
 # Perform copying operations
 copied_parameters = copy(new_parameters)
@@ -198,7 +198,7 @@ old_old_individuals_dict = Dict{Int64, individual}()
 old_old_individuals_dict[1] = individual(0.5, 0.27, 0.64, 0.1, 0.3, 0)
 old_old_individuals_dict[2] = individual(0.65, 0.26, 0.75, 0.53, 0.12, 0)
 
-old_population = population(simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.7,0.05,0.05,20), old_new_individuals_dict, old_old_individuals_dict)
+old_population = population(simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20), old_new_individuals_dict, old_old_individuals_dict)
 
 new_new_individuals_dict = Dict{Int64, individual}()
 new_new_individuals_dict[1] = individual(0.3, 0.57, 0.24, 0.6, 0.4, 0)
@@ -208,7 +208,7 @@ new_old_individuals_dict = Dict{Int64, individual}()
 new_old_individuals_dict[1] = individual(0.54, 0.27, 0.66, 0.12, 0.56, 0)
 new_old_individuals_dict[2] = individual(0.25, 0.98, 0.36, 0.86, 0.86, 0)
 
-new_population = population(simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.3,0.45,0.2,20), new_new_individuals_dict, new_old_individuals_dict)
+new_population = population(simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.0,0.3,0.45,0.2,20), new_new_individuals_dict, new_old_individuals_dict)
 
 # Perform copying operations
 copied_population = copy(new_population)

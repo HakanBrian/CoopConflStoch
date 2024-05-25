@@ -12,6 +12,7 @@ mutable struct simulation_parameters
     gmax::Int64  # max generations
     tmax::Int64  # max timespan for ODE
     N::Int64  # population size
+    v::Float64  # synergy
     u::Float64  # mutation rate
     trait_var::Float64  # trait variance
     mut_Var::Float64  # mutation variance
