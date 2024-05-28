@@ -27,7 +27,7 @@ function population_construction(parameters::simulation_parameters)
         end
     else
         dist_values = Dict{String, Any}()
-        for name in fieldnames(simulation_parameters)[1:end-8]
+        for name in fieldnames(simulation_parameters)[1:4]  # represents game params
             dist_values[String(name)] = Truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
         end
         for i in 1:parameters.N
@@ -124,8 +124,8 @@ function behav_eq!(individual1::individual, individual2::individual, parameters:
     prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, parameters.tmax), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T, v => parameters.v])
     sol = solve(prob, Tsit5())
 
-    individual1.action = sol[parameters.tmax-1][1]
-    individual2.action = sol[parameters.tmax-1][2]
+    individual1.action = sol[end][1]
+    individual2.action = sol[end][2]
 end
 
 function social_interactions!(pop::population)
@@ -172,16 +172,16 @@ end
 
 function mutate!(pop::population)
     for key in keys(pop.individuals)
-        if rand() <= pop.parameters.u
-            a_dist = Truncated(Normal(0, pop.parameters.mut_Var), -pop.individuals[key].a, Inf)
+        if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
+            a_dist = Truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].a, Inf)
             pop.individuals[key].a += rand(a_dist)
         end
-        if rand() <= pop.parameters.u
-            p_dist = Truncated(Normal(0, pop.parameters.mut_Var), -pop.individuals[key].p, Inf)
+        if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
+            p_dist = Truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].p, Inf)
             pop.individuals[key].p += rand(p_dist)
         end
-        if rand() <= pop.parameters.u
-            T_dist = Truncated(Normal(0, pop.parameters.mut_Var), -pop.individuals[key].T, Inf)
+        if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
+            T_dist = Truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].T, Inf)
             pop.individuals[key].T += rand(T_dist)
         end
     end

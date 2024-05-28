@@ -15,7 +15,7 @@ mutable struct simulation_parameters
     v::Float64  # synergy
     u::Float64  # mutation rate
     trait_var::Float64  # trait variance
-    mut_Var::Float64  # mutation variance
+    mut_var::Float64  # mutation variance
     #file/simulation params
     output_save_tick::Int64
 end
