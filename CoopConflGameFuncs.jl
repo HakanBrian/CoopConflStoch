@@ -40,16 +40,27 @@ function population_construction(parameters::simulation_parameters)
 end
 
 function output!(t::Int64, pop::population, outputs::DataFrame)
-    ## Updates output dataframe
-    output_row = floor(Int64, t/pop.parameters.output_save_tick)
-    outputs.generation[output_row] = t
+    # Determine the base row for the current generation
+    if t == 1
+        output_row_base = 1
+    else
+        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.N + 1
+    end
 
-    # Consider looking at the loops here
-    outputs.mean_action[output_row] = mean([(individual.action) for individual in values(pop.individuals)])
-    outputs.mean_a[output_row] = mean([(individual.a) for individual in values(pop.individuals)])
-    outputs.mean_p[output_row] = mean([(individual.p) for individual in values(pop.individuals)])
-    outputs.mean_T[output_row] = mean([(individual.T) for individual in values(pop.individuals)])
-    outputs.mean_payoff[output_row] = mean([(individual.payoff) for individual in values(pop.individuals)])
+    # Iterate over all individuals in the population
+    for i in 1:pop.parameters.N
+        # Calculate the row for the current individual
+        output_row = output_row_base + i - 1
+        
+        # Update the DataFrame with the individual's data
+        outputs.generation[output_row] = t
+        outputs.individual[output_row] = i
+        outputs.action[output_row] = pop.individuals[i].action
+        outputs.a[output_row] = pop.individuals[i].a
+        outputs.p[output_row] = pop.individuals[i].p
+        outputs.T[output_row] = pop.individuals[i].T
+        outputs.payoff[output_row] = pop.individuals[i].payoff
+    end
 end
 
 
@@ -112,7 +123,6 @@ function total_payoff!(individual1::individual, individual2::individual, paramet
     individual2.interactions += 1
 end
 
-# Consider looking at t max here
 function behav_eq!(individual1::individual, individual2::individual, parameters::simulation_parameters)
     @variables action1(t) action2(t)
     @parameters a1 a2 p1 p2 T1 T2 v
@@ -198,13 +208,14 @@ function simulation(pop::population)
     # Sim init #
     ############
 
-    output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick)
+    output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.N
     outputs = DataFrame(generation = zeros(Int64, output_length),
-                        mean_action = zeros(Float64, output_length),
-                        mean_a = zeros(Float64, output_length),
-                        mean_p = zeros(Float64, output_length),
-                        mean_T = zeros(Float64, output_length),
-                        mean_payoff = zeros(Float64, output_length))
+                        individual = zeros(Int64, output_length),
+                        action = zeros(Float64, output_length),
+                        a = zeros(Float64, output_length),
+                        p = zeros(Float64, output_length),
+                        T = zeros(Float64, output_length),
+                        payoff = zeros(Float64, output_length))
 
     ############
     # Sim Loop #
