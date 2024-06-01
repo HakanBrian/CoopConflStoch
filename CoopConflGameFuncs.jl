@@ -1,4 +1,4 @@
-using LinearAlgebra, Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff
+using Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff, CUDA, DiffEqGPU
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 
@@ -28,7 +28,7 @@ function population_construction(parameters::simulation_parameters)
     else
         dist_values = Dict{String, Any}()
         for name in fieldnames(simulation_parameters)[1:4]  # represents game params
-            dist_values[String(name)] = Truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
+            dist_values[String(name)] = truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
         end
         for i in 1:parameters.N
             individuals_dict[i] = individual(rand(dist_values["action0"]), rand(dist_values["a0"]), rand(dist_values["p0"]), rand(dist_values["T0"]), 0.0, 0)
@@ -132,7 +132,7 @@ function behav_eq!(individual1::individual, individual2::individual, parameters:
 
     @mtkbuild sys = ODESystem(eqs, t)
     prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, parameters.tmax), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T, v => parameters.v])
-    sol = solve(prob, Tsit5())
+    sol = solve(prob)
 
     individual1.action = sol[end][1]
     individual2.action = sol[end][2]
@@ -183,15 +183,15 @@ end
 function mutate!(pop::population)
     for key in keys(pop.individuals)
         if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
-            a_dist = Truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].a, Inf)
+            a_dist = truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].a, Inf)
             pop.individuals[key].a += rand(a_dist)
         end
         if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
-            p_dist = Truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].p, Inf)
+            p_dist = truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].p, Inf)
             pop.individuals[key].p += rand(p_dist)
         end
         if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
-            T_dist = Truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].T, Inf)
+            T_dist = truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].T, Inf)
             pop.individuals[key].T += rand(T_dist)
         end
     end

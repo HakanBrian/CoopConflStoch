@@ -14,8 +14,8 @@ my_parameter = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.0,0.05,
 my_population = population_construction(my_parameter)
 
 # weird issue when truncated normal has 0 mean & variance
-norm_dist = Normal(0.0, 0)
-trunc_norm_dist = Truncated(Normal(0.0, 0), 0, 1)
+norm_dist = Normal(0W, 0)
+trunc_norm_dist = truncated(Normal(0, 0), 0, 1)
 
 rand(norm_dist)
 rand(trunc_norm_dist)  # will not evaluate
@@ -244,3 +244,15 @@ println(copied_population.parameters.N == 4)  # Should print true
 mutate!(my_population)
 
 my_population.individuals
+
+
+##################
+# Profiling
+##################
+
+my_population = population_construction(simulation_parameters(0.6, 0.5, 0.45, 0.0, 50, 10, 10, 0.0, 0.05, 0.05, 0.05, 1))
+
+# compilation
+@profview simulation(my_population)
+# pure runtime
+@profview simulation(my_population)
