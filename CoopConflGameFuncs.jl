@@ -134,16 +134,15 @@ function build_ODESystem()
     return ode_system
 end
 
-function behav_eq!(ode_system::ODESystem, pair::Tuple{individual, individual}, parameters::simulation_parameters)
-    prob = ODEProblem(ode_system, [action1 => pair[1].action, action2 => pair[2].action], (0, parameters.tmax), 
-        [a1 => pair[1].a, a2 => pair[2].a, p1 => pair[1].p, p2 => pair[2].p, T1 => pair[1].T, T2 => pair[2].T, v =>parameters.v])
+function behav_eq!(pair::Tuple{individual, individual}, parameters::simulation_parameters, ode_system::ODESystem)
+    prob = ODEProblem(ode_system, [action1 => pair[1].action, action2 => pair[2].action], (0, parameters.tmax), [a1 => pair[1].a, a2 => pair[2].a, p1 => pair[1].p, p2 => pair[2].p, T1 => pair[1].T, T2 => pair[2].T, v =>parameters.v])
     sol = solve(prob, Tsit5())
 
     pair[1].action = sol[end][1]
     pair[2].action = sol[end][2]
 end
 
-function social_interactions!(pop::population, sys::ODESystem)
+function social_interactions!(pop::population, ode_system::ODESystem)
     individuals_key = collect(keys(copy(pop.individuals)))
     individuals_shuffle = shuffle(individuals_key)
 
@@ -152,7 +151,7 @@ function social_interactions!(pop::population, sys::ODESystem)
     end
 
     for i in 1:2:length(individuals_shuffle)-1
-        behav_eq!(sys, (pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
+        behav_eq!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters, ode_system)
         total_payoff!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
     end
 end
