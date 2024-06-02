@@ -180,6 +180,6 @@ mutate!(my_population)
 ##################
 
 # compilation
-@profview simulation(my_population)
+@profview simulation(my_population);
 # pure runtime
-@profview simulation(my_population)
+@profview simulation(my_population);

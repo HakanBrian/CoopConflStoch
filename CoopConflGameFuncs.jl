@@ -193,7 +193,7 @@ function reproduce!(pop::population)
     key = collect(keys(copy(pop.individuals)))
     genotype_array = sample(key, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
-    copy!(pop.old_individuals, pop.individuals)
+    pop.old_individuals = copy(pop.individuals)
     for (res_i, offspring_i) in zip(key, genotype_array)
         pop.individuals[res_i] = pop.old_individuals[offspring_i]
     end
