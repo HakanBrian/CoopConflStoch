@@ -1,5 +1,5 @@
 ##################
-# simulation parameters
+# Simulation Parameters
 ##################
 
 mutable struct simulation_parameters
@@ -45,7 +45,7 @@ end
 
 
 ##################
-# individual
+# Individual
 ##################
 
 mutable struct individual
@@ -87,7 +87,7 @@ end
 
 
 ##################
-# population
+# Population
 ##################
 
 mutable struct population

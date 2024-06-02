@@ -2,14 +2,14 @@ using Plots
 
 
 ##################
-# game functions
+# Game Functions
 ##################
 
 include("CoopConflGameFuncs.jl")
 
 
 ##################
-# population construction
+# Population Construction
 ##################
 
 my_parameter = simulation_parameters(0.6, 0.5, 0.45, 0.0, 10, 15, 5, 0.0, 0.05, 0.05, 0.05, 1)
@@ -18,7 +18,7 @@ my_population = population_construction(my_parameter)
 
 
 ##################
-# simulation
+# Simulation
 ##################
 
 my_simulation = simulation(my_population)
@@ -29,7 +29,7 @@ my_simulation_mean = combine(my_simulation_gdf, :action => mean, :a => mean, :p 
 
 
 ##################
-# plot
+# Plot
 ##################
 
 plot(my_simulation_mean.generation,

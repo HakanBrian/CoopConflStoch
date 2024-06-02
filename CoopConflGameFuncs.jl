@@ -227,24 +227,24 @@ end
 function mutate!(pop::population)
     u = pop.parameters.u
     mut_var = pop.parameters.mut_var
-    
+
     if mut_var == 0
         return nothing
     end
-    
+
     for key in keys(pop.individuals)
         ind = pop.individuals[key]
-        
+
         if rand() <= u
             a_dist = truncated(Normal(0, mut_var), -ind.a, Inf)
             ind.a += rand(a_dist)
         end
-        
+
         if rand() <= u
             p_dist = truncated(Normal(0, mut_var), -ind.p, Inf)
             ind.p += rand(p_dist)
         end
-        
+
         if rand() <= u
             T_dist = truncated(Normal(0, mut_var), -ind.T, Inf)
             ind.T += rand(T_dist)

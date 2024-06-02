@@ -2,14 +2,14 @@ using BenchmarkTools
 
 
 ##################
-# game functions
+# Game Functions
 ##################
 
 include("CoopConflGameFuncs.jl")
 
 
 ##################
-# parameter copy
+# Parameter Copy
 ##################
 
 old_parameters = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20)
@@ -33,7 +33,7 @@ println(copied_parameters.N == 2)  # Should print true
 
 
 ##################
-# individual copy
+# Individual Copy
 ##################
 
 original_individual = individual(0.5, 0.4, 0.3, 0.2, 0.0, 0.0)
@@ -79,7 +79,7 @@ println(copy_individuals_dict[2].action == 0.8)  # Should print false
 
 
 ##################
-# population copy
+# Population Copy
 ##################
 
 old_new_individuals_dict = Dict{Int64, individual}()
@@ -130,7 +130,7 @@ println(copied_population.parameters.N == 4)  # Should print true
 
 
 ##################
-# population_construction
+# Population Construction
 ##################
 
 my_parameter = simulation_parameters(0.6, 0.5, 0.45, 0.0, 50, 20, 10, 0.0, 0.05, 0.05, 0.05, 1)
@@ -138,14 +138,14 @@ my_population = population_construction(my_parameter)
 
 
 ##################
-# behav_eq
+# Behav Eq
 ##################
 
-# define starting parameters
+# Define starting parameters
 individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
-# calculate behave eq
+# Calculate behave eq
 @btime behav_eq!(individual1, individual2, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
@@ -154,21 +154,21 @@ individual2  # individual 1 and 2 should have nearly identical values
 
 
 ##################
-# social interactions
+# Social Interactions
 ##################
 
 social_interactions!(my_population)
 
 
 ##################
-# reproduce
+# Reproduce
 ##################
 
 reproduce!(my_population)
 
 
 ##################
-# mutate
+# Mutate
 ##################
 
 mutate!(my_population)
