@@ -147,7 +147,7 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
 # calculate behave eq
-behav_eq!((individual1, individual2), my_parameter)
+@btime behav_eq!((individual1, individual2), my_parameter)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303

@@ -70,6 +70,7 @@ function output!(t::Int64, pop::population, outputs::DataFrame)
         outputs.T[output_row] = pop.individuals[i].T
         outputs.payoff[output_row] = pop.individuals[i].payoff
     end
+
     nothing
 end
 
@@ -252,7 +253,6 @@ function simulation(pop::population)
     ############
 
     for t in 1:pop.parameters.gmax
-
         # execute social interactions and calculate payoffs
         social_interactions!(pop)
 
@@ -268,7 +268,6 @@ function simulation(pop::population)
         if t % pop.parameters.output_save_tick == 0
             output!(t, copy(pop), outputs)
         end
-
     end
 
 return outputs
