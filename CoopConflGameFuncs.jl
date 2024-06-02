@@ -1,8 +1,4 @@
-using Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff
-using ModelingToolkit: t_nounits as t, D_nounits as D
-
-@variables action1(t) action2(t)
-@parameters a1 a2 p1 p2 T1 T2 v
+using Random, Distributions, StatsBase, DataFrames, DifferentialEquations, ForwardDiff, StaticArrays
 
 
 ####################################
@@ -22,25 +18,35 @@ include("CoopConflGameStructs.jl")
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
     old_individuals_dict = Dict{Int64, individual}()
+    use_distribution = parameters.trait_var != 0
 
-    if parameters.trait_var == 0
-        for i in 1:parameters.N
-            individuals_dict[i] = individual(parameters.action0, parameters.a0, parameters.p0, parameters.T0, 0.0, 0)
-            old_individuals_dict[i] = copy(individuals_dict[i])
-        end
-    else
-        dist_values = Dict{String, Any}()
+    if use_distribution
+        dist_values = Dict{Symbol, Any}()
         for name in fieldnames(simulation_parameters)[1:4]  # represents game params
-            dist_values[String(name)] = truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
+            dist_values[name] = truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
         end
-        for i in 1:parameters.N
-            individuals_dict[i] = individual(rand(dist_values["action0"]), rand(dist_values["a0"]), rand(dist_values["p0"]), rand(dist_values["T0"]), 0.0, 0)
-            old_individuals_dict[i] = copy(individuals_dict[i])
+    end
+
+    for i in 1:parameters.N
+        if use_distribution
+            action0 = rand(dist_values[:action0])
+            a0 = rand(dist_values[:a0])
+            p0 = rand(dist_values[:p0])
+            T0 = rand(dist_values[:T0])
+        else
+            action0 = parameters.action0
+            a0 = parameters.a0
+            p0 = parameters.p0
+            T0 = parameters.T0
         end
+        indiv = individual(action0, a0, p0, T0, 0.0, 0)
+        individuals_dict[i] = indiv
+        old_individuals_dict[i] = copy(indiv)
     end
 
     return population(parameters, individuals_dict, old_individuals_dict)
 end
+
 
 function output!(t::Int64, pop::population, outputs::DataFrame)
     # Determine the base row for the current generation
@@ -64,6 +70,7 @@ function output!(t::Int64, pop::population, outputs::DataFrame)
         outputs.T[output_row] = pop.individuals[i].T
         outputs.payoff[output_row] = pop.individuals[i].payoff
     end
+    nothing
 end
 
 
@@ -79,70 +86,83 @@ end
     # calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-function benefit(action1::Any, action2::Any, v::Any)
-    return (1-v)*(√action1 + √action2) + v*√(action1 + action2)
+@inline function benefit(action1::Any, action2::Float64, v::Float64)
+    sqrt_action1 = √action1
+    sqrt_action2 = √action2
+    sqrt_sum = √(action1 + action2)
+    return (1 - v) * (sqrt_action1 + sqrt_action2) + v * sqrt_sum
 end
 
-function cost(action::Any)
+@inline function cost(action::Any)
     return action^2
 end
 
-function norm_pool(a1::Any, a2::Any)
-    return mean([a1, a2])
+@inline function norm_pool(a1::Float64, a2::Float64)
+    return 0.5 * (a1 + a2)
 end
 
-function punishment_pool(p1::Any, p2::Any)
-    return mean([p1, p2])
+@inline function punishment_pool(p1::Float64, p2::Float64)
+    return 0.5 * (p1 + p2)
 end
 
-function external_punishment(action::Any, a1::Any, a2::Any, p1::Any, p2::Any)
-    return punishment_pool(p1, p2) * (action - norm_pool(a1, a2))^2
+@inline function external_punishment(action::Any, a1::Float64, a2::Float64, p1::Float64, p2::Float64)
+    norm = norm_pool(a1, a2)
+    punishment = punishment_pool(p1, p2)
+    return punishment * (action - norm)^2
 end
 
-function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
-    return T * (action - norm_pool(a1, a2))^2
+@inline function internal_punishment(action::Any, a1::Float64, a2::Float64, T::Float64)
+    norm = norm_pool(a1, a2)
+    return T * (action - norm)^2
 end
 
-function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, v::Any)
+@inline function payoff(action1::Any, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, v::Float64)
     return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+@inline function objective(action1::Any, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, T::Float64, v::Float64)
     return payoff(action1, action2, a1, a2, p1, p2, v) - internal_punishment(action1, a1, a2, T)
 end
 
-function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+@inline function objective_derivative(action1::Any, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, T::Float64, v::Float64)
     return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
 end
 
 function total_payoff!(pair::Tuple{individual, individual}, parameters::simulation_parameters)
-        payoff1 = payoff(pair[1].action, pair[2].action, pair[1].a, pair[2].a, pair[1].p, pair[2].p, parameters.v)
-        payoff2 = payoff(pair[2].action, pair[1].action, pair[2].a, pair[1].a, pair[2].p, pair[1].p, parameters.v)
+    payoff1 = payoff(pair[1].action, pair[2].action, pair[1].a, pair[2].a, pair[1].p, pair[2].p, parameters.v)
+    payoff2 = payoff(pair[2].action, pair[1].action, pair[2].a, pair[1].a, pair[2].p, pair[1].p, parameters.v)
 
-        pair[1].payoff = (payoff1 + pair[1].interactions * pair[1].payoff) / (pair[1].interactions + 1)
-        pair[2].payoff = (payoff2 + pair[2].interactions * pair[2].payoff) / (pair[2].interactions + 1)
+    pair[1].payoff = (payoff1 + pair[1].interactions * pair[1].payoff) / (pair[1].interactions + 1)
+    pair[2].payoff = (payoff2 + pair[2].interactions * pair[2].payoff) / (pair[2].interactions + 1)
 
-        pair[1].interactions += 1
-        pair[2].interactions += 1
+    pair[1].interactions += 1
+    pair[2].interactions += 1
+
+    nothing
 end
 
-function build_ODESystem()
-    equations = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
-                 D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)]
+function behav_ODESystem_static(u, p, t)
+    dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[4], p[5], p[7])
+    dy = objective_derivative(u[2], u[1], p[2], p[1], p[4], p[3], p[6], p[7])
 
-    @mtkbuild ode_system = ODESystem(equations, t)
-    return ode_system
+    return SA[dx, dy]
 end
 
-function behav_eq!(pair::Tuple{individual, individual}, parameters::simulation_parameters, ode_system::ODESystem)
-    prob = ODEProblem(ode_system, [action1 => pair[1].action, action2 => pair[2].action], (0, parameters.tmax), [a1 => pair[1].a, a2 => pair[2].a, p1 => pair[1].p, p2 => pair[2].p, T1 => pair[1].T, T2 => pair[2].T, v =>parameters.v])
-    sol = solve(prob, Tsit5())
+function behav_eq!(pair::Tuple{individual, individual}, parameters::simulation_parameters)
+    u0 = SA[pair[1].action; pair[2].action]
+    tspan = (0, parameters.tmax)
+    p = SA[pair[1].a; pair[2].a; pair[1].p; pair[2].p; pair[1].T; pair[2].T; parameters.v]
+
+    prob = ODEProblem(behav_ODESystem_static, u0, tspan, p)
+    sol = solve(prob, Tsit5(), save_everystep = false)
 
     pair[1].action = sol[end][1]
     pair[2].action = sol[end][2]
+
+    nothing
 end
 
-function social_interactions!(pop::population, ode_system::ODESystem)
+function social_interactions!(pop::population)
     individuals_key = collect(keys(copy(pop.individuals)))
     individuals_shuffle = shuffle(individuals_key)
 
@@ -151,9 +171,11 @@ function social_interactions!(pop::population, ode_system::ODESystem)
     end
 
     for i in 1:2:length(individuals_shuffle)-1
-        behav_eq!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters, ode_system)
+        behav_eq!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
         total_payoff!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
     end
+
+    nothing
 end
 
 
@@ -174,6 +196,8 @@ function reproduce!(pop::population)
     for (res_i, offspring_i) in zip(key, genotype_array)
         pop.individuals[res_i] = pop.old_individuals[offspring_i]
     end
+
+    nothing
 end
 
 
@@ -199,6 +223,8 @@ function mutate!(pop::population)
             pop.individuals[key].T += rand(T_dist)
         end
     end
+
+    nothing
 end
 
 
@@ -211,8 +237,6 @@ function simulation(pop::population)
     ############
     # Sim init #
     ############
-
-    ode_system = build_ODESystem()
 
     output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.N
     outputs = DataFrame(generation = zeros(Int64, output_length),
@@ -230,7 +254,7 @@ function simulation(pop::population)
     for t in 1:pop.parameters.gmax
 
         # execute social interactions and calculate payoffs
-        social_interactions!(pop, ode_system)
+        social_interactions!(pop)
 
         # reproduction function to produce new generation
         reproduce!(pop)

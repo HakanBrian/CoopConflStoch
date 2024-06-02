@@ -1,3 +1,6 @@
+using BenchmarkTools
+
+
 ##################
 # game functions
 ##################
@@ -144,7 +147,7 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
 # calculate behave eq
-behav_eq!(build_ODESystem(), (individual1, individual2), my_parameter)
+behav_eq!((individual1, individual2), my_parameter)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -155,7 +158,7 @@ individual2  # individual 1 and 2 should have nearly identical values
 # social interactions
 ##################
 
-simulation(my_population)
+social_interactions!(my_population)
 
 
 ##################
