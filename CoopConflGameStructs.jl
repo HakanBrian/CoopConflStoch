@@ -21,9 +21,20 @@ mutable struct simulation_parameters
 end
 
 function Base.copy(parameters::simulation_parameters)
-    return simulation_parameters(getfield(parameters, :action0), getfield(parameters, :a0), getfield(parameters, :p0), getfield(parameters, :T0), 
-                                 getfield(parameters, :gmax), getfield(parameters, :tmax), getfield(parameters, :N), getfield(parameters, :v), 
-                                 getfield(parameters, :u), getfield(parameters, :trait_var), getfield(parameters, :mut_var), getfield(parameters, :output_save_tick))
+    return simulation_parameters(
+        getfield(parameters, :action0),
+        getfield(parameters, :a0),
+        getfield(parameters, :p0),
+        getfield(parameters, :T0),
+        getfield(parameters, :gmax),
+        getfield(parameters, :tmax),
+        getfield(parameters, :N),
+        getfield(parameters, :v),
+        getfield(parameters, :u),
+        getfield(parameters, :trait_var),
+        getfield(parameters, :mut_var),
+        getfield(parameters, :output_save_tick)
+    )
 end
 
 function Base.copy!(old_params::simulation_parameters, new_params::simulation_parameters)
@@ -58,7 +69,14 @@ mutable struct individual
 end
 
 function Base.copy(ind::individual)
-    return individual(getfield(ind, :action), getfield(ind, :a), getfield(ind, :p), getfield(ind, :T), getfield(ind, :payoff), getfield(ind, :interactions))
+    return individual(
+        getfield(ind, :action),
+        getfield(ind, :a),
+        getfield(ind, :p),
+        getfield(ind, :T),
+        getfield(ind, :payoff),
+        getfield(ind, :interactions)
+    )
 end
 
 function Base.copy!(old_ind::individual, new_ind::individual)
@@ -97,7 +115,11 @@ mutable struct population
 end
 
 function Base.copy(pop::population)
-    return population(getfield(pop, :parameters), getfield(pop, :individuals), getfield(pop, :old_individuals))
+    return population(
+        copy(getfield(pop, :parameters)),
+        copy(getfield(pop, :individuals)),
+        copy(getfield(pop, :old_individuals))
+    )
 end
 
 function Base.copy!(old_population::population, new_population::population)
