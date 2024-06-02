@@ -1,5 +1,8 @@
-using Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff, CUDA, DiffEqGPU
+using Random, Distributions, StatsBase, DataFrames, ModelingToolkit, DifferentialEquations, ForwardDiff
 using ModelingToolkit: t_nounits as t, D_nounits as D
+
+@variables action1(t) action2(t)
+@parameters a1 a2 p1 p2 T1 T2 v
 
 
 ####################################
@@ -112,33 +115,35 @@ function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::
     return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
 end
 
-function total_payoff!(individual1::individual, individual2::individual, parameters::simulation_parameters)
-    payoff1 = payoff(individual1.action, individual2.action, individual1.a, individual2.a, individual1.p, individual2.p, parameters.v)
-    payoff2 = payoff(individual2.action, individual1.action, individual2.a, individual1.a, individual2.p, individual1.p, parameters.v)
+function total_payoff!(pair::Tuple{individual, individual}, parameters::simulation_parameters)
+        payoff1 = payoff(pair[1].action, pair[2].action, pair[1].a, pair[2].a, pair[1].p, pair[2].p, parameters.v)
+        payoff2 = payoff(pair[2].action, pair[1].action, pair[2].a, pair[1].a, pair[2].p, pair[1].p, parameters.v)
 
-    individual1.payoff = (payoff1 + individual1.interactions * individual1.payoff) / (individual1.interactions + 1)
-    individual2.payoff = (payoff2 + individual2.interactions * individual2.payoff) / (individual2.interactions + 1)
+        pair[1].payoff = (payoff1 + pair[1].interactions * pair[1].payoff) / (pair[1].interactions + 1)
+        pair[2].payoff = (payoff2 + pair[2].interactions * pair[2].payoff) / (pair[2].interactions + 1)
 
-    individual1.interactions += 1
-    individual2.interactions += 1
+        pair[1].interactions += 1
+        pair[2].interactions += 1
 end
 
-function behav_eq!(individual1::individual, individual2::individual, parameters::simulation_parameters)
-    @variables action1(t) action2(t)
-    @parameters a1 a2 p1 p2 T1 T2 v
+function build_ODESystem()
+    equations = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
+                 D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)]
 
-    eqs = [D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
-           D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)]
-
-    @mtkbuild sys = ODESystem(eqs, t)
-    prob = ODEProblem(sys, [action1 => individual1.action, action2 => individual2.action], (0, parameters.tmax), [a1 => individual1.a, a2 => individual2.a, p1 => individual1.p, p2 => individual2.p, T1 => individual1.T, T2 => individual2.T, v => parameters.v])
-    sol = solve(prob)
-
-    individual1.action = sol[end][1]
-    individual2.action = sol[end][2]
+    @mtkbuild ode_system = ODESystem(equations, t)
+    return ode_system
 end
 
-function social_interactions!(pop::population)
+function behav_eq!(ode_system::ODESystem, pair::Tuple{individual, individual}, parameters::simulation_parameters)
+    prob = ODEProblem(ode_system, [action1 => pair[1].action, action2 => pair[2].action], (0, parameters.tmax), 
+        [a1 => pair[1].a, a2 => pair[2].a, p1 => pair[1].p, p2 => pair[2].p, T1 => pair[1].T, T2 => pair[2].T, v =>parameters.v])
+    sol = solve(prob, Tsit5())
+
+    pair[1].action = sol[end][1]
+    pair[2].action = sol[end][2]
+end
+
+function social_interactions!(pop::population, sys::ODESystem)
     individuals_key = collect(keys(copy(pop.individuals)))
     individuals_shuffle = shuffle(individuals_key)
 
@@ -146,9 +151,9 @@ function social_interactions!(pop::population)
         push!(individuals_shuffle, individuals_key[rand(1:pop.parameters.N)])
     end
 
-    for i in 1:2:(length(individuals_shuffle)-1)
-        behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters)
-        total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters)
+    for i in 1:2:length(individuals_shuffle)-1
+        behav_eq!(sys, (pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
+        total_payoff!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
     end
 end
 
@@ -208,6 +213,8 @@ function simulation(pop::population)
     # Sim init #
     ############
 
+    ode_system = build_ODESystem()
+
     output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.N
     outputs = DataFrame(generation = zeros(Int64, output_length),
                         individual = zeros(Int64, output_length),
@@ -224,7 +231,7 @@ function simulation(pop::population)
     for t in 1:pop.parameters.gmax
 
         # execute social interactions and calculate payoffs
-        social_interactions!(pop)
+        social_interactions!(pop, ode_system)
 
         # reproduction function to produce new generation
         reproduce!(pop)
