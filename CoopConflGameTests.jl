@@ -5,7 +5,6 @@ using BenchmarkTools
 # game functions
 ##################
 
-include("CoopConflGameStructs.jl")
 include("CoopConflGameFuncs.jl")
 
 
@@ -147,7 +146,7 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
 # calculate behave eq
-@btime behav_eq!((individual1, individual2), my_parameter)
+@btime behav_eq!(individual1, individual2, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303

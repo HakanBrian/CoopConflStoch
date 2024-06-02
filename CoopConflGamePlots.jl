@@ -5,7 +5,6 @@ using Plots
 # game functions
 ##################
 
-include("CoopConflGameStructs.jl")
 include("CoopConflGameFuncs.jl")
 
 

@@ -21,15 +21,26 @@ mutable struct simulation_parameters
 end
 
 function Base.copy(parameters::simulation_parameters)
-    field_values = map(field -> getfield(parameters, field), fieldnames(simulation_parameters))
-    return simulation_parameters(field_values...)
+    return simulation_parameters(getfield(parameters, :action0), getfield(parameters, :a0), getfield(parameters, :p0), getfield(parameters, :T0), 
+                                 getfield(parameters, :gmax), getfield(parameters, :tmax), getfield(parameters, :N), getfield(parameters, :v), 
+                                 getfield(parameters, :u), getfield(parameters, :trait_var), getfield(parameters, :mut_var), getfield(parameters, :output_save_tick))
 end
 
 function Base.copy!(old_params::simulation_parameters, new_params::simulation_parameters)
-    field_names = fieldnames(simulation_parameters)
-    for name in field_names
-        setfield!(old_params, name, getfield(new_params, name))
-    end
+    setfield!(old_params, :action0, getfield(new_params, :action0))
+    setfield!(old_params, :a0, getfield(new_params, :a0))
+    setfield!(old_params, :p0, getfield(new_params, :p0))
+    setfield!(old_params, :T0, getfield(new_params, :T0))
+    setfield!(old_params, :gmax, getfield(new_params, :gmax))
+    setfield!(old_params, :tmax, getfield(new_params, :tmax))
+    setfield!(old_params, :N, getfield(new_params, :N))
+    setfield!(old_params, :v, getfield(new_params, :v))
+    setfield!(old_params, :u, getfield(new_params, :u))
+    setfield!(old_params, :trait_var, getfield(new_params, :trait_var))
+    setfield!(old_params, :mut_var, getfield(new_params, :mut_var))
+    setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
+
+    return nothing
 end
 
 
@@ -47,15 +58,18 @@ mutable struct individual
 end
 
 function Base.copy(ind::individual)
-    field_values = map(field -> getfield(ind, field), fieldnames(individual))
-    return individual(field_values...)
+    return individual(getfield(ind, :action), getfield(ind, :a), getfield(ind, :p), getfield(ind, :T), getfield(ind, :payoff), getfield(ind, :interactions))
 end
 
 function Base.copy!(old_ind::individual, new_ind::individual)
-    field_names = fieldnames(individual)
-    for name in field_names
-        setfield!(old_ind, name, getfield(new_ind, name))
-    end
+    setfield!(old_ind, :action, getfield(new_ind, :action))
+    setfield!(old_ind, :a, getfield(new_ind, :a))
+    setfield!(old_ind, :p, getfield(new_ind, :p))
+    setfield!(old_ind, :T, getfield(new_ind, :T))
+    setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
+    setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
+
+    return nothing
 end
 
 function Base.copy(inds::Dict{Int64, individual})
@@ -64,8 +78,11 @@ end
 
 function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, individual})
     for key in keys(old_inds)
-        copy!(old_inds[key], new_inds[key])
+        new_value = new_inds[key]
+        copy!(old_inds[key], new_value)
     end
+
+    return nothing
 end
 
 
@@ -80,12 +97,13 @@ mutable struct population
 end
 
 function Base.copy(pop::population)
-    field_values = map(field -> copy(getfield(pop, field)), fieldnames(population))
-    return population(field_values...)
+    return population(getfield(pop, :parameters), getfield(pop, :individuals), getfield(pop, :old_individuals))
 end
 
 function Base.copy!(old_population::population, new_population::population)
-    for field in fieldnames(population)
-        copy!(getfield(old_population, field), getfield(new_population, field))
-    end
+    copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
+    copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
+    copy!(getfield(old_population, :old_individuals), getfield(new_population, :old_individuals))
+
+    return nothing
 end

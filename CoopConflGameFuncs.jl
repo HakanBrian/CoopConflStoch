@@ -47,8 +47,7 @@ function population_construction(parameters::simulation_parameters)
     return population(parameters, individuals_dict, old_individuals_dict)
 end
 
-
-function output!(t::Int64, pop::population, outputs::DataFrame)
+function output!(outputs::DataFrame, t::Int64, pop::population)
     # Determine the base row for the current generation
     if t == 1
         output_row_base = 1
@@ -56,22 +55,39 @@ function output!(t::Int64, pop::population, outputs::DataFrame)
         output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.N + 1
     end
 
-    # Iterate over all individuals in the population
-    for i in 1:pop.parameters.N
-        # Calculate the row for the current individual
-        output_row = output_row_base + i - 1
-        
-        # Update the DataFrame with the individual's data
-        outputs.generation[output_row] = t
-        outputs.individual[output_row] = i
-        outputs.action[output_row] = pop.individuals[i].action
-        outputs.a[output_row] = pop.individuals[i].a
-        outputs.p[output_row] = pop.individuals[i].p
-        outputs.T[output_row] = pop.individuals[i].T
-        outputs.payoff[output_row] = pop.individuals[i].payoff
+    # Preallocate vectors for batch assignment
+    N = pop.parameters.N
+    generation_col = fill(t, N)
+    individual_col = 1:N
+    action_col = Vector{typeof(pop.individuals[1].action)}(undef, N)
+    a_col = Vector{typeof(pop.individuals[1].a)}(undef, N)
+    p_col = Vector{typeof(pop.individuals[1].p)}(undef, N)
+    T_col = Vector{typeof(pop.individuals[1].T)}(undef, N)
+    payoff_col = Vector{typeof(pop.individuals[1].payoff)}(undef, N)
+
+    # Collect the data for each individual
+    for i in 1:N
+        ind = pop.individuals[i]
+        action_col[i] = ind.action
+        a_col[i] = ind.a
+        p_col[i] = ind.p
+        T_col[i] = ind.T
+        payoff_col[i] = ind.payoff
     end
 
-    nothing
+    # Calculate the range of rows to be updated
+    output_rows = output_row_base:(output_row_base + N - 1)
+
+    # Update the DataFrame with batch assignment
+    outputs.generation[output_rows] = generation_col
+    outputs.individual[output_rows] = individual_col
+    outputs.action[output_rows] = action_col
+    outputs.a[output_rows] = a_col
+    outputs.p[output_rows] = p_col
+    outputs.T[output_rows] = T_col
+    outputs.payoff[output_rows] = payoff_col
+
+    return nothing
 end
 
 
@@ -129,17 +145,17 @@ end
     return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
 end
 
-function total_payoff!(pair::Tuple{individual, individual}, parameters::simulation_parameters)
-    payoff1 = payoff(pair[1].action, pair[2].action, pair[1].a, pair[2].a, pair[1].p, pair[2].p, parameters.v)
-    payoff2 = payoff(pair[2].action, pair[1].action, pair[2].a, pair[1].a, pair[2].p, pair[1].p, parameters.v)
+function total_payoff!(ind1::individual, ind2::individual, v::Float64)
+    payoff1 = payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v)
+    payoff2 = payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v)
 
-    pair[1].payoff = (payoff1 + pair[1].interactions * pair[1].payoff) / (pair[1].interactions + 1)
-    pair[2].payoff = (payoff2 + pair[2].interactions * pair[2].payoff) / (pair[2].interactions + 1)
+    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
+    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
 
-    pair[1].interactions += 1
-    pair[2].interactions += 1
+    ind1.interactions += 1
+    ind2.interactions += 1
 
-    nothing
+    return nothing
 end
 
 function behav_ODESystem_static(u, p, t)
@@ -149,18 +165,17 @@ function behav_ODESystem_static(u, p, t)
     return SA[dx, dy]
 end
 
-function behav_eq!(pair::Tuple{individual, individual}, parameters::simulation_parameters)
-    u0 = SA[pair[1].action; pair[2].action]
-    tspan = (0, parameters.tmax)
-    p = SA[pair[1].a; pair[2].a; pair[1].p; pair[2].p; pair[1].T; pair[2].T; parameters.v]
+function behav_eq!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
+    u0 = SA[ind1.action; ind2.action]
+    tspan = (0, tmax)
+    p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
 
     prob = ODEProblem(behav_ODESystem_static, u0, tspan, p)
     sol = solve(prob, Tsit5(), save_everystep = false)
 
-    pair[1].action = sol[end][1]
-    pair[2].action = sol[end][2]
+    ind1.action, ind2.action = sol[end]
 
-    nothing
+    return nothing
 end
 
 function social_interactions!(pop::population)
@@ -172,11 +187,11 @@ function social_interactions!(pop::population)
     end
 
     for i in 1:2:length(individuals_shuffle)-1
-        behav_eq!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
-        total_payoff!((pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]), pop.parameters)
+        behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters.tmax, pop.parameters.v)
+        total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters.v)
     end
 
-    nothing
+    return nothing
 end
 
 
@@ -193,12 +208,12 @@ function reproduce!(pop::population)
     key = collect(keys(copy(pop.individuals)))
     genotype_array = sample(key, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
-    pop.old_individuals = copy(pop.individuals)
+    copy!(pop.old_individuals, pop.individuals)
     for (res_i, offspring_i) in zip(key, genotype_array)
         pop.individuals[res_i] = pop.old_individuals[offspring_i]
     end
 
-    nothing
+    return nothing
 end
 
 
@@ -210,22 +225,33 @@ end
     # use an independent draw function for each of the traits that could mutate
 
 function mutate!(pop::population)
+    u = pop.parameters.u
+    mut_var = pop.parameters.mut_var
+    
+    if mut_var == 0
+        return nothing
+    end
+    
     for key in keys(pop.individuals)
-        if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
-            a_dist = truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].a, Inf)
-            pop.individuals[key].a += rand(a_dist)
+        ind = pop.individuals[key]
+        
+        if rand() <= u
+            a_dist = truncated(Normal(0, mut_var), -ind.a, Inf)
+            ind.a += rand(a_dist)
         end
-        if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
-            p_dist = truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].p, Inf)
-            pop.individuals[key].p += rand(p_dist)
+        
+        if rand() <= u
+            p_dist = truncated(Normal(0, mut_var), -ind.p, Inf)
+            ind.p += rand(p_dist)
         end
-        if rand() <= pop.parameters.u && pop.parameters.mut_var != 0
-            T_dist = truncated(Normal(0, pop.parameters.mut_var), -pop.individuals[key].T, Inf)
-            pop.individuals[key].T += rand(T_dist)
+        
+        if rand() <= u
+            T_dist = truncated(Normal(0, mut_var), -ind.T, Inf)
+            ind.T += rand(T_dist)
         end
     end
 
-    nothing
+    return nothing
 end
 
 
@@ -240,13 +266,15 @@ function simulation(pop::population)
     ############
 
     output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.N
-    outputs = DataFrame(generation = zeros(Int64, output_length),
-                        individual = zeros(Int64, output_length),
-                        action = zeros(Float64, output_length),
-                        a = zeros(Float64, output_length),
-                        p = zeros(Float64, output_length),
-                        T = zeros(Float64, output_length),
-                        payoff = zeros(Float64, output_length))
+    outputs = DataFrame(
+        generation = Vector{Int64}(undef, output_length),
+        individual = Vector{Int64}(undef, output_length),
+        action = Vector{Float64}(undef, output_length),
+        a = Vector{Float64}(undef, output_length),
+        p = Vector{Float64}(undef, output_length),
+        T = Vector{Float64}(undef, output_length),
+        payoff = Vector{Float64}(undef, output_length)
+    )
 
     ############
     # Sim Loop #
@@ -266,9 +294,9 @@ function simulation(pop::population)
 
         # per-timestep counters, outputs going to disk
         if t % pop.parameters.output_save_tick == 0
-            output!(t, copy(pop), outputs)
+            output!(outputs, t, copy(pop))
         end
     end
 
-return outputs
+    return outputs
 end
