@@ -37,7 +37,6 @@ println(copied_parameters.N == 2)  # Should print true
 ##################
 
 original_individual = individual(0.5, 0.4, 0.3, 0.2, 0.0, 0.0)
-
 copied_individual = copy(original_individual)
 
 # Modify some fields in the original and copied objects
@@ -146,7 +145,7 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
 # Calculate behave eq
-@btime behav_eq!(individual1, individual2, my_parameter.tmax, my_parameter.v)
+behav_eq!(individual1, individual2, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -164,7 +163,36 @@ social_interactions!(my_population)
 # Reproduce
 ##################
 
+# Create sample population
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 20, 4, 0.0, 0.0, 0.0, 0.0, 1)
+individuals_dict = Dict{Int64, individual}()
+old_individuals_dict = Dict{Int64, individual}()
+my_population = population(my_parameter, individuals_dict, old_individuals_dict)
+
+my_population.individuals[1] = individual(0.5, 0.5, 0.5, 0.0, 1, 0)
+my_population.individuals[2] = individual(0.5, 0.5, 0.5, 0.0, 2, 0)
+my_population.individuals[3] = individual(0.5, 0.5, 0.5, 0.0, 3, 0)
+my_population.individuals[4] = individual(0.5, 0.5, 0.5, 0.0, 4, 0)
+
+# Bootstrap to increase sample size
+original_size = length(my_population.individuals)
+new_key = original_size + 1
+for i in 1:original_size
+    for j in 1:24
+        my_population.individuals[new_key] = copy(my_population.individuals[i])
+        new_key += 1
+    end
+end
+
+# Ensure 25 of each copies of each parent
+println("Initial population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
+
+# Complete a round of reproduction
+my_population.old_individuals = copy(my_population.individuals)
 reproduce!(my_population)
+
+# Offspring should have parent 1 as their parent ~40% of the time
+println("New population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
 
 
 ##################
@@ -182,3 +210,9 @@ mutate!(my_population)
 @profview simulation(my_population);
 # pure runtime
 @profview simulation(my_population);
+
+@profview @btime social_interactions!(my_population)
+
+@profview @btime reproduce!(my_population);
+
+@profview @btime mutate!(my_population);
