@@ -177,7 +177,7 @@ social_interactions!(my_population)
 ##################
 
 # Create sample population
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 20, 4, 0.0, 0.0, 0.0, 0.0, 1)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 20, 1000, 0.0, 0.0, 0.0, 0.0, 1)
 individuals_dict = Dict{Int64, individual}()
 old_individuals_dict = Dict{Int64, individual}()
 my_population = population(my_parameter, individuals_dict, old_individuals_dict)
@@ -191,20 +191,20 @@ my_population.individuals[4] = individual(0.5, 0.5, 0.5, 0.0, 4, 0)
 original_size = length(my_population.individuals)
 new_key = original_size + 1
 for i in 1:original_size
-    for j in 1:24
+    for j in 1:249
         my_population.individuals[new_key] = copy(my_population.individuals[i])
         new_key += 1
     end
 end
+my_population.old_individuals = copy(my_population.individuals)
 
 # Ensure 25 of each copies of each parent
 println("Initial population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
 
 # Complete a round of reproduction
-my_population.old_individuals = copy(my_population.individuals)
 reproduce!(my_population)
 
-# Offspring should have parent 1 as their parent ~40% of the time
+# Offspring should have parent 4 as their parent ~40% of the time
 println("New population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
 
 
@@ -224,7 +224,7 @@ mutate!(my_population)
 # pure runtime
 @profview simulation(my_population);
 
-@profview @btime social_interactions!(my_population)
+@profview @btime social_interactions!(my_population);
 
 @profview @btime reproduce!(my_population);
 

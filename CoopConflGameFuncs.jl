@@ -20,6 +20,13 @@ function population_construction(parameters::simulation_parameters)
     old_individuals_dict = Dict{Int64, individual}()
     use_distribution = parameters.trait_var != 0
 
+    # Collect initial parameters
+    action0 = parameters.action0
+    a0 = parameters.a0
+    p0 = parameters.p0
+    T0 = parameters.T0
+
+    # Construct a distribution if necessary
     if use_distribution
         dist_values = Dict{Symbol, Any}()
         for name in fieldnames(simulation_parameters)[1:4]  # represents game params
@@ -27,17 +34,13 @@ function population_construction(parameters::simulation_parameters)
         end
     end
 
+    # Create individuals
     for i in 1:parameters.N
         if use_distribution
             action0 = rand(dist_values[:action0])
             a0 = rand(dist_values[:a0])
             p0 = rand(dist_values[:p0])
             T0 = rand(dist_values[:T0])
-        else
-            action0 = parameters.action0
-            a0 = parameters.a0
-            p0 = parameters.p0
-            T0 = parameters.T0
         end
         indiv = individual(action0, a0, p0, T0, 0.0, 0)
         individuals_dict[i] = indiv
@@ -200,7 +203,6 @@ end
 ##################
 
     # offspring inherit the payoff or traits of the parents
-    # only need one parent
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
@@ -208,12 +210,8 @@ function reproduce!(pop::population)
     payoffs = map(individual -> individual.payoff, individuals)
     keys_list = collect(keys(pop.individuals))
 
-    # Normalize payoffs for weights
-    total_payoff = sum(payoffs)
-    weights = [p / total_payoff for p in payoffs]
-
     # Sample with the given weights
-    sampled_keys = sample(keys_list, AnalyticWeights(weights), pop.parameters.N, replace=true, ordered=false)
+    sampled_keys = wsample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
     # Temporarily store old individuals
     copy!(pop.old_individuals, pop.individuals)
