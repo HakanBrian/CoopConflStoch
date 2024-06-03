@@ -95,9 +95,9 @@ function Base.copy(inds::Dict{Int64, individual})
 end
 
 function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, individual})
-    for key in keys(old_inds)
-        new_value = new_inds[key]
-        copy!(old_inds[key], new_value)
+    for (key, new_ind) in pairs(new_inds)
+        old_ind = old_inds[key]
+        copy!(old_ind, new_ind)
     end
 
     return nothing

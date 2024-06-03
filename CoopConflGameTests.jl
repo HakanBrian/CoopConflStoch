@@ -56,13 +56,20 @@ original_individuals_dict = Dict{Int64, individual}()
 original_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
 original_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
 
+old_individuals_dict = Dict{Int64, individual}()
+old_individuals_dict[1] = individual(0.43, 0.5, 0.34, 0, 0, 0)
+old_individuals_dict[2] = individual(0.36, 0.3, 0.55, 0, 0, 0)
+
 copy_individuals_dict = copy(original_individuals_dict)
+copy!(old_individuals_dict, original_individuals_dict)
 
 # Modify some fields in the original and copied objects
 original_individuals_dict[1].action = 0.9
 original_individuals_dict[2].action = 0.8
 copy_individuals_dict[1].action = 0.1
 copy_individuals_dict[2].action = 0.2
+old_individuals_dict[1].action = 0.4
+old_individuals_dict[2].action = 0.5
 
 # Check if modifications affect the original individual
 println(original_individuals_dict[1].action == 0.9)  # Should print true
@@ -75,6 +82,12 @@ println(copy_individuals_dict[1].action == 0.1)  # Should print true
 println(copy_individuals_dict[1].action == 0.9)  # Should print false
 println(copy_individuals_dict[2].action == 0.2)  # Should print true
 println(copy_individuals_dict[2].action == 0.8)  # Should print false
+
+# Check if modifications affect the old individual
+println(old_individuals_dict[1].action == 0.4)  # Should print true
+println(old_individuals_dict[1].action == 0.9)  # Should print false
+println(old_individuals_dict[2].action == 0.5)  # Should print true
+println(old_individuals_dict[2].action == 0.8)  # Should print false
 
 
 ##################
