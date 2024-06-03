@@ -158,7 +158,8 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 
 # Calculate behave eq
-behav_eq!(individual1, individual2, my_parameter.tmax, my_parameter.v)
+@btime behav_eq!(individual1, individual2, my_parameter.tmax, my_parameter.v)
+@btime behav_eq_MTK!(individual1, individual2, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -198,7 +199,7 @@ for i in 1:original_size
 end
 my_population.old_individuals = copy(my_population.individuals)
 
-# Ensure 25 of each copies of each parent
+# Ensure 250 copies of each parent
 println("Initial population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
 
 # Complete a round of reproduction
@@ -223,9 +224,3 @@ mutate!(my_population)
 @profview simulation(my_population);
 # pure runtime
 @profview simulation(my_population);
-
-@profview @btime social_interactions!(my_population);
-
-@profview @btime reproduce!(my_population);
-
-@profview @btime mutate!(my_population);

@@ -1,5 +1,5 @@
-using Random, Distributions, StatsBase, DataFrames, DifferentialEquations, ForwardDiff, StaticArrays
-
+using Random, Distributions, StatsBase, DataFrames, DifferentialEquations, ForwardDiff, ModelingToolkit, StaticArrays
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
 ####################################
 # Game Functions
@@ -95,18 +95,13 @@ end
 
 
 ##################
-# Pairwise fitness
+# Fitness function
 ##################
 
-    # pair individuals with the possibiliy of pairing more than once
-    # everyone has the same chance of picking a partner / getting picked
-    # at the end of the day everyone is picked roughly an equal number of times
-    # aka random pairing without replacment
-
-    # calculate payoff, and keep a running average of payoff for each individual
+    # Calculate payoff, and keep a running average of payoff for each individual
     # after each session of interaction the running average becomes the individual's payoff
 
-@inline function benefit(action1::Any, action2::Float64, v::Float64)
+@inline function benefit(action1::Any, action2::Any, v::Any)
     sqrt_action1 = √action1
     sqrt_action2 = √action2
     sqrt_sum = √(action1 + action2)
@@ -117,34 +112,34 @@ end
     return action^2
 end
 
-@inline function norm_pool(a1::Float64, a2::Float64)
+@inline function norm_pool(a1::Any, a2::Any)
     return 0.5 * (a1 + a2)
 end
 
-@inline function punishment_pool(p1::Float64, p2::Float64)
+@inline function punishment_pool(p1::Any, p2::Any)
     return 0.5 * (p1 + p2)
 end
 
-@inline function external_punishment(action::Any, a1::Float64, a2::Float64, p1::Float64, p2::Float64)
+@inline function external_punishment(action::Any, a1::Any, a2::Any, p1::Any, p2::Any)
     norm = norm_pool(a1, a2)
     punishment = punishment_pool(p1, p2)
     return punishment * (action - norm)^2
 end
 
-@inline function internal_punishment(action::Any, a1::Float64, a2::Float64, T::Float64)
+@inline function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
     norm = norm_pool(a1, a2)
     return T * (action - norm)^2
 end
 
-@inline function payoff(action1::Any, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, v::Float64)
+@inline function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, v::Any)
     return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-@inline function objective(action1::Any, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, T::Float64, v::Float64)
+@inline function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
     return payoff(action1, action2, a1, a2, p1, p2, v) - internal_punishment(action1, a1, a2, T)
 end
 
-@inline function objective_derivative(action1::Any, action2::Float64, a1::Float64, a2::Float64, p1::Float64, p2::Float64, T::Float64, v::Float64)
+@inline function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
     return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
 end
 
@@ -161,6 +156,11 @@ function total_payoff!(ind1::individual, ind2::individual, v::Float64)
     return nothing
 end
 
+
+##################
+# Behavioral Equilibrium function
+##################
+
 function behav_ODESystem_static(u, p, t)
     dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[4], p[5], p[7])
     dy = objective_derivative(u[2], u[1], p[2], p[1], p[4], p[3], p[6], p[7])
@@ -169,17 +169,69 @@ function behav_ODESystem_static(u, p, t)
 end
 
 function behav_eq!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
+    # Collect variables, timespan, and parameters
     u0 = SA[ind1.action; ind2.action]
     tspan = (0, tmax)
     p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
-
+    
+    # Define and solve the problem
     prob = ODEProblem(behav_ODESystem_static, u0, tspan, p)
     sol = solve(prob, Tsit5(), save_everystep = false)
 
+    # Update action values
     ind1.action, ind2.action = sol[end]
 
     return nothing
 end
+
+# Define the model
+@mtkmodel BEHAV_ODE begin
+    @parameters begin
+        a1
+        a2
+        p1
+        p2
+        T1
+        T2
+        v
+    end
+    @variables begin
+        action1(t)
+        action2(t)
+    end
+    @equations begin
+        D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
+        D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)
+    end
+end
+
+# Build the model
+@mtkbuild behav_ODE = BEHAV_ODE()
+
+function behav_eq_MTK!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
+    # Collect fields
+    u0 = [behav_ODE.action1 => ind1.action, behav_ODE.action2 => ind2.action]
+    tspan = (0, tmax)
+    p = [behav_ODE.a1 => ind1.a, behav_ODE.a2 => ind2.a, behav_ODE.p1 => ind1.p, behav_ODE.p2 => ind2.p, behav_ODE.T1 => ind1.T, behav_ODE.T2 => ind2.T, behav_ODE.v => v]
+
+    # Define and solve the problem
+    prob = ODEProblem(behav_ODE, u0, tspan, p)
+    sol = solve(prob, Tsit5(), save_everystep = false)
+
+    # Update action values
+    ind1.action, ind2.action = sol[end]
+
+    return nothing
+end
+
+
+##################
+# Social Interactions function
+##################
+
+    # Pair individuals with the possibiliy of pairing more than once
+    # Everyone has the same chance of picking a partner / getting picked
+    # At the end of the day everyone is picked roughly an equal number of times
 
 function social_interactions!(pop::population)
     individuals_key = collect(keys(copy(pop.individuals)))
