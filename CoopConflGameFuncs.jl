@@ -62,11 +62,11 @@ function output!(outputs::DataFrame, t::Int64, pop::population)
     N = pop.parameters.N
     generation_col = fill(t, N)
     individual_col = 1:N
-    action_col = Vector{typeof(pop.individuals[1].action)}(undef, N)
-    a_col = Vector{typeof(pop.individuals[1].a)}(undef, N)
-    p_col = Vector{typeof(pop.individuals[1].p)}(undef, N)
-    T_col = Vector{typeof(pop.individuals[1].T)}(undef, N)
-    payoff_col = Vector{typeof(pop.individuals[1].payoff)}(undef, N)
+    action_col = Vector{Float64}(undef, N)
+    a_col = Vector{Float64}(undef, N)
+    p_col = Vector{Float64}(undef, N)
+    T_col = Vector{Float64}(undef, N)
+    payoff_col = Vector{Float64}(undef, N)
 
     # Collect the data for each individual
     for i in 1:N
@@ -263,7 +263,7 @@ function reproduce!(pop::population)
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
-    sampled_keys = wsample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
+    sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
     # Temporarily store old individuals
     copy!(pop.old_individuals, pop.individuals)
