@@ -12,7 +12,7 @@ include("CoopConflGameFuncs.jl")
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.7, 0.5, 0.5, 0.0, 100000, 15, 50, 0.0, 0.05, 0.0, 0.05, 10)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100000, 15, 10, 0.0, 0.2, 0.0, 0.004, 1)
 
 my_population = population_construction(my_parameter)
 
@@ -35,6 +35,7 @@ plot(my_simulation_mean.generation,
     [my_simulation_mean.action_mean, my_simulation_mean.a_mean, my_simulation_mean.p_mean, my_simulation_mean.T_mean, my_simulation_mean.payoff_mean],
     title=string(my_parameter),
     titlefontsize=8,
+    xlabel="Generation", ylabel="Traits",
     label=["action" "a" "p" "T" "payoff"])
 
 # Plotting each individual's data

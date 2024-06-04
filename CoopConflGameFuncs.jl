@@ -1,4 +1,4 @@
-using Random, Distributions, StatsBase, DataFrames, DifferentialEquations, ForwardDiff, ModelingToolkit, StaticArrays
+using Random, Distributions, StatsBase, DataFrames, DifferentialEquations, ForwardDiff, StaticArrays, ModelingToolkit
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 ####################################
@@ -18,9 +18,11 @@ include("CoopConflGameStructs.jl")
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
     old_individuals_dict = Dict{Int64, individual}()
-    use_distribution = parameters.trait_var != 0
 
-    # Collect initial parameters
+    trait_var = parameters.trait_var
+    use_distribution = trait_var != 0
+
+    # Collect initial traits
     action0 = parameters.action0
     a0 = parameters.a0
     p0 = parameters.p0
@@ -28,19 +30,19 @@ function population_construction(parameters::simulation_parameters)
 
     # Construct a distribution if necessary
     if use_distribution
-        dist_values = Dict{Symbol, Any}()
-        for name in fieldnames(simulation_parameters)[1:4]  # represents game params
-            dist_values[name] = truncated(Normal(getfield(parameters, name), parameters.trait_var), 0, 1)
-        end
+        action0_dist = truncated(Normal(action0, trait_var), lower=0)
+        a0_dist = truncated(Normal(a0, trait_var), lower=0)
+        p0_dist = truncated(Normal(p0, trait_var), lower=0)
+        T0_dist = truncated(Normal(T0, trait_var), lower=0)
     end
 
     # Create individuals
     for i in 1:parameters.N
         if use_distribution
-            action0 = rand(dist_values[:action0])
-            a0 = rand(dist_values[:a0])
-            p0 = rand(dist_values[:p0])
-            T0 = rand(dist_values[:T0])
+            action0 = rand(action0_dist)
+            a0 = rand(a0_dist)
+            p0 = rand(p0_dist)
+            T0 = rand(T0_dist)
         end
         indiv = individual(action0, a0, p0, T0, 0.0, 0)
         individuals_dict[i] = indiv
@@ -144,11 +146,11 @@ end
 end
 
 function total_payoff!(ind1::individual, ind2::individual, v::Float64)
-    payoff1 = payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v)
-    payoff2 = payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v)
+    payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
+    payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
 
-    ind1.payoff = max((payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1), 0)
-    ind2.payoff = max((payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1), 0)
+    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
+    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
 
     ind1.interactions += 1
     ind2.interactions += 1
@@ -251,7 +253,6 @@ function social_interactions!(pop::population)
     for i in 1:2:N-1
         ind1 = pop.individuals[individuals_shuffle[i]]
         ind2 = pop.individuals[individuals_shuffle[i+1]]
-
         behav_eq!(ind1, ind2, tmax, v)
         total_payoff!(ind1, ind2, v)
     end
@@ -267,23 +268,10 @@ end
     # offspring inherit the payoff or traits of the parents
     # number of individuals in population remains the same
 
-function sanitize_payoffs!(payoffs::Vector{Float64})
-    for i in eachindex(payoffs)
-        if isnan(payoffs[i]) || payoffs[i] < 0
-            payoffs[i] = 0
-        elseif isinf(payoffs[i])
-            payoffs[i] = maximum(payoffs[!isinf.(payoffs)])  # Replace Inf with the max finite value in payoffs
-        end
-    end
-end
-
 function reproduce!(pop::population)
     individuals = values(pop.individuals)
     payoffs = map(individual -> individual.payoff, individuals)
     keys_list = collect(keys(pop.individuals))
-
-    # Sanitize payoffs to ensure no NaN or Inf values
-    sanitize_payoffs!(payoffs)
 
     # Sample with the given weights
     sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
@@ -321,19 +309,17 @@ function mutate!(pop::population)
         ind = pop.individuals[key]
 
         if rand() <= u
-            a_dist = truncated(Normal(0, mut_var), -ind.a, Inf)
-            ind.a += rand(a_dist)
+            ind.a = rand(truncated(Normal(ind.a, mut_var), lower=0))
+        end
+#=
+        if rand() <= u
+            ind.p = rand(truncated(Normal(ind.p, mut_var), lower=0))
         end
 
         if rand() <= u
-            p_dist = truncated(Normal(0, mut_var), -ind.p, Inf)
-            ind.p += rand(p_dist)
+            ind.T = rand(truncated(Normal(ind.p, mut_var), lower=0))
         end
-
-        if rand() <= u
-            T_dist = truncated(Normal(0, mut_var), -ind.T, Inf)
-            ind.T += rand(T_dist)
-        end
+=#
     end
 
     return nothing
