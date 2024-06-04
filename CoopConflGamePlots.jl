@@ -21,6 +21,9 @@ my_population = population_construction(my_parameter)
 # Simulation
 ##################
 
+# Update parameters
+my_population.parameters = my_parameter
+
 my_simulation = simulation(my_population)
 
 

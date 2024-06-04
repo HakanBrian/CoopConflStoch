@@ -311,7 +311,7 @@ function mutate!(pop::population)
         if rand() <= u
             ind.a = rand(truncated(Normal(ind.a, mut_var), lower=0))
         end
-#=
+
         if rand() <= u
             ind.p = rand(truncated(Normal(ind.p, mut_var), lower=0))
         end
@@ -319,7 +319,6 @@ function mutate!(pop::population)
         if rand() <= u
             ind.T = rand(truncated(Normal(ind.p, mut_var), lower=0))
         end
-=#
     end
 
     return nothing
