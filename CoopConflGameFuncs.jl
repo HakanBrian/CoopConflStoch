@@ -12,8 +12,8 @@ include("CoopConflGameStructs.jl")
 # Population Simulation Funcs #
 ###############################
 
-    # create a blank starting population
-    # format output
+    # Create an initial population
+    # Format output
 
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
@@ -99,12 +99,12 @@ end
 ##################
 
     # Calculate payoff, and keep a running average of payoff for each individual
-    # after each session of interaction the running average becomes the individual's payoff
+    # After each session of interaction the running average becomes the individual's payoff
 
 @inline function benefit(action1::Any, action2::Any, v::Any)
-    sqrt_action1 = √action1
-    sqrt_action2 = √action2
-    sqrt_sum = √(action1 + action2)
+    sqrt_action1 = √max(action1, 0)
+    sqrt_action2 = √max(action2, 0)
+    sqrt_sum = √max((action1 + action2), 0)
     return (1 - v) * (sqrt_action1 + sqrt_action2) + v * sqrt_sum
 end
 
@@ -147,8 +147,8 @@ function total_payoff!(ind1::individual, ind2::individual, v::Float64)
     payoff1 = payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v)
     payoff2 = payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v)
 
-    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
-    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
+    ind1.payoff = max((payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1), 0)
+    ind2.payoff = max((payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1), 0)
 
     ind1.interactions += 1
     ind2.interactions += 1
@@ -173,7 +173,7 @@ function behav_eq!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
     u0 = SA[ind1.action; ind2.action]
     tspan = (0, tmax)
     p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
-    
+
     # Define and solve the problem
     prob = ODEProblem(behav_ODESystem_static, u0, tspan, p)
     sol = solve(prob, Tsit5(), save_everystep = false)
@@ -234,16 +234,26 @@ end
     # At the end of the day everyone is picked roughly an equal number of times
 
 function social_interactions!(pop::population)
-    individuals_key = collect(keys(copy(pop.individuals)))
+    individuals_key = collect(keys(pop.individuals))
     individuals_shuffle = shuffle(individuals_key)
 
-    if pop.parameters.N % 2 != 0
-        push!(individuals_shuffle, individuals_key[rand(1:pop.parameters.N)])
+    # Local variables for frequently accessed property
+    N = pop.parameters.N
+    tmax = pop.parameters.tmax
+    v = pop.parameters.v
+
+    # If the number of individuals is odd, append a random individual to the shuffled list
+    if N % 2 != 0
+        push!(individuals_shuffle, individuals_key[rand(1:N)])
     end
 
-    for i in 1:2:length(individuals_shuffle)-1
-        behav_eq!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters.tmax, pop.parameters.v)
-        total_payoff!(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]], pop.parameters.v)
+    # Iterate over the pairs of individuals
+    for i in 1:2:N-1
+        ind1 = pop.individuals[individuals_shuffle[i]]
+        ind2 = pop.individuals[individuals_shuffle[i+1]]
+
+        behav_eq!(ind1, ind2, tmax, v)
+        total_payoff!(ind1, ind2, v)
     end
 
     return nothing
@@ -257,10 +267,23 @@ end
     # offspring inherit the payoff or traits of the parents
     # number of individuals in population remains the same
 
+function sanitize_payoffs!(payoffs::Vector{Float64})
+    for i in eachindex(payoffs)
+        if isnan(payoffs[i]) || payoffs[i] < 0
+            payoffs[i] = 0
+        elseif isinf(payoffs[i])
+            payoffs[i] = maximum(payoffs[!isinf.(payoffs)])  # Replace Inf with the max finite value in payoffs
+        end
+    end
+end
+
 function reproduce!(pop::population)
     individuals = values(pop.individuals)
     payoffs = map(individual -> individual.payoff, individuals)
     keys_list = collect(keys(pop.individuals))
+
+    # Sanitize payoffs to ensure no NaN or Inf values
+    sanitize_payoffs!(payoffs)
 
     # Sample with the given weights
     sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
@@ -288,10 +311,12 @@ function mutate!(pop::population)
     u = pop.parameters.u
     mut_var = pop.parameters.mut_var
 
+    # Only mutate if necessary
     if mut_var == 0
         return nothing
     end
 
+    # Indpendent draw for each of the traits to mutate
     for key in keys(pop.individuals)
         ind = pop.individuals[key]
 
