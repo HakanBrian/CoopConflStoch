@@ -28,7 +28,7 @@ function population_construction(parameters::simulation_parameters)
     p0 = parameters.p0
     T0 = parameters.T0
 
-    # Construct a distribution if necessary
+    # Construct distributions
     if use_distribution
         action0_dist = truncated(Normal(action0, trait_var), lower=0)
         a0_dist = truncated(Normal(a0, trait_var), lower=0)
@@ -103,45 +103,45 @@ end
     # Calculate payoff, and keep a running average of payoff for each individual
     # After each session of interaction the running average becomes the individual's payoff
 
-@inline function benefit(action1::Any, action2::Any, v::Any)
+function benefit(action1::Any, action2::Any, v::Any)
     sqrt_action1 = √max(action1, 0)
     sqrt_action2 = √max(action2, 0)
     sqrt_sum = √max((action1 + action2), 0)
     return (1 - v) * (sqrt_action1 + sqrt_action2) + v * sqrt_sum
 end
 
-@inline function cost(action::Any)
+function cost(action::Any)
     return action^2
 end
 
-@inline function norm_pool(a1::Any, a2::Any)
+function norm_pool(a1::Any, a2::Any)
     return 0.5 * (a1 + a2)
 end
 
-@inline function punishment_pool(p1::Any, p2::Any)
+function punishment_pool(p1::Any, p2::Any)
     return 0.5 * (p1 + p2)
 end
 
-@inline function external_punishment(action::Any, a1::Any, a2::Any, p1::Any, p2::Any)
+function external_punishment(action::Any, a1::Any, a2::Any, p1::Any, p2::Any)
     norm = norm_pool(a1, a2)
     punishment = punishment_pool(p1, p2)
     return punishment * (action - norm)^2
 end
 
-@inline function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
+function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
     norm = norm_pool(a1, a2)
     return T * (action - norm)^2
 end
 
-@inline function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, v::Any)
+function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, v::Any)
     return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-@inline function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
     return payoff(action1, action2, a1, a2, p1, p2, v) - internal_punishment(action1, a1, a2, T)
 end
 
-@inline function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
     return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
 end
 
