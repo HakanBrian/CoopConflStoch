@@ -145,7 +145,7 @@ println(copied_population.parameters.N == 4)  # Should print true
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.6, 0.5, 0.45, 0.0, 50, 20, 10, 0.0, 0.05, 0.05, 0.05, 1)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 500, 5, 50, 0.0, 0.2, 0.0, 0.004, 10)
 my_population = population_construction(my_parameter)
 
 
@@ -156,7 +156,9 @@ my_population = population_construction(my_parameter)
 # Define starting parameters
 individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
-pair = [SVector(individual1, individual2)]
+individual3 = individual(0.4, 0.2, 0.5, 0.7, 0, 0)
+individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0)
+pair = [SVector(individual1, individual2), SVector(individual3, individual4)]
 
 # Calculate behave eq
 behav_eq!(pair, my_parameter.tmax, my_parameter.v)
@@ -165,6 +167,8 @@ behav_eq_MTK!(pair, my_parameter.tmax, my_parameter.v)
 # Compare values with mathematica code
 individual1  # should be around 0.41303
 individual2  # individual 1 and 2 should have nearly identical values
+individual3  # should be around 0.32913
+individual4  # individual 3 and 4 should have nearly identical values
 
 
 ##################
@@ -179,7 +183,7 @@ social_interactions!(my_population)
 ##################
 
 # Create sample population
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 20, 1000, 0.0, 0.0, 0.0, 0.0, 1)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.0, 0.0, 0.0, 1)
 individuals_dict = Dict{Int64, individual}()
 old_individuals_dict = Dict{Int64, individual}()
 my_population = population(my_parameter, individuals_dict, old_individuals_dict)
@@ -222,6 +226,6 @@ mutate!(my_population)
 ##################
 
 # compilation
-@profview simulation(my_population);
+simulation(my_population);
 # pure runtime
 @profview simulation(my_population);

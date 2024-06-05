@@ -12,7 +12,7 @@ include("CoopConflGameFuncs.jl")
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100000, 15, 10, 0.0, 0.2, 0.0, 0.004, 1)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100000, 5, 10, 0.0, 0.2, 0.0, 0.004, 1)
 
 my_population = population_construction(my_parameter)
 

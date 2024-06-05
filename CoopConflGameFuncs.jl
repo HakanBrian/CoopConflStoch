@@ -1,4 +1,4 @@
-using Random, Distributions, StatsBase, DataFrames, DifferentialEquations, ForwardDiff, StaticArrays, ModelingToolkit
+using StatsBase, Random, Distributions, DataFrames, StaticArrays, DifferentialEquations, ModelingToolkit, ForwardDiff
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 ####################################
@@ -172,24 +172,32 @@ function behav_ODE_static(u, p, t)
     return SA[dx, dy]
 end
 
-function prob_func(prob, i, repeat)
-    remake(prob, u0 = u0s[i], p0 = p0s[i])
-end
-
 function behav_eq!(pairs::Vector{SVector{2, individual}}, tmax::Int64, v::Float64)
+    tspan = (0, tmax)
+    u0s = Vector{SArray{Tuple{2}, Float64}}()
+    ps = Vector{SArray{Tuple{7}, Float64}}()
+
     for (ind1, ind2) in pairs
-        # Collect variables, timespan, and parameters
-        u0 = SA[ind1.action; ind2.action]
-        tspan = (0, tmax)
-        p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
+        push!(u0s, SA[ind1.action; ind2.action])
+        push!(ps, SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v])
+    end
 
-        # Define and solve the problem
-        prob = ODEProblem(behav_ODE_static, u0, tspan, p)
-        sol = solve(prob, Tsit5(), save_everystep = false)
+    # Initialize a problem with the first set of parameters as a template
+    prob = ODEProblem(behav_ODE_static, u0s[1], tspan, ps[1])
 
-        # Update action values
-        ind1.action = sol[end][1]
-        ind2.action = sol[end][2]
+    # Function to remake the problem for each pair
+    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
+
+    # Create an ensemble problem
+    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
+
+    # Solve the ensemble problem
+    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = length(pairs), save_everystep = false)
+
+    # Update action values
+    for ((ind1, ind2), i) in zip(pairs, eachindex(sim))
+        ind1.action = sim[i][end][1]
+        ind2.action = sim[i][end][2]
     end
 
     nothing
@@ -218,19 +226,43 @@ end
 @mtkbuild behav_ODE = BEHAV_ODE()
 
 function behav_eq_MTK!(pairs::Vector{SVector{2, individual}}, tmax::Int64, v::Float64)
+    tspan = (0, tmax)
+    u0s = Vector{Dict{Any, Float64}}()
+    ps = Vector{Dict{Any, Float64}}()
+
     for (ind1, ind2) in pairs
-        # Collect fields
-        u0 = [behav_ODE.action1 => ind1.action, behav_ODE.action2 => ind2.action]
-        tspan = (0, tmax)
-        p = [behav_ODE.a1 => ind1.a, behav_ODE.a2 => ind2.a, behav_ODE.p1 => ind1.p, behav_ODE.p2 => ind2.p, behav_ODE.T1 => ind1.T, behav_ODE.T2 => ind2.T, behav_ODE.v => v]
+        push!(u0s, Dict(
+            behav_ODE.action1 => ind1.action,
+            behav_ODE.action2 => ind2.action
+        ))
 
-        # Define and solve the problem
-        prob = ODEProblem(behav_ODE, u0, tspan, p)
-        sol = solve(prob, Tsit5(), save_everystep = false)
+        push!(ps, Dict(
+            behav_ODE.a1 => ind1.a,
+            behav_ODE.a2 => ind2.a,
+            behav_ODE.p1 => ind1.p,
+            behav_ODE.p2 => ind2.p,
+            behav_ODE.T1 => ind1.T,
+            behav_ODE.T2 => ind2.T,
+            behav_ODE.v => v
+        ))
+    end
 
-        # Update action values
-        ind1.action = sol[end][1]
-        ind2.action = sol[end][2]
+    # Initialize a problem with the first set of parameters as a template
+    prob = ODEProblem(behav_ODE, u0s[1], tspan, ps[1])
+
+    # Function to remake the problem for each pair
+    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
+
+    # Create an ensemble problem
+    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
+
+    # Solve the ensemble problem
+    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = length(pairs), save_everystep = false)
+
+    # Update action values
+    for ((ind1, ind2), i) in zip(pairs, eachindex(sim))
+        ind1.action = sim[i][end][1]
+        ind2.action = sim[i][end][2]
     end
 
     nothing
@@ -375,7 +407,7 @@ function simulation(pop::population)
 
         # per-timestep counters, outputs going to disk
         if t % pop.parameters.output_save_tick == 0
-            output!(outputs, t, copy(pop))
+            output!(outputs, t, pop)
         end
     end
 
