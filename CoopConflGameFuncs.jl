@@ -92,7 +92,7 @@ function output!(outputs::DataFrame, t::Int64, pop::population)
     outputs.T[output_rows] = T_col
     outputs.payoff[output_rows] = payoff_col
 
-    return nothing
+    nothing
 end
 
 
@@ -145,17 +145,19 @@ function objective_derivative(action1::Real, action2::Real, a1::Real, a2::Real, 
     return ForwardDiff.derivative(x -> objective(x, action2, a1, a2, p1, p2, T, v), action1)
 end
 
-function total_payoff!(ind1::individual, ind2::individual, v::Float64)
-    payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
-    payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
+function total_payoff!(pairs::Vector{SVector{2, individual}}, v::Float64)
+    for (ind1, ind2) in pairs
+        payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
+        payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
 
-    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
-    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
+        ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
+        ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
 
-    ind1.interactions += 1
-    ind2.interactions += 1
+        ind1.interactions += 1
+        ind2.interactions += 1
+    end
 
-    return nothing
+    nothing
 end
 
 
@@ -170,20 +172,27 @@ function behav_ODE_static(u, p, t)
     return SA[dx, dy]
 end
 
-function behav_eq!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
-    # Collect variables, timespan, and parameters
-    u0 = SA[ind1.action; ind2.action]
-    tspan = (0, tmax)
-    p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
+function prob_func(prob, i, repeat)
+    remake(prob, u0 = u0s[i], p0 = p0s[i])
+end
 
-    # Define and solve the problem
-    prob = ODEProblem(behav_ODE_static, u0, tspan, p)
-    sol = solve(prob, Tsit5(), save_everystep = false)
+function behav_eq!(pairs::Vector{SVector{2, individual}}, tmax::Int64, v::Float64)
+    for (ind1, ind2) in pairs
+        # Collect variables, timespan, and parameters
+        u0 = SA[ind1.action; ind2.action]
+        tspan = (0, tmax)
+        p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
 
-    # Update action values
-    ind1.action, ind2.action = sol[end]
+        # Define and solve the problem
+        prob = ODEProblem(behav_ODE_static, u0, tspan, p)
+        sol = solve(prob, Tsit5(), save_everystep = false)
 
-    return nothing
+        # Update action values
+        ind1.action = sol[end][1]
+        ind2.action = sol[end][2]
+    end
+
+    nothing
 end
 
 @mtkmodel BEHAV_ODE begin
@@ -208,20 +217,23 @@ end
 
 @mtkbuild behav_ODE = BEHAV_ODE()
 
-function behav_eq_MTK!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
-    # Collect fields
-    u0 = [behav_ODE.action1 => ind1.action, behav_ODE.action2 => ind2.action]
-    tspan = (0, tmax)
-    p = [behav_ODE.a1 => ind1.a, behav_ODE.a2 => ind2.a, behav_ODE.p1 => ind1.p, behav_ODE.p2 => ind2.p, behav_ODE.T1 => ind1.T, behav_ODE.T2 => ind2.T, behav_ODE.v => v]
+function behav_eq_MTK!(pairs::Vector{SVector{2, individual}}, tmax::Int64, v::Float64)
+    for (ind1, ind2) in pairs
+        # Collect fields
+        u0 = [behav_ODE.action1 => ind1.action, behav_ODE.action2 => ind2.action]
+        tspan = (0, tmax)
+        p = [behav_ODE.a1 => ind1.a, behav_ODE.a2 => ind2.a, behav_ODE.p1 => ind1.p, behav_ODE.p2 => ind2.p, behav_ODE.T1 => ind1.T, behav_ODE.T2 => ind2.T, behav_ODE.v => v]
 
-    # Define and solve the problem
-    prob = ODEProblem(behav_ODE, u0, tspan, p)
-    sol = solve(prob, Tsit5(), save_everystep = false)
+        # Define and solve the problem
+        prob = ODEProblem(behav_ODE, u0, tspan, p)
+        sol = solve(prob, Tsit5(), save_everystep = false)
 
-    # Update action values
-    ind1.action, ind2.action = sol[end]
+        # Update action values
+        ind1.action = sol[end][1]
+        ind2.action = sol[end][2]
+    end
 
-    return nothing
+    nothing
 end
 
 
@@ -247,15 +259,17 @@ function social_interactions!(pop::population)
         push!(individuals_shuffle, individuals_key[rand(1:N)])
     end
 
-    # Iterate over the pairs of individuals
+    # Create the pairs of individuals
+    pairs = Vector{SVector{2, individual}}()
     for i in 1:2:N-1
-        ind1 = pop.individuals[individuals_shuffle[i]]
-        ind2 = pop.individuals[individuals_shuffle[i+1]]
-        behav_eq!(ind1, ind2, tmax, v)
-        total_payoff!(ind1, ind2, v)
+        pair = SVector(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
+        push!(pairs, pair)
     end
 
-    return nothing
+    behav_eq!(pairs, tmax, v)
+    total_payoff!(pairs, v)
+
+    nothing
 end
 
 
@@ -281,7 +295,7 @@ function reproduce!(pop::population)
         pop.individuals[key] = pop.old_individuals[sampled_key]
     end
 
-    return nothing
+    nothing
 end
 
 
@@ -318,7 +332,7 @@ function mutate!(pop::population)
         end
     end
 
-    return nothing
+    nothing
 end
 
 

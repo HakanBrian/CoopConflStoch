@@ -51,7 +51,7 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     setfield!(old_params, :mut_var, getfield(new_params, :mut_var))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
-    return nothing
+    nothing
 end
 
 
@@ -87,7 +87,7 @@ function Base.copy!(old_ind::individual, new_ind::individual)
     setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
     setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
 
-    return nothing
+    nothing
 end
 
 function Base.copy(inds::Dict{Int64, individual})
@@ -100,7 +100,7 @@ function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, ind
         copy!(old_ind, new_ind)
     end
 
-    return nothing
+    nothing
 end
 
 
@@ -127,5 +127,5 @@ function Base.copy!(old_population::population, new_population::population)
     copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
     copy!(getfield(old_population, :old_individuals), getfield(new_population, :old_individuals))
 
-    return nothing
+    nothing
 end
