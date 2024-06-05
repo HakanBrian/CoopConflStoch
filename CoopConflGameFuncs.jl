@@ -28,7 +28,7 @@ function population_construction(parameters::simulation_parameters)
     p0 = parameters.p0
     T0 = parameters.T0
 
-    # Construct distributions
+    # Construct distributions if necessary
     if use_distribution
         action0_dist = truncated(Normal(action0, trait_var), lower=0)
         a0_dist = truncated(Normal(a0, trait_var), lower=0)
@@ -103,46 +103,46 @@ end
     # Calculate payoff, and keep a running average of payoff for each individual
     # After each session of interaction the running average becomes the individual's payoff
 
-function benefit(action1::Any, action2::Any, v::Any)
+function benefit(action1::Real, action2::Real, v::Real)
     sqrt_action1 = √max(action1, 0)
     sqrt_action2 = √max(action2, 0)
     sqrt_sum = √max((action1 + action2), 0)
     return (1 - v) * (sqrt_action1 + sqrt_action2) + v * sqrt_sum
 end
 
-function cost(action::Any)
+function cost(action::Real)
     return action^2
 end
 
-function norm_pool(a1::Any, a2::Any)
+function norm_pool(a1::Real, a2::Real)
     return 0.5 * (a1 + a2)
 end
 
-function punishment_pool(p1::Any, p2::Any)
+function punishment_pool(p1::Real, p2::Real)
     return 0.5 * (p1 + p2)
 end
 
-function external_punishment(action::Any, a1::Any, a2::Any, p1::Any, p2::Any)
+function external_punishment(action::Real, a1::Real, a2::Real, p1::Real, p2::Real)
     norm = norm_pool(a1, a2)
     punishment = punishment_pool(p1, p2)
     return punishment * (action - norm)^2
 end
 
-function internal_punishment(action::Any, a1::Any, a2::Any, T::Any)
+function internal_punishment(action::Real, a1::Real, a2::Real, T::Real)
     norm = norm_pool(a1, a2)
     return T * (action - norm)^2
 end
 
-function payoff(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, v::Any)
+function payoff(action1::Real, action2::Real, a1::Real, a2::Real, p1::Real, p2::Real, v::Real)
     return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
 end
 
-function objective(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
+function objective(action1::Real, action2::Real, a1::Real, a2::Real, p1::Real, p2::Real, T::Real, v::Real)
     return payoff(action1, action2, a1, a2, p1, p2, v) - internal_punishment(action1, a1, a2, T)
 end
 
-function objective_derivative(action1::Any, action2::Any, a1::Any, a2::Any, p1::Any, p2::Any, T::Any, v::Any)
-    return ForwardDiff.derivative(action1 -> objective(action1, action2, a1, a2, p1, p2, T, v), action1)
+function objective_derivative(action1::Real, action2::Real, a1::Real, a2::Real, p1::Real, p2::Real, T::Real, v::Real)
+    return ForwardDiff.derivative(x -> objective(x, action2, a1, a2, p1, p2, T, v), action1)
 end
 
 function total_payoff!(ind1::individual, ind2::individual, v::Float64)
@@ -163,7 +163,7 @@ end
 # Behavioral Equilibrium function
 ##################
 
-function behav_ODESystem_static(u, p, t)
+function behav_ODE_static(u, p, t)
     dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[4], p[5], p[7])
     dy = objective_derivative(u[2], u[1], p[2], p[1], p[4], p[3], p[6], p[7])
 
@@ -177,7 +177,7 @@ function behav_eq!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
     p = SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v]
 
     # Define and solve the problem
-    prob = ODEProblem(behav_ODESystem_static, u0, tspan, p)
+    prob = ODEProblem(behav_ODE_static, u0, tspan, p)
     sol = solve(prob, Tsit5(), save_everystep = false)
 
     # Update action values
@@ -186,20 +186,19 @@ function behav_eq!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
     return nothing
 end
 
-# Define the model
 @mtkmodel BEHAV_ODE begin
     @parameters begin
-        a1
-        a2
-        p1
-        p2
-        T1
-        T2
-        v
+        a1::Float64
+        a2::Float64
+        p1::Float64
+        p2::Float64
+        T1::Float64
+        T2::Float64
+        v::Float64
     end
     @variables begin
-        action1(t)
-        action2(t)
+        action1(t)::Float64
+        action2(t)::Float64
     end
     @equations begin
         D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
@@ -207,7 +206,6 @@ end
     end
 end
 
-# Build the model
 @mtkbuild behav_ODE = BEHAV_ODE()
 
 function behav_eq_MTK!(ind1::individual, ind2::individual, tmax::Int64, v::Float64)
@@ -269,8 +267,7 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    individuals = values(pop.individuals)
-    payoffs = map(individual -> individual.payoff, individuals)
+    payoffs = map(individual -> individual.payoff, values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
