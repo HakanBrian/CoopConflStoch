@@ -145,8 +145,8 @@ println(copied_population.parameters.N == 4)  # Should print true
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 500, 5, 50, 0.0, 0.2, 0.0, 0.004, 10)
-my_population = population_construction(my_parameter)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.2, 0.0, 0.004, 10);
+my_population = population_construction(my_parameter);
 
 
 ##################
@@ -154,11 +154,11 @@ my_population = population_construction(my_parameter)
 ##################
 
 # Define starting parameters
-individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
-individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
-individual3 = individual(0.4, 0.2, 0.5, 0.7, 0, 0)
-individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0)
-pair = [(individual1, individual2), (individual3, individual4)]
+individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0);
+individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0);
+individual3 = individual(0.4, 0.2, 0.5, 0.7, 0, 0);
+individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0);
+pair = [(individual1, individual2), (individual3, individual4)];
 
 # Calculate behave eq
 behav_eq!(pair, my_parameter.tmax, my_parameter.v)

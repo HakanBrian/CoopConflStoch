@@ -1,4 +1,4 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays, DifferentialEquations, ModelingToolkit, ForwardDiff
+using StatsBase, Random, Distributions, DataFrames, StaticArrays, DiffEqGPU, OrdinaryDiffEq, CUDA, ModelingToolkit, ForwardDiff
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 ####################################
@@ -172,18 +172,19 @@ function behav_ODE_static(u, p, t)
     return SA[dx, dy]
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Int64, v::Float64)
-    tspan = (0, tmax)
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, v::Float64)
+    trajectories = length(pairs)
+    tspan = (0.0f0, tmax)
     u0s = Vector{SArray{Tuple{2}, Float64}}()
     ps = Vector{SArray{Tuple{7}, Float64}}()
 
     for (ind1, ind2) in pairs
-        push!(u0s, SA[ind1.action; ind2.action])
-        push!(ps, SA[ind1.a; ind2.a; ind1.p; ind2.p; ind1.T; ind2.T; v])
+        push!(u0s, SA[ind1.action, ind2.action])
+        push!(ps, SA[ind1.a, ind2.a, ind1.p, ind2.p, ind1.T, ind2.T, v])
     end
 
     # Initialize a problem with the first set of parameters as a template
-    prob = ODEProblem(behav_ODE_static, u0s[1], tspan, ps[1])
+    prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
 
     # Function to remake the problem for each pair
     prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
@@ -192,7 +193,7 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Int64, v:
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = length(pairs), save_everystep = false)
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_everystep = false)
 
     # Update action values
     for ((ind1, ind2), i) in zip(pairs, eachindex(sim))
@@ -225,7 +226,8 @@ end
 
 @mtkbuild behav_ODE = BEHAV_ODE()
 
-function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Int64, v::Float64)
+function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, v::Float64)
+    trajectories = length(pairs)
     tspan = (0, tmax)
     u0s = Vector{Dict{Any, Float64}}()
     ps = Vector{Dict{Any, Float64}}()
@@ -257,7 +259,7 @@ function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Int64
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = length(pairs), save_everystep = false)
+    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = trajectories, save_everystep = false)
 
     # Update action values
     for ((ind1, ind2), i) in zip(pairs, eachindex(sim))
