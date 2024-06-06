@@ -145,7 +145,7 @@ println(copied_population.parameters.N == 4)  # Should print true
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.2, 0.0, 0.004, 10);
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 100000, 0.0, 0.1, 0.0, 0.004, 10);
 my_population = population_construction(my_parameter);
 
 
@@ -161,7 +161,7 @@ individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0);
 pair = [(individual1, individual2), (individual3, individual4)];
 
 # Calculate behave eq
-behav_eq!(pair, my_parameter.tmax, my_parameter.v)
+@time behav_eq!(pair, my_parameter.tmax, my_parameter.v)
 behav_eq_MTK!(pair, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
@@ -175,7 +175,7 @@ individual4  # individual 3 and 4 should have nearly identical values
 # Social Interactions
 ##################
 
-social_interactions!(my_population)
+@btime social_interactions!(my_population)
 
 
 ##################
@@ -226,6 +226,6 @@ mutate!(my_population)
 ##################
 
 # compilation
-simulation(my_population);
+@btime simulation(my_population);
 # pure runtime
 @profview simulation(my_population);

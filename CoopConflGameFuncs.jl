@@ -178,10 +178,9 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, 
     u0s = Vector{SArray{Tuple{2}, Float64}}()
     ps = Vector{SArray{Tuple{7}, Float64}}()
 
-    for (ind1, ind2) in pairs
-        push!(u0s, SA[ind1.action, ind2.action])
-        push!(ps, SA[ind1.a, ind2.a, ind1.p, ind2.p, ind1.T, ind2.T, v])
-    end
+    # Extract initial conditions and parameters
+    u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
+    ps = [SA[ind1.a, ind2.a, ind1.p, ind2.p, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -196,10 +195,10 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, 
     sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_everystep = false)
 
     # Update action values
-    for ((ind1, ind2), i) in zip(pairs, eachindex(sim))
-        ind1.action = sim[i][end][1]
-        ind2.action = sim[i][end][2]
-    end
+    final_actions = [sol[end] for sol in sim]
+    for ((ind1, ind2), new_actions) in zip(pairs, final_actions)
+        ind1.action, ind2.action = new_actions
+    end    
 
     nothing
 end
@@ -296,8 +295,7 @@ function social_interactions!(pop::population)
     # Create the pairs of individuals
     pairs = Vector{Tuple{individual, individual}}()
     for i in 1:2:N-1
-        pair = (pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
-        push!(pairs, pair)
+        push!(pairs, (pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]))
     end
 
     behav_eq!(pairs, tmax, v)
