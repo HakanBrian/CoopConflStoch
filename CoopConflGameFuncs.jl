@@ -1,5 +1,5 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays, DiffEqGPU, DifferentialEquations, CUDA, ModelingToolkit, ForwardDiff
-using ModelingToolkit: t_nounits as t, D_nounits as D
+using StatsBase, Random, Distributions, DataFrames, StaticArrays, ForwardDiff, DiffEqGPU, DifferentialEquations, CUDA
+
 
 ####################################
 # Game Functions
@@ -204,67 +204,6 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Floa
     nothing
 end
 
-@mtkmodel BEHAV_ODE begin
-    @parameters begin
-        a::Float64
-        p::Float64
-        T1::Float64
-        T2::Float64
-        v::Float64
-    end
-    @variables begin
-        action1(t)::Float64
-        action2(t)::Float64
-    end
-    @equations begin
-        D(action1) ~ objective_derivative(action1, action2, a, p, T1, v)
-        D(action2) ~ objective_derivative(action2, action1, a, p, T2, v)
-    end
-end
-
-@mtkbuild behav_ODE = BEHAV_ODE()
-
-function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Real, punishment_pool::Real, tmax::Float64, v::Float64)
-    u0s = Vector{Dict{Any, Float64}}()
-    tspan = (0, tmax)
-    ps = Vector{Dict{Any, Float64}}()
-
-    for (ind1, ind2) in pairs
-        push!(u0s, Dict(
-            behav_ODE.action1 => ind1.action,
-            behav_ODE.action2 => ind2.action
-        ))
-
-        push!(ps, Dict(
-            behav_ODE.a => norm_pool,
-            behav_ODE.p => punishment_pool,
-            behav_ODE.T1 => ind1.T,
-            behav_ODE.T2 => ind2.T,
-            behav_ODE.v => v
-        ))
-    end
-
-    # Initialize a problem with the first set of parameters as a template
-    prob = ODEProblem(behav_ODE, u0s[1], tspan, ps[1])
-
-    # Function to remake the problem for each pair
-    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
-
-    # Create an ensemble problem
-    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
-
-    # Solve the ensemble problem
-    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = length(pairs), save_on = false)
-
-    # Update action values
-    final_actions = [sol[end] for sol in sim]
-    for ((ind1, ind2), new_actions) in zip(pairs, final_actions)
-        ind1.action, ind2.action = new_actions
-    end
-
-    nothing
-end
-
 
 ##################
 # Social Interactions function
@@ -325,7 +264,6 @@ function social_interactions!(pop::population)
 
     nothing
 end
-
 
 
 ##################
