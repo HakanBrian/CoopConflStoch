@@ -145,17 +145,15 @@ function objective_derivative(action1::Real, action2::Real, a1::Real, a2::Real, 
     return ForwardDiff.derivative(x -> objective(x, action2, a1, a2, p1, p2, T, v), action1)
 end
 
-function total_payoff!(pairs::Vector{Tuple{individual, individual}}, v::Float64)
-    for (ind1, ind2) in pairs
-        payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
-        payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
+function total_payoff!(ind1::individual, ind2::individual, v::Float64)
+    payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
+    payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
 
-        ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
-        ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
+    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
+    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
 
-        ind1.interactions += 1
-        ind2.interactions += 1
-    end
+    ind1.interactions += 1
+    ind2.interactions += 1
 
     nothing
 end
@@ -175,8 +173,6 @@ end
 function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, v::Float64)
     trajectories = length(pairs)
     tspan = (0.0f0, tmax)
-    u0s = Vector{SArray{Tuple{2}, Float64}}()
-    ps = Vector{SArray{Tuple{7}, Float64}}()
 
     # Extract initial conditions and parameters
     u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
@@ -192,15 +188,37 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, 
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_everystep = false)
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_on = false)
 
     # Update action values
     final_actions = [sol[end] for sol in sim]
-    for ((ind1, ind2), new_actions) in zip(pairs, final_actions)
-        ind1.action, ind2.action = new_actions
-    end    
+    for ((ind1, ind2), action) in zip(pairs, final_actions)
+        ind1.action, ind2.action = action
+    end
 
     nothing
+end
+
+function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{7}, Float64}}, tmax::Float64, v::Float64)
+    trajectories = length(u0s)
+    tspan = (0.0f0, tmax)
+
+    # Initialize a problem with the first set of parameters as a template
+    prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
+
+    # Function to remake the problem for each pair
+    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
+
+    # Create an ensemble problem
+    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
+
+    # Solve the ensemble problem
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_on = false)
+
+    # Extract final action values
+    final_actions = [sol[2] for sol in sim]
+
+    return final_actions
 end
 
 @mtkmodel BEHAV_ODE begin
@@ -258,12 +276,12 @@ function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Float
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = trajectories, save_everystep = false)
+    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = trajectories, save_on = false)
 
     # Update action values
-    for ((ind1, ind2), i) in zip(pairs, eachindex(sim))
-        ind1.action = sim[i][end][1]
-        ind2.action = sim[i][end][2]
+    final_actions = [sol[end] for sol in sim]
+    for ((ind1, ind2), new_actions) in zip(pairs, final_actions)
+        ind1.action, ind2.action = new_actions
     end
 
     nothing
@@ -282,24 +300,37 @@ function social_interactions!(pop::population)
     individuals_key = collect(keys(pop.individuals))
     individuals_shuffle = shuffle(individuals_key)
 
-    # Local variables for frequently accessed property
-    N = pop.parameters.N
-    tmax = pop.parameters.tmax
-    v = pop.parameters.v
-
     # If the number of individuals is odd, append a random individual to the shuffled list
-    if N % 2 != 0
-        push!(individuals_shuffle, individuals_key[rand(1:N)])
+    if length(individuals_shuffle) % 2 != 0
+        push!(individuals_shuffle, individuals_key[rand(1:end)])
     end
 
-    # Create the pairs of individuals
-    pairs = Vector{Tuple{individual, individual}}()
-    for i in 1:2:N-1
-        push!(pairs, (pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]]))
+    # Local variables for frequently accessed properties
+    v = pop.parameters.v
+    num_pairs = length(individuals_shuffle) ÷ 2
+
+    # Prepare storage for initial conditions and parameters for all pairs
+    u0s = Vector{SArray{Tuple{2}, Float64}}(undef, num_pairs)
+    ps = Vector{SArray{Tuple{7}, Float64}}(undef, num_pairs)
+
+    # Collect initial conditions and parameters for all pairs
+    for i in 1:num_pairs
+        ind1 = pop.individuals[individuals_shuffle[2i-1]]
+        ind2 = pop.individuals[individuals_shuffle[2i]]
+        u0s[i] = SA[ind1.action, ind2.action]
+        ps[i] = SA[ind1.a, ind2.a, ind1.p, ind2.p, ind1.T, ind2.T, v]
     end
 
-    behav_eq!(pairs, tmax, v)
-    total_payoff!(pairs, v)
+    # Calculate final actions for all pairs
+    final_actions = behav_eq(u0s, ps, pop.parameters.tmax, v)
+
+    # Update actions and payoffs for all pairs based on final actions
+    for (i, new_actions) in enumerate(final_actions)
+        ind1 = pop.individuals[individuals_shuffle[2i-1]]
+        ind2 = pop.individuals[individuals_shuffle[2i]]
+        ind1.action, ind2.action = new_actions
+        total_payoff!(ind1, ind2, v)
+    end
 
     nothing
 end
