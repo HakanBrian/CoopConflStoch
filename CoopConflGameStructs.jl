@@ -111,21 +111,24 @@ end
 mutable struct population
     parameters::simulation_parameters
     individuals::Dict{Int64, individual}
-    old_individuals::Dict{Int64, individual}
+    norm_pool::Float64
+    punishment_pool::Float64
 end
 
 function Base.copy(pop::population)
     return population(
         copy(getfield(pop, :parameters)),
         copy(getfield(pop, :individuals)),
-        copy(getfield(pop, :old_individuals))
+        copy(getfield(pop, :norm_pool)),
+        copy(getfield(pop, :punishment_pool))
     )
 end
 
 function Base.copy!(old_population::population, new_population::population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
     copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
-    copy!(getfield(old_population, :old_individuals), getfield(new_population, :old_individuals))
+    copy!(getfield(old_population, :norm_pool), getfield(new_population, :norm_pool))
+    copy!(getfield(old_population, :punishment_pool), getfield(new_population, :punishment_pool))
 
     nothing
 end

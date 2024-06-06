@@ -98,21 +98,13 @@ old_new_individuals_dict = Dict{Int64, individual}()
 old_new_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
 old_new_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
 
-old_old_individuals_dict = Dict{Int64, individual}()
-old_old_individuals_dict[1] = individual(0.5, 0.27, 0.64, 0.1, 0.3, 0)
-old_old_individuals_dict[2] = individual(0.65, 0.26, 0.75, 0.53, 0.12, 0)
-
-old_population = population(simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20), old_new_individuals_dict, old_old_individuals_dict)
+old_population = population(simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20), old_new_individuals_dict, 0, 0)
 
 new_new_individuals_dict = Dict{Int64, individual}()
 new_new_individuals_dict[1] = individual(0.3, 0.57, 0.24, 0.6, 0.4, 0)
 new_new_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0.7, 0.44, 0)
 
-new_old_individuals_dict = Dict{Int64, individual}()
-new_old_individuals_dict[1] = individual(0.54, 0.27, 0.66, 0.12, 0.56, 0)
-new_old_individuals_dict[2] = individual(0.25, 0.98, 0.36, 0.86, 0.86, 0)
-
-new_population = population(simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.0,0.3,0.45,0.2,20), new_new_individuals_dict, new_old_individuals_dict)
+new_population = population(simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.0,0.3,0.45,0.2,20), new_new_individuals_dict, 0, 0)
 
 # Perform copying operations
 copied_population = copy(new_population)
@@ -145,7 +137,7 @@ println(copied_population.parameters.N == 4)  # Should print true
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 1000, 0.0, 0.1, 0.0, 0.004, 10);
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 100000, 0.0, 0.1, 0.0, 0.004, 10);
 my_population = population_construction(my_parameter);
 
 
@@ -156,13 +148,20 @@ my_population = population_construction(my_parameter);
 # Define starting parameters
 individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0);
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0);
+pair = [(individual1, individual2)];
+norm = mean([individual1.a, individual2.a])
+punishment = mean([individual1.p, individual2.p])
+
 individual3 = individual(0.4, 0.2, 0.5, 0.7, 0, 0);
 individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0);
-pair = [(individual1, individual2), (individual3, individual4)];
+pair_all = [(individual1, individual2), (individual3, individual4)];
+norm_all = mean([individual1.a, individual2.a, individual3.a, individual4.a])
+punishment_all = mean([individual1.p, individual2.p, individual3.p, individual4.p])
 
 # Calculate behave eq
-@time behav_eq!(pair, my_parameter.tmax, my_parameter.v)
-behav_eq_MTK!(pair, my_parameter.tmax, my_parameter.v)
+@time behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
+@time behav_eq!(pair_all, norm_all, punishment_all, my_parameter.tmax, my_parameter.v)
+behav_eq_MTK!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -185,8 +184,7 @@ individual4  # individual 3 and 4 should have nearly identical values
 # Create sample population
 my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.0, 0.0, 0.0, 1)
 individuals_dict = Dict{Int64, individual}()
-old_individuals_dict = Dict{Int64, individual}()
-my_population = population(my_parameter, individuals_dict, old_individuals_dict)
+my_population = population(my_parameter, individuals_dict, 0, 0)
 
 my_population.individuals[1] = individual(0.5, 0.5, 0.5, 0.0, 1, 0)
 my_population.individuals[2] = individual(0.5, 0.5, 0.5, 0.0, 2, 0)
@@ -202,7 +200,6 @@ for i in 1:original_size
         new_key += 1
     end
 end
-my_population.old_individuals = copy(my_population.individuals)
 
 # Ensure 250 copies of each parent
 println("Initial population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))

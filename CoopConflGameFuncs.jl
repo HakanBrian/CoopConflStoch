@@ -1,4 +1,4 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays, DiffEqGPU, OrdinaryDiffEq, CUDA, ModelingToolkit, ForwardDiff
+using StatsBase, Random, Distributions, DataFrames, StaticArrays, DiffEqGPU, DifferentialEquations, CUDA, ModelingToolkit, ForwardDiff
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 ####################################
@@ -17,8 +17,6 @@ include("CoopConflGameStructs.jl")
 
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
-    old_individuals_dict = Dict{Int64, individual}()
-
     trait_var = parameters.trait_var
     use_distribution = trait_var != 0
 
@@ -46,10 +44,9 @@ function population_construction(parameters::simulation_parameters)
         end
         indiv = individual(action0, a0, p0, T0, 0.0, 0)
         individuals_dict[i] = indiv
-        old_individuals_dict[i] = copy(indiv)
     end
 
-    return population(parameters, individuals_dict, old_individuals_dict)
+    return population(parameters, individuals_dict, 0, 0)
 end
 
 function output!(outputs::DataFrame, t::Int64, pop::population)
@@ -114,40 +111,29 @@ function cost(action::Real)
     return action^2
 end
 
-function norm_pool(a1::Real, a2::Real)
-    return 0.5 * (a1 + a2)
+function external_punishment(action::Real, norm_pool::Real, punishment_pool::Real)
+    return punishment_pool * (action - norm_pool)^2
 end
 
-function punishment_pool(p1::Real, p2::Real)
-    return 0.5 * (p1 + p2)
+function internal_punishment(action::Real, norm_pool::Real, T::Real)
+    return T * (action - norm_pool)^2
 end
 
-function external_punishment(action::Real, a1::Real, a2::Real, p1::Real, p2::Real)
-    norm = norm_pool(a1, a2)
-    punishment = punishment_pool(p1, p2)
-    return punishment * (action - norm)^2
+function payoff(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, v::Real)
+    return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, norm_pool, punishment_pool)
 end
 
-function internal_punishment(action::Real, a1::Real, a2::Real, T::Real)
-    norm = norm_pool(a1, a2)
-    return T * (action - norm)^2
+function objective(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
+    return payoff(action1, action2, norm_pool, punishment_pool, v) - internal_punishment(action1, norm_pool, T)
 end
 
-function payoff(action1::Real, action2::Real, a1::Real, a2::Real, p1::Real, p2::Real, v::Real)
-    return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, a1, a2, p1, p2)
+function objective_derivative(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
+    return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, v), action1)
 end
 
-function objective(action1::Real, action2::Real, a1::Real, a2::Real, p1::Real, p2::Real, T::Real, v::Real)
-    return payoff(action1, action2, a1, a2, p1, p2, v) - internal_punishment(action1, a1, a2, T)
-end
-
-function objective_derivative(action1::Real, action2::Real, a1::Real, a2::Real, p1::Real, p2::Real, T::Real, v::Real)
-    return ForwardDiff.derivative(x -> objective(x, action2, a1, a2, p1, p2, T, v), action1)
-end
-
-function total_payoff!(ind1::individual, ind2::individual, v::Float64)
-    payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
-    payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
+function total_payoff!(ind1::individual, ind2::individual, norm_pool::Real, punishment_pool::Real, v::Float64)
+    payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, v), 0)
+    payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, v), 0)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -164,19 +150,14 @@ end
 ##################
 
 function behav_ODE_static(u, p, t)
-    dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[4], p[5], p[7])
-    dy = objective_derivative(u[2], u[1], p[2], p[1], p[4], p[3], p[6], p[7])
+    dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[5])
+    dy = objective_derivative(u[2], u[1], p[1], p[2], p[4], p[5])
 
     return SA[dx, dy]
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, v::Float64)
-    trajectories = length(pairs)
+function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{5}, Float64}}, tmax::Float64)
     tspan = (0.0f0, tmax)
-
-    # Extract initial conditions and parameters
-    u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
-    ps = [SA[ind1.a, ind2.a, ind1.p, ind2.p, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -188,7 +169,31 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, 
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_on = false)
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = length(u0s), save_on = false)
+
+    # Extract final action values
+    final_actions = [sol[2] for sol in sim]
+
+    return final_actions
+end
+
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, v::Float64)
+    # Extract initial conditions and parameters
+    u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
+    tspan = (0.0f0, tmax)
+    ps = [SA[norm_pool, punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
+
+    # Initialize a problem with the first set of parameters as a template
+    prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
+
+    # Function to remake the problem for each pair
+    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
+
+    # Create an ensemble problem
+    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
+
+    # Solve the ensemble problem
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = length(pairs), save_on = false)
 
     # Update action values
     final_actions = [sol[end] for sol in sim]
@@ -199,34 +204,10 @@ function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, 
     nothing
 end
 
-function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{7}, Float64}}, tmax::Float64, v::Float64)
-    trajectories = length(u0s)
-    tspan = (0.0f0, tmax)
-
-    # Initialize a problem with the first set of parameters as a template
-    prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
-
-    # Function to remake the problem for each pair
-    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
-
-    # Create an ensemble problem
-    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
-
-    # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = trajectories, save_on = false)
-
-    # Extract final action values
-    final_actions = [sol[2] for sol in sim]
-
-    return final_actions
-end
-
 @mtkmodel BEHAV_ODE begin
     @parameters begin
-        a1::Float64
-        a2::Float64
-        p1::Float64
-        p2::Float64
+        a::Float64
+        p::Float64
         T1::Float64
         T2::Float64
         v::Float64
@@ -236,17 +217,16 @@ end
         action2(t)::Float64
     end
     @equations begin
-        D(action1) ~ objective_derivative(action1, action2, a1, a2, p1, p2, T1, v)
-        D(action2) ~ objective_derivative(action2, action1, a2, a1, p2, p1, T2, v)
+        D(action1) ~ objective_derivative(action1, action2, a, p, T1, v)
+        D(action2) ~ objective_derivative(action2, action1, a, p, T2, v)
     end
 end
 
 @mtkbuild behav_ODE = BEHAV_ODE()
 
-function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Float64, v::Float64)
-    trajectories = length(pairs)
-    tspan = (0, tmax)
+function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Real, punishment_pool::Real, tmax::Float64, v::Float64)
     u0s = Vector{Dict{Any, Float64}}()
+    tspan = (0, tmax)
     ps = Vector{Dict{Any, Float64}}()
 
     for (ind1, ind2) in pairs
@@ -256,10 +236,8 @@ function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Float
         ))
 
         push!(ps, Dict(
-            behav_ODE.a1 => ind1.a,
-            behav_ODE.a2 => ind2.a,
-            behav_ODE.p1 => ind1.p,
-            behav_ODE.p2 => ind2.p,
+            behav_ODE.a => norm_pool,
+            behav_ODE.p => punishment_pool,
             behav_ODE.T1 => ind1.T,
             behav_ODE.T2 => ind2.T,
             behav_ODE.v => v
@@ -276,7 +254,7 @@ function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Float
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = trajectories, save_on = false)
+    sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories = length(pairs), save_on = false)
 
     # Update action values
     final_actions = [sol[end] for sol in sim]
@@ -301,39 +279,53 @@ function social_interactions!(pop::population)
     individuals_shuffle = shuffle(individuals_key)
 
     # If the number of individuals is odd, append a random individual to the shuffled list
-    if length(individuals_shuffle) % 2 != 0
-        push!(individuals_shuffle, individuals_key[rand(1:end)])
+    if isodd(length(individuals_shuffle))
+        push!(individuals_shuffle, individuals_key[rand(1:length(individuals_key))])
     end
 
-    # Local variables for frequently accessed properties
-    v = pop.parameters.v
     num_pairs = length(individuals_shuffle) ÷ 2
 
     # Prepare storage for initial conditions and parameters for all pairs
     u0s = Vector{SArray{Tuple{2}, Float64}}(undef, num_pairs)
-    ps = Vector{SArray{Tuple{7}, Float64}}(undef, num_pairs)
+    ps = Vector{SArray{Tuple{5}, Float64}}(undef, num_pairs)
+
+    # Initialize sums for calculating mean
+    norm_sum = 0.0
+    punishment_sum = 0.0
+
+    # Iterate through individuals to sum norms and punishments
+    for individual in values(pop.individuals)
+        norm_sum += individual.a
+        punishment_sum += individual.p
+    end
+
+    # Update norm and punishment pools
+    pop.norm_pool = norm_sum / pop.parameters.N
+    pop.punishment_pool = punishment_sum / pop.parameters.N
 
     # Collect initial conditions and parameters for all pairs
     for i in 1:num_pairs
         ind1 = pop.individuals[individuals_shuffle[2i-1]]
         ind2 = pop.individuals[individuals_shuffle[2i]]
         u0s[i] = SA[ind1.action, ind2.action]
-        ps[i] = SA[ind1.a, ind2.a, ind1.p, ind2.p, ind1.T, ind2.T, v]
+        ps[i] = SA[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
     end
 
     # Calculate final actions for all pairs
-    final_actions = behav_eq(u0s, ps, pop.parameters.tmax, v)
+    final_actions = behav_eq(u0s, ps, pop.parameters.tmax)
 
     # Update actions and payoffs for all pairs based on final actions
-    for (i, new_actions) in enumerate(final_actions)
+    for i in 1:num_pairs
+        new_actions = final_actions[i]
         ind1 = pop.individuals[individuals_shuffle[2i-1]]
         ind2 = pop.individuals[individuals_shuffle[2i]]
         ind1.action, ind2.action = new_actions
-        total_payoff!(ind1, ind2, v)
+        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
     end
 
     nothing
 end
+
 
 
 ##################
@@ -350,12 +342,13 @@ function reproduce!(pop::population)
     # Sample with the given weights
     sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
-    # Temporarily store old individuals
-    copy!(pop.old_individuals, pop.individuals)
+    # Sort keys
+    sort!(keys_list)
+    sort!(sampled_keys)
 
     # Update population individuals based on sampled keys
     for (key, sampled_key) in zip(keys_list, sampled_keys)
-        pop.individuals[key] = pop.old_individuals[sampled_key]
+        copy!(pop.individuals[key], pop.individuals[sampled_key])
     end
 
     nothing
@@ -391,7 +384,7 @@ function mutate!(pop::population)
         end
 
         if rand() <= u
-            ind.T = rand(truncated(Normal(ind.p, mut_var), lower=0))
+            ind.T = rand(truncated(Normal(ind.T, mut_var), lower=0))
         end
     end
 
