@@ -145,7 +145,7 @@ function objective_derivative(action1::Real, action2::Real, a1::Real, a2::Real, 
     return ForwardDiff.derivative(x -> objective(x, action2, a1, a2, p1, p2, T, v), action1)
 end
 
-function total_payoff!(pairs::Vector{SVector{2, individual}}, v::Float64)
+function total_payoff!(pairs::Vector{Tuple{individual, individual}}, v::Float64)
     for (ind1, ind2) in pairs
         payoff1 = max(payoff(ind1.action, ind2.action, ind1.a, ind2.a, ind1.p, ind2.p, v), 0)
         payoff2 = max(payoff(ind2.action, ind1.action, ind2.a, ind1.a, ind2.p, ind1.p, v), 0)
@@ -172,7 +172,7 @@ function behav_ODE_static(u, p, t)
     return SA[dx, dy]
 end
 
-function behav_eq!(pairs::Vector{SVector{2, individual}}, tmax::Int64, v::Float64)
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Int64, v::Float64)
     tspan = (0, tmax)
     u0s = Vector{SArray{Tuple{2}, Float64}}()
     ps = Vector{SArray{Tuple{7}, Float64}}()
@@ -225,7 +225,7 @@ end
 
 @mtkbuild behav_ODE = BEHAV_ODE()
 
-function behav_eq_MTK!(pairs::Vector{SVector{2, individual}}, tmax::Int64, v::Float64)
+function behav_eq_MTK!(pairs::Vector{Tuple{individual, individual}}, tmax::Int64, v::Float64)
     tspan = (0, tmax)
     u0s = Vector{Dict{Any, Float64}}()
     ps = Vector{Dict{Any, Float64}}()
@@ -292,9 +292,9 @@ function social_interactions!(pop::population)
     end
 
     # Create the pairs of individuals
-    pairs = Vector{SVector{2, individual}}()
+    pairs = Vector{Tuple{individual, individual}}()
     for i in 1:2:N-1
-        pair = SVector(pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
+        pair = (pop.individuals[individuals_shuffle[i]], pop.individuals[individuals_shuffle[i+1]])
         push!(pairs, pair)
     end
 

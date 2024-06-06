@@ -158,7 +158,7 @@ individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0)
 individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0)
 individual3 = individual(0.4, 0.2, 0.5, 0.7, 0, 0)
 individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0)
-pair = [SVector(individual1, individual2), SVector(individual3, individual4)]
+pair = [(individual1, individual2), (individual3, individual4)]
 
 # Calculate behave eq
 behav_eq!(pair, my_parameter.tmax, my_parameter.v)
