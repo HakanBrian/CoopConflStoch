@@ -100,7 +100,7 @@ end
     # Calculate payoff, and keep a running average of payoff for each individual
     # After each session of interaction the running average becomes the individual's payoff
 
-function benefit(action1::Real, action2::Real, v::Real)
+function benefit(action1::Real, action2::Float64, v::Float64)
     sqrt_action1 = √max(action1, 0)
     sqrt_action2 = √max(action2, 0)
     sqrt_sum = √max((action1 + action2), 0)
@@ -111,27 +111,27 @@ function cost(action::Real)
     return action^2
 end
 
-function external_punishment(action::Real, norm_pool::Real, punishment_pool::Real)
+function external_punishment(action::Real, norm_pool::Float64, punishment_pool::Float64)
     return punishment_pool * (action - norm_pool)^2
 end
 
-function internal_punishment(action::Real, norm_pool::Real, T::Real)
+function internal_punishment(action::Real, norm_pool::Float64, T::Float64)
     return T * (action - norm_pool)^2
 end
 
-function payoff(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, v::Real)
+function payoff(action1::Real, action2::Float64, norm_pool::Float64, punishment_pool::Float64, v::Float64)
     return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, norm_pool, punishment_pool)
 end
 
-function objective(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
+function objective(action1::Real, action2::Float64, norm_pool::Float64, punishment_pool::Float64, T::Float64, v::Float64)
     return payoff(action1, action2, norm_pool, punishment_pool, v) - internal_punishment(action1, norm_pool, T)
 end
 
-function objective_derivative(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
+function objective_derivative(action1::Real, action2::Float64, norm_pool::Float64, punishment_pool::Float64, T::Float64, v::Float64)
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, v), action1)
 end
 
-function total_payoff!(ind1::individual, ind2::individual, norm_pool::Real, punishment_pool::Real, v::Float64)
+function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, v::Float64)
     payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, v), 0)
     payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, v), 0)
 
@@ -310,9 +310,7 @@ function mutate!(pop::population)
     end
 
     # Indpendent draw for each of the traits to mutate
-    for key in keys(pop.individuals)
-        ind = pop.individuals[key]
-
+    for ind in values(pop.individuals)
         if rand() <= u
             ind.a = rand(truncated(Normal(ind.a, mut_var), lower=0))
         end
@@ -356,18 +354,18 @@ function simulation(pop::population)
     ############
 
     for t in 1:pop.parameters.gmax
-        # execute social interactions and calculate payoffs
+        # Execute social interactions and calculate payoffs
         social_interactions!(pop)
 
-        # reproduction function to produce new generation
+        # Reproduction function to produce new generation
         reproduce!(pop)
 
-        # mutation function iterates over population and mutates at chance probability μ
+        # Mutation function iterates over population and mutates at chance probability μ
         if pop.parameters.u > 0
             mutate!(pop)
         end
 
-        # per-timestep counters, outputs going to disk
+        # Per-timestep counters, outputs going to disk
         if t % pop.parameters.output_save_tick == 0
             output!(outputs, t, pop)
         end

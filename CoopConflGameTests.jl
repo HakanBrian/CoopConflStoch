@@ -161,7 +161,6 @@ punishment_all = mean([individual1.p, individual2.p, individual3.p, individual4.
 # Calculate behave eq
 @time behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
 @time behav_eq!(pair_all, norm_all, punishment_all, my_parameter.tmax, my_parameter.v)
-behav_eq_MTK!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
