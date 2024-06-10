@@ -157,7 +157,7 @@ function behav_ODE_static(u, p, t)
 end
 
 function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{5}, Float64}}, tmax::Float64)
-    tspan = (0.0f0, tmax)
+    tspan = (0.0, tmax)
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -172,7 +172,7 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{
     sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = length(u0s), save_on = false)
 
     # Extract final action values
-    final_actions = [sol[2] for sol in sim]
+    final_actions = [sol[end] for sol in sim]
 
     return final_actions
 end
@@ -180,7 +180,7 @@ end
 function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, v::Float64)
     # Extract initial conditions and parameters
     u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
-    tspan = (0.0f0, tmax)
+    tspan = (0.0, tmax)
     ps = [SA[norm_pool, punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
@@ -255,10 +255,9 @@ function social_interactions!(pop::population)
 
     # Update actions and payoffs for all pairs based on final actions
     for i in 1:num_pairs
-        new_actions = final_actions[i]
         ind1 = pop.individuals[individuals_shuffle[2i-1]]
         ind2 = pop.individuals[individuals_shuffle[2i]]
-        ind1.action, ind2.action = new_actions
+        ind1.action, ind2.action = copy(final_actions[i])
         total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
     end
 
@@ -275,18 +274,41 @@ end
 
 function reproduce!(pop::population)
     payoffs = map(individual -> individual.payoff, values(pop.individuals))
+    #actions = map(individual -> individual.action, values(pop.individuals))
+    #as = map(individual -> individual.a, values(pop.individuals))
+    #ps = map(individual -> individual.p, values(pop.individuals))
+    #Ts = map(individual -> individual.T, values(pop.individuals))
+
     keys_list = collect(keys(pop.individuals))
 
-    # Sample with the given weights
+    #sampled_keys = copy(keys_list)
+
     sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
+    #=
+    try
+    # Sample with the given weights
+    sampled_keys = sample!(keys_list, ProbabilityWeights(payoffs), sampled_keys, replace=true, ordered=false)
+    catch e
+        println(payoffs)
+        println(actions)
+        println(as)
+        println(ps)
+        println(Ts)
+
+        rethrow()
+    end
+=#
+    old_individuals = copy(pop.individuals)
+
     # Sort keys
-    sort!(keys_list)
-    sort!(sampled_keys)
+    #sort!(keys_list)
+    #sort!(sampled_keys)
 
     # Update population individuals based on sampled keys
     for (key, sampled_key) in zip(keys_list, sampled_keys)
-        copy!(pop.individuals[key], pop.individuals[sampled_key])
+        #copy!(pop.individuals[key], pop.individuals[sampled_key])
+        copy!(pop.individuals[key], old_individuals[sampled_key])
     end
 
     nothing
