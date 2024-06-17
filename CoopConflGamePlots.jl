@@ -12,16 +12,16 @@ include("CoopConflGameFuncs.jl")
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.2, 0.5, 0.4, 0.0, 10000, 5, 1000, 0.0, 0.1, 0.0, 0.05, 1)
+my_parameter = simulation_parameters(0.2, 0.5, 0.4, 0.0, 10000, 5, 10000, 0.0, 0.05, 0.0, 0.05, 1)
 
-my_population = population_construction(my_parameter)
+my_population = population_construction(my_parameter);
 
 
 ##################
 # Simulation
 ##################
 
-my_simulation = simulation(my_population)
+@time my_simulation = simulation(my_population)
 
 
 ##################
@@ -29,8 +29,8 @@ my_simulation = simulation(my_population)
 ##################
 
 # Plotting each of generations's average data
-my_simulation_gdf = groupby(my_simulation, :generation)
-my_simulation_mean = combine(my_simulation_gdf, :action => mean, :a => mean, :p => mean, :T => mean, :payoff => mean)
+my_simulation_gdf = groupby(my_simulation, :generation);
+my_simulation_mean = combine(my_simulation_gdf, :action => mean, :a => mean, :p => mean, :T => mean, :payoff => mean);
 plot(my_simulation_mean.generation,
     [my_simulation_mean.action_mean, my_simulation_mean.a_mean, my_simulation_mean.p_mean, my_simulation_mean.T_mean, my_simulation_mean.payoff_mean],
     title=string(my_parameter),

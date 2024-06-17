@@ -15,6 +15,20 @@ include("CoopConflGameStructs.jl")
     # Create an initial population
     # Format output
 
+function truncation_bounds(variance::Float64, retain_proportion::Float64)
+    # Calculate tail probability alpha
+    alpha = 1 - retain_proportion
+
+    # Calculate z-score corresponding to alpha/2
+    z_alpha_over_2 = quantile(Normal(), 1 - alpha/2)
+
+    # Calculate truncation bounds
+    lower_bound = -z_alpha_over_2 * sqrt(variance)
+    upper_bound = z_alpha_over_2 * sqrt(variance)
+
+    return SA[lower_bound, upper_bound]
+end
+
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
     trait_var = parameters.trait_var
@@ -28,19 +42,20 @@ function population_construction(parameters::simulation_parameters)
 
     # Construct distributions if necessary
     if use_distribution
-        action0_dist = truncated(Normal(action0, trait_var), lower=0)
-        a0_dist = truncated(Normal(a0, trait_var), lower=0)
-        p0_dist = truncated(Normal(p0, trait_var), lower=0)
-        T0_dist = truncated(Normal(T0, trait_var), lower=0)
+        lower_bound, upper_bound = truncation_bounds(trait_var, 0.99)
+        action0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -action0), upper=upper_bound)
+        a0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -a0), upper=upper_bound)
+        p0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -p0), upper=upper_bound)
+        T0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -T0), upper=upper_bound)
     end
 
     # Create individuals
     for i in 1:parameters.N
         if use_distribution
-            action0 = rand(action0_dist)
-            a0 = rand(a0_dist)
-            p0 = rand(p0_dist)
-            T0 = rand(T0_dist)
+            action0 += rand(action0_dist)
+            a0 += rand(a0_dist)
+            p0 += rand(p0_dist)
+            T0 += rand(T0_dist)
         end
         indiv = individual(action0, a0, p0, T0, 0.0, 0)
         individuals_dict[i] = indiv
@@ -274,41 +289,17 @@ end
 
 function reproduce!(pop::population)
     payoffs = map(individual -> individual.payoff, values(pop.individuals))
-    #actions = map(individual -> individual.action, values(pop.individuals))
-    #as = map(individual -> individual.a, values(pop.individuals))
-    #ps = map(individual -> individual.p, values(pop.individuals))
-    #Ts = map(individual -> individual.T, values(pop.individuals))
-
     keys_list = collect(keys(pop.individuals))
 
-    #sampled_keys = copy(keys_list)
-
+    # Sample with the given weights
     sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
-    #=
-    try
-    # Sample with the given weights
-    sampled_keys = sample!(keys_list, ProbabilityWeights(payoffs), sampled_keys, replace=true, ordered=false)
-    catch e
-        println(payoffs)
-        println(actions)
-        println(as)
-        println(ps)
-        println(Ts)
-
-        rethrow()
-    end
-=#
-    old_individuals = copy(pop.individuals)
-
     # Sort keys
-    #sort!(keys_list)
-    #sort!(sampled_keys)
+    sort!(sampled_keys)
 
     # Update population individuals based on sampled keys
-    for (key, sampled_key) in zip(keys_list, sampled_keys)
-        #copy!(pop.individuals[key], pop.individuals[sampled_key])
-        copy!(pop.individuals[key], old_individuals[sampled_key])
+    for (key, sampled_key) in zip(1:pop.parameters.N, sampled_keys)
+        copy!(pop.individuals[key], pop.individuals[sampled_key])
     end
 
     nothing
@@ -322,8 +313,7 @@ end
     # offspring have slightly different trait values from their parents
     # use an independent draw function for each of the traits that could mutate
 
-function mutate!(pop::population)
-    u = pop.parameters.u
+function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     mut_var = pop.parameters.mut_var
 
     # Only mutate if necessary
@@ -331,18 +321,26 @@ function mutate!(pop::population)
         return nothing
     end
 
+    u = pop.parameters.u
+    #lower_bound, upper_bound = truncate_bounds
+
+    lower_bound, upper_bound = truncate_bounds
+
     # Indpendent draw for each of the traits to mutate
     for ind in values(pop.individuals)
         if rand() <= u
-            ind.a = rand(truncated(Normal(ind.a, mut_var), lower=0))
+            a_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.a), upper=upper_bound)
+            ind.a += rand(a_dist)
         end
 
         if rand() <= u
-            ind.p = rand(truncated(Normal(ind.p, mut_var), lower=0))
+            p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.p), upper=upper_bound)
+            ind.p += rand(p_dist)
         end
 
         if rand() <= u
-            ind.T = rand(truncated(Normal(ind.T, mut_var), lower=0))
+            T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
+            ind.T += rand(T_dist)
         end
     end
 
@@ -371,6 +369,8 @@ function simulation(pop::population)
         payoff = Vector{Float64}(undef, output_length)
     )
 
+    truncate_bounds = truncation_bounds(pop.parameters.mut_var, 0.99)
+
     ############
     # Sim Loop #
     ############
@@ -384,7 +384,7 @@ function simulation(pop::population)
 
         # Mutation function iterates over population and mutates at chance probability μ
         if pop.parameters.u > 0
-            mutate!(pop)
+            mutate!(pop, truncate_bounds)
         end
 
         # Per-timestep counters, outputs going to disk
