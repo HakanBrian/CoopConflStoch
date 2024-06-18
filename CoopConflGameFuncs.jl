@@ -52,12 +52,11 @@ function population_construction(parameters::simulation_parameters)
     # Create individuals
     for i in 1:parameters.N
         if use_distribution
-            action0 += rand(action0_dist)
-            a0 += rand(a0_dist)
-            p0 += rand(p0_dist)
-            T0 += rand(T0_dist)
+            indiv = individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
+        else
+            indiv = individual(action0, a0, p0, T0, 0.0, 0)
         end
-        indiv = individual(action0, a0, p0, T0, 0.0, 0)
+
         individuals_dict[i] = indiv
     end
 
@@ -287,7 +286,10 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    payoffs = map(individual -> 1 + 0.5 * individual.payoff, values(pop.individuals))
+    # Uncomment below if testing selection
+    # payoffs = map(individual -> 1 + 0.5 * individual.payoff, values(pop.individuals))
+
+    payoffs = map(individual -> individual.payoff, values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -334,12 +336,12 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
             p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.p), upper=upper_bound)
             ind.p += rand(p_dist)
         end
-#=
-        if rand() <= u
-            T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
-            ind.T += rand(T_dist)
-        end
-=#
+
+        # Uncomment below if 'T' trait mutation is required
+        # if rand() <= u
+        #     T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
+        #     ind.T += rand(T_dist)
+        # end
     end
 
     nothing

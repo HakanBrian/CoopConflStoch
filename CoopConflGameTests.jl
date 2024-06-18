@@ -9,131 +9,6 @@ include("CoopConflGameFuncs.jl")
 
 
 ##################
-# Parameter Copy
-##################
-
-old_parameters = simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20)
-new_parameters = simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.0,0.3,0.45,0.1,20)
-
-# Perform copying operations
-copied_parameters = copy(new_parameters)
-copy!(old_parameters, new_parameters)
-
-# Modify some fields in the original and copied objects
-new_parameters.N = 423
-old_parameters.N = 4
-copied_parameters.N = 2
-
-# Check if modifications affect the copied individual
-println(old_parameters.N == 423)  # Should print false
-println(old_parameters.N == 4)  # Should print true
-
-println(copied_parameters.N == 423)  # Should print false
-println(copied_parameters.N == 2)  # Should print true
-
-
-##################
-# Individual Copy
-##################
-
-original_individual = individual(0.5, 0.4, 0.3, 0.2, 0.0, 0.0)
-copied_individual = copy(original_individual)
-
-# Modify some fields in the original and copied objects
-original_individual.action = 0.9
-copied_individual.action = 0.1
-
-# Check if modifications affect the original individual
-println(original_individual.action == 0.9)  # Should print true
-println(original_individual.action == 0.1)  # Should print false
-
-# Check if modifications affect the copied individual
-println(copied_individual.action == 0.9)  # Should print false
-println(copied_individual.action == 0.1)  # Should print true
-
-
-original_individuals_dict = Dict{Int64, individual}()
-original_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
-original_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
-
-old_individuals_dict = Dict{Int64, individual}()
-old_individuals_dict[1] = individual(0.43, 0.5, 0.34, 0, 0, 0)
-old_individuals_dict[2] = individual(0.36, 0.3, 0.55, 0, 0, 0)
-
-copy_individuals_dict = copy(original_individuals_dict)
-copy!(old_individuals_dict, original_individuals_dict)
-
-# Modify some fields in the original and copied objects
-original_individuals_dict[1].action = 0.9
-original_individuals_dict[2].action = 0.8
-copy_individuals_dict[1].action = 0.1
-copy_individuals_dict[2].action = 0.2
-old_individuals_dict[1].action = 0.4
-old_individuals_dict[2].action = 0.5
-
-# Check if modifications affect the original individual
-println(original_individuals_dict[1].action == 0.9)  # Should print true
-println(original_individuals_dict[1].action == 0.1)  # Should print false
-println(original_individuals_dict[2].action == 0.8)  # Should print true
-println(original_individuals_dict[2].action == 0.2)  # Should print false
-
-# Check if modifications affect the copied individual
-println(copy_individuals_dict[1].action == 0.1)  # Should print true
-println(copy_individuals_dict[1].action == 0.9)  # Should print false
-println(copy_individuals_dict[2].action == 0.2)  # Should print true
-println(copy_individuals_dict[2].action == 0.8)  # Should print false
-
-# Check if modifications affect the old individual
-println(old_individuals_dict[1].action == 0.4)  # Should print true
-println(old_individuals_dict[1].action == 0.9)  # Should print false
-println(old_individuals_dict[2].action == 0.5)  # Should print true
-println(old_individuals_dict[2].action == 0.8)  # Should print false
-
-
-##################
-# Population Copy
-##################
-
-old_new_individuals_dict = Dict{Int64, individual}()
-old_new_individuals_dict[1] = individual(0.4, 0.67, 0.54, 0, 0, 0)
-old_new_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0, 0, 0)
-
-old_population = population(simulation_parameters(0.45,0.5,0.4,0.0,20,15,11,0.0,0.7,0.05,0.05,20), old_new_individuals_dict, 0, 0)
-
-new_new_individuals_dict = Dict{Int64, individual}()
-new_new_individuals_dict[1] = individual(0.3, 0.57, 0.24, 0.6, 0.4, 0)
-new_new_individuals_dict[2] = individual(0.6, 0.36, 0.45, 0.7, 0.44, 0)
-
-new_population = population(simulation_parameters(0.15,0.15,0.34,0.2,21,15,12,0.0,0.3,0.45,0.2,20), new_new_individuals_dict, 0, 0)
-
-# Perform copying operations
-copied_population = copy(new_population)
-copy!(old_population, new_population)
-
-# Modify some fields in the original and copied objects
-new_population.individuals[1].action = 0.0
-old_population.individuals[1].action = 0.1
-copied_population.individuals[1].action = 0.2
-
-new_population.parameters.N = 342
-old_population.parameters.N = 3
-copied_population.parameters.N = 4
-
-# Check if modifications affect the copied individual
-println(old_population.individuals[1].action == 0.0)  # Should print false
-println(old_population.individuals[1].action == 0.1)  # Should print true
-
-println(old_population.parameters.N == 342)  # Should print false
-println(old_population.parameters.N == 3)  # Should print true
-
-println(copied_population.individuals[1].action == 0.0)  # Should print false
-println(copied_population.individuals[1].action == 0.2)  # Should print true
-
-println(copied_population.parameters.N == 342)  # Should print false
-println(copied_population.parameters.N == 4)  # Should print true
-
-
-##################
 # Population Construction
 ##################
 
@@ -214,7 +89,9 @@ println("New population with payoff 4: ", count(individual -> individual.payoff 
 # Mutate
 ##################
 
-mutate!(my_population, truncation_bounds(pop.parameters.mut_var, 0.99))
+mutate!(my_population, truncation_bounds(my_population.parameters.mut_var, 0.99))
+
+println(my_population)
 
 
 ##################

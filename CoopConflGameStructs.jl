@@ -90,19 +90,6 @@ function Base.copy!(old_ind::individual, new_ind::individual)
     nothing
 end
 
-function Base.copy(inds::Dict{Int64, individual})
-    return Dict{Int64, individual}(key => copy(value) for (key, value) in inds)
-end
-
-function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, individual})
-    for (key, new_ind) in pairs(new_inds)
-        old_ind = old_inds[key]
-        copy!(old_ind, new_ind)
-    end
-
-    nothing
-end
-
 
 ##################
 # Population
