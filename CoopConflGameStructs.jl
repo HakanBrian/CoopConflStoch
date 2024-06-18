@@ -2,7 +2,7 @@
 # Simulation Parameters
 ##################
 
-mutable struct simulation_parameters
+mutable struct Simulation_Parameters
     #game params
     action0::Float64
     a0::Float64
@@ -20,8 +20,8 @@ mutable struct simulation_parameters
     output_save_tick::Int64
 end
 
-function Base.copy(parameters::simulation_parameters)
-    return simulation_parameters(
+function Base.copy(parameters::Simulation_Parameters)
+    return Simulation_Parameters(
         getfield(parameters, :action0),
         getfield(parameters, :a0),
         getfield(parameters, :p0),
@@ -37,7 +37,7 @@ function Base.copy(parameters::simulation_parameters)
     )
 end
 
-function Base.copy!(old_params::simulation_parameters, new_params::simulation_parameters)
+function Base.copy!(old_params::Simulation_Parameters, new_params::Simulation_Parameters)
     setfield!(old_params, :action0, getfield(new_params, :action0))
     setfield!(old_params, :a0, getfield(new_params, :a0))
     setfield!(old_params, :p0, getfield(new_params, :p0))
@@ -51,7 +51,7 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     setfield!(old_params, :mut_var, getfield(new_params, :mut_var))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
-    nothing
+    return nothing
 end
 
 
@@ -59,17 +59,17 @@ end
 # Individual
 ##################
 
-mutable struct individual
+mutable struct Individual
     action::Float64
     a::Float64
     p::Float64
     T::Float64
     payoff::Float64
-    interactions::Int64
+    interaction::Int64
 end
 
-function Base.copy(ind::individual)
-    return individual(
+function Base.copy(ind::Individual)
+    return Individual(
         getfield(ind, :action),
         getfield(ind, :a),
         getfield(ind, :p),
@@ -79,7 +79,7 @@ function Base.copy(ind::individual)
     )
 end
 
-function Base.copy!(old_ind::individual, new_ind::individual)
+function Base.copy!(old_ind::Individual, new_ind::Individual)
     setfield!(old_ind, :action, getfield(new_ind, :action))
     setfield!(old_ind, :a, getfield(new_ind, :a))
     setfield!(old_ind, :p, getfield(new_ind, :p))
@@ -87,20 +87,7 @@ function Base.copy!(old_ind::individual, new_ind::individual)
     setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
     setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
 
-    nothing
-end
-
-function Base.copy(inds::Dict{Int64, individual})
-    return Dict{Int64, individual}(key => copy(value) for (key, value) in inds)
-end
-
-function Base.copy!(old_inds::Dict{Int64, individual}, new_inds::Dict{Int64, individual})
-    for (key, new_ind) in pairs(new_inds)
-        old_ind = old_inds[key]
-        copy!(old_ind, new_ind)
-    end
-
-    nothing
+    return nothing
 end
 
 
@@ -108,27 +95,57 @@ end
 # Population
 ##################
 
-mutable struct population
-    parameters::simulation_parameters
-    individuals::Dict{Int64, individual}
+mutable struct Population
+    parameters::Simulation_Parameters
+    actions::Vector{Float64}
+    as::Vector{Float64}
+    ps::Vector{Float64}
+    Ts::Vector{Float64}
+    payoffs::Vector{Float64}
+    interactions::Vector{Int64}
     norm_pool::Float64
     punishment_pool::Float64
 end
 
-function Base.copy(pop::population)
-    return population(
+function get_individual(population::Population, i::Int64)
+    Individual(population.actions[i], population.as[i], population.ps[i], population.Ts[i], population.payoffs[i], population.interactions[i])
+end
+
+function set_individual!(population::Population, i::Int64, individual::Individual)
+    population.actions[i] = individual.action
+    population.as[i] = individual.a
+    population.ps[i] = individual.p
+    population.Ts[i] = individual.T
+    population.payoffs[i] = individual.payoff
+    population.interactions[i] = individual.interaction
+
+    nothing
+end
+
+function Base.copy(pop::Population)
+    return Population(
         copy(getfield(pop, :parameters)),
-        copy(getfield(pop, :individuals)),
+        copy(getfield(pop, :actions)),
+        copy(getfield(pop, :as)),
+        copy(getfield(pop, :ps)),
+        copy(getfield(pop, :Ts)),
+        copy(getfield(pop, :payoffs)),
+        copy(getfield(pop, :interactions)),
         copy(getfield(pop, :norm_pool)),
         copy(getfield(pop, :punishment_pool))
     )
 end
 
-function Base.copy!(old_population::population, new_population::population)
+function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
-    copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
+    copy!(getfield(old_population, :actions), getfield(new_population, :actions))
+    copy!(getfield(old_population, :a), getfield(new_population, :as))
+    copy!(getfield(old_population, :p), getfield(new_population, :ps))
+    copy!(getfield(old_population, :T), getfield(new_population, :Ts))
+    copy!(getfield(old_population, :payoff), getfield(new_population, :payoffs))
+    copy!(getfield(old_population, :interactions), getfield(new_population, :interactions))
     copy!(getfield(old_population, :norm_pool), getfield(new_population, :norm_pool))
     copy!(getfield(old_population, :punishment_pool), getfield(new_population, :punishment_pool))
 
-    nothing
+    return nothing
 end

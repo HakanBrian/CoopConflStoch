@@ -29,8 +29,14 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     return SA[lower_bound, upper_bound]
 end
 
-function population_construction(parameters::simulation_parameters)
-    individuals_dict = Dict{Int64, individual}()
+function population_construction(parameters::Simulation_Parameters)
+    actions = zeros(Float64, N)
+    as = zeros(Float64, N)
+    ps = zeros(Float64, N)
+    Ts = zeros(Float64, N)
+    payoffs = zeros(Float64, N)
+    interactions = zeros(Int64, N)
+
     trait_var = parameters.trait_var
     use_distribution = trait_var != 0
 
@@ -52,19 +58,22 @@ function population_construction(parameters::simulation_parameters)
     # Create individuals
     for i in 1:parameters.N
         if use_distribution
-            action0 += rand(action0_dist)
-            a0 += rand(a0_dist)
-            p0 += rand(p0_dist)
-            T0 += rand(T0_dist)
+            actions[i] = action0 + rand(action0_dist)
+            as[i] = a0 + rand(a0_dist)
+            ps[i] = p0 + rand(p0_dist)
+            Ts[i] = T0 + rand(T0_dist)
+        else
+            actions[i] = action0
+            as[i] = a0
+            ps[i] = p0
+            Ts[i] = T0 
         end
-        indiv = individual(action0, a0, p0, T0, 0.0, 0)
-        individuals_dict[i] = indiv
     end
 
-    return population(parameters, individuals_dict, 0, 0)
+    return Population(parameters, actions, as, ps, Ts, payoffs, interactions, 0.0, 0.0)
 end
 
-function output!(outputs::DataFrame, t::Int64, pop::population)
+function output!(outputs::DataFrame, t::Int64, pop::Population)
     # Determine the base row for the current generation
     if t == 1
         output_row_base = 1
@@ -72,37 +81,19 @@ function output!(outputs::DataFrame, t::Int64, pop::population)
         output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.N + 1
     end
 
-    # Preallocate vectors for batch assignment
     N = pop.parameters.N
-    generation_col = fill(t, N)
-    individual_col = 1:N
-    action_col = Vector{Float64}(undef, N)
-    a_col = Vector{Float64}(undef, N)
-    p_col = Vector{Float64}(undef, N)
-    T_col = Vector{Float64}(undef, N)
-    payoff_col = Vector{Float64}(undef, N)
-
-    # Collect the data for each individual
-    for i in 1:N
-        ind = pop.individuals[i]
-        action_col[i] = ind.action
-        a_col[i] = ind.a
-        p_col[i] = ind.p
-        T_col[i] = ind.T
-        payoff_col[i] = ind.payoff
-    end
 
     # Calculate the range of rows to be updated
     output_rows = output_row_base:(output_row_base + N - 1)
 
     # Update the DataFrame with batch assignment
-    outputs.generation[output_rows] = generation_col
-    outputs.individual[output_rows] = individual_col
-    outputs.action[output_rows] = action_col
-    outputs.a[output_rows] = a_col
-    outputs.p[output_rows] = p_col
-    outputs.T[output_rows] = T_col
-    outputs.payoff[output_rows] = payoff_col
+    outputs.generation[output_rows] = fill(t, N)
+    outputs.individual[output_rows] = 1:N
+    outputs.action[output_rows] = pop.actions[1:N]
+    outputs.a[output_rows] = pop.as[1:N]
+    outputs.p[output_rows] = pop.ps[1:N]
+    outputs.T[output_rows] = pop.Ts[1:N]
+    outputs.payoff[output_rows] = pop.payoffs[1:N]
 
     nothing
 end
@@ -146,15 +137,20 @@ function objective_derivative(action1::Real, action2::Float64, norm_pool::Float6
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, v), action1)
 end
 
-function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, v::Float64)
-    payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, v), 0)
-    payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, v), 0)
+function total_payoff!(pop::Population, idx1::Int, idx2::Int, norm_pool::Float64, punishment_pool::Float64, v::Float64)
+    ind1_action = pop.actions[idx1]
+    ind2_action = pop.actions[idx2]
 
-    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
-    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
+    payoff1 = max(payoff(ind1_action, ind2_action, norm_pool, punishment_pool, v), 0)
+    payoff2 = max(payoff(ind2_action, ind1_action, norm_pool, punishment_pool, v), 0)
 
-    ind1.interactions += 1
-    ind2.interactions += 1
+    # Update payoffs for individual at idx1
+    pop.payoffs[idx1] = (payoff1 + pop.interactions[idx1] * pop.payoffs[idx1]) / (pop.interactions[idx1] + 1)
+    pop.interactions[idx1] += 1
+
+    # Update payoffs for individual at idx2
+    pop.payoffs[idx2] = (payoff2 + pop.interactions[idx2] * pop.payoffs[idx2]) / (pop.interactions[idx2] + 1)
+    pop.interactions[idx2] += 1
 
     nothing
 end
@@ -192,7 +188,7 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{
     return final_actions
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, v::Float64)
+function behav_eq!(pairs::Vector{Tuple{Individual, Individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, v::Float64)
     # Extract initial conditions and parameters
     u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
     tspan = (0.0, tmax)
@@ -228,39 +224,32 @@ end
     # Everyone has the same chance of picking a partner / getting picked
     # At the end of the day everyone is picked roughly an equal number of times
 
-function social_interactions!(pop::population)
-    individuals_key = collect(keys(pop.individuals))
-    individuals_shuffle = shuffle(individuals_key)
+function social_interactions!(pop::Population)
+    individuals_indices = Vector(1:pop.parameters.N)
+    individuals_shuffle = shuffle(individuals_indices)
 
     # If the number of individuals is odd, append a random individual to the shuffled list
     if isodd(pop.parameters.N)
-        push!(individuals_shuffle, individuals_key[rand(1:pop.parameters.N)])
+        push!(individuals_shuffle, rand(individuals_indices))
     end
 
     num_pairs = pop.parameters.N ÷ 2
+
+    # Update norm and punishment pools
+    pop.norm_pool = mean(pop.as)
+    pop.punishment_pool = mean(pop.ps)
 
     # Prepare storage for initial conditions and parameters for all pairs
     u0s = Vector{SArray{Tuple{2}, Float64}}(undef, num_pairs)
     ps = Vector{SArray{Tuple{5}, Float64}}(undef, num_pairs)
 
-    # Initialize sums for calculating mean
-    norm_sum = 0.0
-    punishment_sum = 0.0
-    for individual in values(pop.individuals)
-        norm_sum += individual.a
-        punishment_sum += individual.p
-    end
-
-    # Update norm and punishment pools
-    pop.norm_pool = norm_sum / pop.parameters.N
-    pop.punishment_pool = punishment_sum / pop.parameters.N
-
     # Collect initial conditions and parameters for all pairs
     for i in 1:num_pairs
-        ind1 = pop.individuals[individuals_shuffle[2i-1]]
-        ind2 = pop.individuals[individuals_shuffle[2i]]
-        u0s[i] = SA[ind1.action, ind2.action]
-        ps[i] = SA[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
+        idx1 = individuals_shuffle[2i-1]
+        idx2 = individuals_shuffle[2i]
+
+        u0s[i] = SA[pop.actions[idx1], pop.actions[idx2]]
+        ps[i] = SA[pop.norm_pool, pop.punishment_pool, pop.Ts[idx1], pop.Ts[idx2], pop.parameters.v]
     end
 
     # Calculate final actions for all pairs
@@ -268,11 +257,12 @@ function social_interactions!(pop::population)
 
     # Update actions and payoffs for all pairs based on final actions
     for i in 1:num_pairs
-        ind1 = pop.individuals[individuals_shuffle[2i-1]]
-        ind2 = pop.individuals[individuals_shuffle[2i]]
-        ind1.action = final_actions[i][1]
-        ind2.action = final_actions[i][2]
-        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
+        idx1 = individuals_shuffle[2i-1]
+        idx2 = individuals_shuffle[2i]
+        
+        pop.actions[idx1], pop.actions[idx2] = final_actions[i]
+        
+        total_payoff!(pop, idx1, idx2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
     end
 
     nothing
@@ -286,19 +276,21 @@ end
     # offspring inherit the payoff or traits of the parents
     # number of individuals in population remains the same
 
-function reproduce!(pop::population)
-    payoffs = map(individual -> 1 + 0.5 * individual.payoff, values(pop.individuals))
-    keys_list = collect(keys(pop.individuals))
+function reproduce!(pop::Population)
+    # Uncomment below if testing selection
+    # payoffs = map(payoff -> 1 + 0.5 * payoff, pop.payoffs)
+
+    payoffs = pop.payoffs
 
     # Sample with the given weights
-    sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
+    sampled_idxs = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
 
     # Sort keys
-    sort!(sampled_keys)
+    sort!(sampled_idxs)
 
     # Update population individuals based on sampled keys
-    for (key, sampled_key) in zip(1:pop.parameters.N, sampled_keys)
-        copy!(pop.individuals[key], pop.individuals[sampled_key])
+    for (i, sampled_idx) in zip(1:pop.parameters.N, sampled_idxs)
+        set_individual!(pop, i, get_individual(pop, sampled_idx))
     end
 
     nothing
@@ -312,7 +304,7 @@ end
     # offspring have slightly different trait values from their parents
     # use an independent draw function for each of the traits that could mutate
 
-function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
+function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mut_var = pop.parameters.mut_var
 
     # Only mutate if necessary
@@ -323,23 +315,25 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     u = pop.parameters.u
     lower_bound, upper_bound = truncate_bounds
 
-    # Indpendent draw for each of the traits to mutate
-    for ind in values(pop.individuals)
+    # Mutate each trait independently for all individuals
+    for i in 1:pop.parameters.N
         if rand() <= u
-            a_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.a), upper=upper_bound)
-            ind.a += rand(a_dist)
+            # Mutate 'a' trait
+            a_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -pop.as[i]), upper=upper_bound)
+            pop.as[i] += rand(a_dist)
         end
 
         if rand() <= u
-            p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.p), upper=upper_bound)
-            ind.p += rand(p_dist)
+            # Mutate 'p' trait
+            p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -pop.ps[i]), upper=upper_bound)
+            pop.ps[i] += rand(p_dist)
         end
-#=
-        if rand() <= u
-            T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
-            ind.T += rand(T_dist)
-        end
-=#
+
+        # Uncomment below if 'T' trait mutation is required
+        # if rand() <= u
+        #     T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -pop.Ts[i]), upper=upper_bound)
+        #     pop.Ts[i] += rand(T_dist)
+        # end
     end
 
     nothing
@@ -350,7 +344,7 @@ end
 # Simulation Function #
 #######################
 
-function simulation(pop::population)
+function simulation(pop::Population)
 
     ############
     # Sim init #
