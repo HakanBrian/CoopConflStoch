@@ -214,7 +214,7 @@ println("New population with payoff 4: ", count(individual -> individual.payoff 
 # Mutate
 ##################
 
-mutate!(my_population)
+mutate!(my_population, truncation_bounds(pop.parameters.mut_var, 0.99))
 
 
 ##################
@@ -224,4 +224,4 @@ mutate!(my_population)
 # compilation
 @btime simulation(my_population);
 # pure runtime
-@profview simulation(my_population);
+@profview @time simulation(my_population);

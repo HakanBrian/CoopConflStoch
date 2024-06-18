@@ -233,11 +233,11 @@ function social_interactions!(pop::population)
     individuals_shuffle = shuffle(individuals_key)
 
     # If the number of individuals is odd, append a random individual to the shuffled list
-    if isodd(length(individuals_shuffle))
-        push!(individuals_shuffle, individuals_key[rand(1:length(individuals_key))])
+    if isodd(pop.parameters.N)
+        push!(individuals_shuffle, individuals_key[rand(1:pop.parameters.N)])
     end
 
-    num_pairs = length(individuals_shuffle) ÷ 2
+    num_pairs = pop.parameters.N ÷ 2
 
     # Prepare storage for initial conditions and parameters for all pairs
     u0s = Vector{SArray{Tuple{2}, Float64}}(undef, num_pairs)
@@ -246,8 +246,6 @@ function social_interactions!(pop::population)
     # Initialize sums for calculating mean
     norm_sum = 0.0
     punishment_sum = 0.0
-
-    # Iterate through individuals to sum norms and punishments
     for individual in values(pop.individuals)
         norm_sum += individual.a
         punishment_sum += individual.p
@@ -272,7 +270,8 @@ function social_interactions!(pop::population)
     for i in 1:num_pairs
         ind1 = pop.individuals[individuals_shuffle[2i-1]]
         ind2 = pop.individuals[individuals_shuffle[2i]]
-        ind1.action, ind2.action = copy(final_actions[i])
+        ind1.action = final_actions[i][1]
+        ind2.action = final_actions[i][2]
         total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
     end
 
@@ -288,7 +287,7 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    payoffs = map(individual -> individual.payoff, values(pop.individuals))
+    payoffs = map(individual -> 1 + 0.5 * individual.payoff, values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -322,8 +321,6 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     end
 
     u = pop.parameters.u
-    #lower_bound, upper_bound = truncate_bounds
-
     lower_bound, upper_bound = truncate_bounds
 
     # Indpendent draw for each of the traits to mutate
@@ -337,11 +334,12 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
             p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.p), upper=upper_bound)
             ind.p += rand(p_dist)
         end
-
+#=
         if rand() <= u
             T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
             ind.T += rand(T_dist)
         end
+=#
     end
 
     nothing
