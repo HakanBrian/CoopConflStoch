@@ -10,7 +10,7 @@ mutable struct simulation_parameters
     T0::Float64
     #popgen params
     gmax::Int64  # max generations
-    tmax::Float64  # max timespan for ODE
+    tmax::Float32  # max timespan for ODE
     N::Int64  # population size
     v::Float64  # synergy
     u::Float64  # mutation rate

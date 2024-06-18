@@ -114,7 +114,7 @@ end
     # Calculate payoff, and keep a running average of payoff for each individual
     # After each session of interaction the running average becomes the individual's payoff
 
-function benefit(action1::Real, action2::Float64, v::Float64)
+function benefit(action1::Real, action2::Real, v::Real)
     sqrt_action1 = √max(action1, 0)
     sqrt_action2 = √max(action2, 0)
     sqrt_sum = √max((action1 + action2), 0)
@@ -125,23 +125,23 @@ function cost(action::Real)
     return action^2
 end
 
-function external_punishment(action::Real, norm_pool::Float64, punishment_pool::Float64)
+function external_punishment(action::Real, norm_pool::Real, punishment_pool::Real)
     return punishment_pool * (action - norm_pool)^2
 end
 
-function internal_punishment(action::Real, norm_pool::Float64, T::Float64)
+function internal_punishment(action::Real, norm_pool::Real, T::Real)
     return T * (action - norm_pool)^2
 end
 
-function payoff(action1::Real, action2::Float64, norm_pool::Float64, punishment_pool::Float64, v::Float64)
+function payoff(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, v::Real)
     return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, norm_pool, punishment_pool)
 end
 
-function objective(action1::Real, action2::Float64, norm_pool::Float64, punishment_pool::Float64, T::Float64, v::Float64)
+function objective(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
     return payoff(action1, action2, norm_pool, punishment_pool, v) - internal_punishment(action1, norm_pool, T)
 end
 
-function objective_derivative(action1::Real, action2::Float64, norm_pool::Float64, punishment_pool::Float64, T::Float64, v::Float64)
+function objective_derivative(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, v), action1)
 end
 
@@ -170,8 +170,8 @@ function behav_ODE_static(u, p, t)
     return SA[dx, dy]
 end
 
-function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{5}, Float64}}, tmax::Float64)
-    tspan = (0.0, tmax)
+function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{5}, Float32}}, tmax::Float32, num_pairs::Int64)
+    tspan = (0.0f0, tmax)
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -183,7 +183,7 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = length(u0s), save_on = false)
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_pairs, save_on = false)
 
     # Extract final action values
     final_actions = [sol[end] for sol in sim]
@@ -191,11 +191,11 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float64}}, ps::Array{SArray{Tuple{
     return final_actions
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, v::Float64)
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float32, v::Float64)
     # Extract initial conditions and parameters
-    u0s = [SA[ind1.action, ind2.action] for (ind1, ind2) in pairs]
-    tspan = (0.0, tmax)
-    ps = [SA[norm_pool, punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
+    u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
+    tspan = (0.0f0, tmax)
+    ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -239,8 +239,8 @@ function social_interactions!(pop::population)
     num_pairs = pop.parameters.N ÷ 2
 
     # Prepare storage for initial conditions and parameters for all pairs
-    u0s = Vector{SArray{Tuple{2}, Float64}}(undef, num_pairs)
-    ps = Vector{SArray{Tuple{5}, Float64}}(undef, num_pairs)
+    u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
+    ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
 
     # Initialize sums for calculating mean
     norm_sum = 0.0
@@ -258,12 +258,12 @@ function social_interactions!(pop::population)
     for i in 1:num_pairs
         ind1 = pop.individuals[individuals_shuffle[2i-1]]
         ind2 = pop.individuals[individuals_shuffle[2i]]
-        u0s[i] = SA[ind1.action, ind2.action]
-        ps[i] = SA[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
+        u0s[i] = SA_F32[ind1.action; ind2.action]
+        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
     end
 
     # Calculate final actions for all pairs
-    final_actions = behav_eq(u0s, ps, pop.parameters.tmax)
+    final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
 
     # Update actions and payoffs for all pairs based on final actions
     for i in 1:num_pairs
