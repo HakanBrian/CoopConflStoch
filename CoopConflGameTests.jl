@@ -48,7 +48,7 @@ individual4  # individual 3 and 4 should have nearly identical values
 # Social Interactions
 ##################
 
-@btime social_interactions!(my_population)
+@time social_interactions!(my_population)
 
 
 ##################
