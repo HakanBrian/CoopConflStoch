@@ -225,47 +225,60 @@ end
     # Everyone has the same chance of picking a partner / getting picked
     # At the end of the day everyone is picked roughly an equal number of times
 
-function social_interactions!(pop::Population)
-    individuals_indices = Vector(1:pop.parameters.N)
-    individuals_shuffle = shuffle(individuals_indices)
+function shuffle_and_pair(individuals_indices::Vector{Int64})
+    shuffle!(individuals_indices)
+    num_pairs = length(individuals_indices) ÷ 2
+    pairs = [(individuals_indices[2i-1], individuals_indices[2i]) for i in 1:num_pairs]
 
-    # If the number of individuals is odd, append a random individual to the shuffled list
-    if isodd(pop.parameters.N)
-        push!(individuals_shuffle, rand(individuals_indices))
+    if isodd(length(individuals_indices))
+        # Pair the last individual with a random individual
+        push!(pairs, (individuals_indices[end], rand(individuals_indices[1:end-1])))
+        num_pairs += 1
     end
 
-    num_pairs = pop.parameters.N ÷ 2
+    return [pairs, num_pairs]
+end
+
+function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::Population)
+    u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
+    ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
+
+    for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
+        u0s[i] = SA_F32[pop.actions[idx1]; pop.actions[idx2]]
+        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, pop.Ts[idx1], pop.Ts[idx2], pop.parameters.v]
+    end
+
+    return [u0s, ps]
+end
+
+function update_actions_and_payoffs!(final_actions::SVector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::Population)
+    for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
+        pop.actions[idx1], pop.actions[idx2] = final_actions[i]
+        total_payoff!(pop, idx1, idx2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
+    end
+
+    nothing
+end
+
+function social_interactions!(pop::Population)
+    individuals_indices = collect(1:pop.parameters.N)
 
     # Update norm and punishment pools
     pop.norm_pool = mean(pop.as)
     pop.punishment_pool = mean(pop.ps)
 
-    # Prepare storage for initial conditions and parameters for all pairs
-    u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
-    ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
+    # Shuffle and pair individuals
+    pairs, num_pairs = shuffle_and_pair(individuals_indices)
 
     # Collect initial conditions and parameters for all pairs
-    for i in 1:num_pairs
-        idx1 = individuals_shuffle[2i-1]
-        idx2 = individuals_shuffle[2i]
-
-        u0s[i] = SA_F32[pop.actions[idx1]; pop.actions[idx2]]
-        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, pop.Ts[idx1], pop.Ts[idx2], pop.parameters.v]
-    end
+    u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
 
     # Calculate final actions for all pairs
     final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
 
     # Update actions and payoffs for all pairs based on final actions
-    for i in 1:num_pairs
-        idx1 = individuals_shuffle[2i-1]
-        idx2 = individuals_shuffle[2i]
-
-        pop.actions[idx1], pop.actions[idx2] = final_actions[i]
-
-        total_payoff!(pop, idx1, idx2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
-    end
-
+    update_actions_and_payoffs!(final_actions, pairs, pop)
+    
     nothing
 end
 
