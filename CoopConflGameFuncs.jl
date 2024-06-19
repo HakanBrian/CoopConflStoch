@@ -251,7 +251,7 @@ function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, In
     return [u0s, ps]
 end
 
-function update_actions_and_payoffs!(final_actions::SVector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::Population)
+function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::Population)
     for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
         pop.actions[idx1], pop.actions[idx2] = final_actions[i]
         total_payoff!(pop, idx1, idx2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
