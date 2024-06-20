@@ -65,7 +65,7 @@ individuals3 = Individual(0.5, 0.5, 0.5, 0.0, 3, 0)
 individuals4 = Individual(0.5, 0.5, 0.5, 0.0, 4, 0)
 
 # Bootstrap to increase sample size
-for i in 1:4:my_parameter.N-3
+for i in 1:4:(my_parameter.N-3)
     for j in 1:249
         set_individual!(my_population, i, individuals1)
         set_individual!(my_population, i+1, individuals2)
@@ -73,6 +73,26 @@ for i in 1:4:my_parameter.N-3
         set_individual!(my_population, i+3, individuals4)
     end
 end
+
+# Handling the last few individuals if N is not a multiple of 4
+remaining = my_parameter.N % 4
+if remaining > 0
+    for j in 1:249
+        if remaining >= 1
+            set_individual!(my_population, my_parameter.N-remaining+1, individuals1)
+        end
+        if remaining >= 2
+            set_individual!(my_population, my_parameter.N-remaining+2, individuals2)
+        end
+        if remaining >= 3
+            set_individual!(my_population, my_parameter.N-remaining+3, individuals3)
+        end
+        if remaining == 4
+            set_individual!(my_population, my_parameter.N, individuals4)
+        end
+    end
+end
+
 
 # Ensure 250 copies of each parent
 println("Initial population with payoff 4: ", count(payoff -> payoff == 4, my_population.payoffs))

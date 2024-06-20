@@ -236,23 +236,23 @@ function shuffle_and_pair(individuals_indices::Vector{Int64})
         num_pairs += 1
     end
 
-    return [pairs, num_pairs]
+    return pairs, num_pairs
 end
 
 function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::Population)
     u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
     ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
 
-    for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
+    for (i, (idx1, idx2)) in enumerate(pairs)
         u0s[i] = SA_F32[pop.actions[idx1]; pop.actions[idx2]]
         ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, pop.Ts[idx1], pop.Ts[idx2], pop.parameters.v]
     end
 
-    return [u0s, ps]
+    return u0s, ps
 end
 
 function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::Population)
-    for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
+    for (i, (idx1, idx2)) in enumerate(pairs)
         pop.actions[idx1], pop.actions[idx2] = final_actions[i]
         total_payoff!(pop, idx1, idx2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
     end
@@ -278,7 +278,7 @@ function social_interactions!(pop::Population)
 
     # Update actions and payoffs for all pairs based on final actions
     update_actions_and_payoffs!(final_actions, pairs, pop)
-    
+
     nothing
 end
 
@@ -297,13 +297,10 @@ function reproduce!(pop::Population)
     payoffs = pop.payoffs
 
     # Sample with the given weights
-    sampled_idxs = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
-
-    # Sort keys
-    sort!(sampled_idxs)
+    sampled_idxs = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true)
 
     # Update population individuals based on sampled keys
-    for (i, sampled_idx) in zip(1:pop.parameters.N, sampled_idxs)
+    for (i, sampled_idx) in enumerate(sampled_idxs)
         set_individual!(pop, i, get_individual(pop, sampled_idx))
     end
 
