@@ -299,9 +299,13 @@ function reproduce!(pop::Population)
     # Sample with the given weights
     sampled_idxs = sample(1:pop.parameters.N, ProbabilityWeights(payoffs), pop.parameters.N, replace=true)
 
+    # Sort the sampled indices
+    sort!(sampled_idxs)
+
     # Update population individuals based on sampled keys
     for (i, sampled_idx) in enumerate(sampled_idxs)
-        set_individual!(pop, i, get_individual(pop, sampled_idx))
+        parent = get_individual(pop, sampled_idx)
+        set_individual!(pop, i, parent)
     end
 
     nothing
