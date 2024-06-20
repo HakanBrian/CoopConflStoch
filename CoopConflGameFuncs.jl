@@ -253,25 +253,25 @@ function shuffle_and_pair(individuals_key::Vector{Int64})
         num_pairs += 1
     end
 
-    return [pairs, num_pairs]
+    return pairs, num_pairs
 end
 
 function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::population)
     u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
     ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
 
-    for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
+    for (i, (idx1, idx2)) in enumerate(pairs)
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         u0s[i] = SA_F32[ind1.action; ind2.action]
         ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
     end
 
-    return [u0s, ps]
+    return u0s, ps
 end
 
 function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::population)
-    for (i, (idx1, idx2)) in zip(eachindex(pairs), pairs)
+    for (i, (idx1, idx2)) in enumerate(pairs)
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
