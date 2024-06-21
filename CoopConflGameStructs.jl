@@ -51,7 +51,7 @@ function Base.copy!(old_params::Simulation_Parameters, new_params::Simulation_Pa
     setfield!(old_params, :mut_var, getfield(new_params, :mut_var))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
-    return nothing
+    nothing
 end
 
 
@@ -87,7 +87,7 @@ function Base.copy!(old_ind::Individual, new_ind::Individual)
     setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
     setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
 
-    return nothing
+    nothing
 end
 
 
@@ -147,5 +147,5 @@ function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :norm_pool), getfield(new_population, :norm_pool))
     copy!(getfield(old_population, :punishment_pool), getfield(new_population, :punishment_pool))
 
-    return nothing
+    nothing
 end
