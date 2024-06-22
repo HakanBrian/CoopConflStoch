@@ -56,7 +56,7 @@ individual4  # individual 3 and 4 should have nearly identical values
 ##################
 
 # Create sample population
-my_parameter = Simulation_Parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.0, 0.0, 0.0, 1);
+my_parameter = Simulation_Parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.0, 0.0, 0.0, 1); # N has to be a multiple of 4
 my_population = population_construction(my_parameter)
 
 individuals1 = Individual(0.5, 0.5, 0.5, 0.0, 1, 0)
@@ -73,26 +73,6 @@ for i in 1:4:(my_parameter.N-3)
         set_individual!(my_population, i+3, individuals4)
     end
 end
-
-# Handling the last few individuals if N is not a multiple of 4
-remaining = my_parameter.N % 4
-if remaining > 0
-    for j in 1:249
-        if remaining >= 1
-            set_individual!(my_population, my_parameter.N-remaining+1, individuals1)
-        end
-        if remaining >= 2
-            set_individual!(my_population, my_parameter.N-remaining+2, individuals2)
-        end
-        if remaining >= 3
-            set_individual!(my_population, my_parameter.N-remaining+3, individuals3)
-        end
-        if remaining == 4
-            set_individual!(my_population, my_parameter.N, individuals4)
-        end
-    end
-end
-
 
 # Ensure 250 copies of each parent
 println("Initial population with payoff 4: ", count(payoff -> payoff == 4, my_population.payoffs))
