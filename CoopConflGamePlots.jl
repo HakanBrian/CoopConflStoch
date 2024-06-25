@@ -21,7 +21,7 @@ my_population = population_construction(my_parameter);
 # Simulation
 ##################
 
-@time my_simulation = simulation(my_population)
+my_simulation = simulation(my_population)
 
 
 ##################
@@ -41,7 +41,7 @@ plot(my_simulation_mean.generation,
 # Plotting each individual's data
 plot()
 for i in 1:my_population.parameters.N
-    individual_data = filter(row -> row[:individual] == i, my_simulation)
+    individual_data = filter(row -> row[:individual] == 10, my_simulation)
     plot!(individual_data.generation, individual_data.action, label="", linestyle=:solid, color=:blue)
     plot!(individual_data.generation, individual_data.a, label="", linestyle=:dash, color=:red)
     plot!(individual_data.generation, individual_data.p, label="", linestyle=:dot, color=:green)

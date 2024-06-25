@@ -43,6 +43,8 @@ individual2  # individual 1 and 2 should have nearly identical values
 individual3  # should be around 0.32913
 individual4  # individual 3 and 4 should have nearly identical values
 
+total_payoff!(individual1, individual2, norm, punishment, 0.0)
+
 
 ##################
 # Social Interactions

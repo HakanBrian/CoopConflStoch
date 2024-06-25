@@ -373,6 +373,57 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
 end
 
 
+# Uncomment below if using mutation units
+#=
+function mutate!(pop::population)
+    mutation_unit = pop.parameters.mut_var
+
+    # Only mutate if necessary
+    if mutation_unit == 0
+        return nothing
+    end
+
+    mutation_direction = [-1, 1]
+    u = pop.parameters.u
+
+    # Indpendent draw for each of the traits to mutate
+    for ind in values(pop.individuals)
+        if rand() <= u
+            mutation_amount = rand(mutation_direction) * mutation_unit
+
+            if ind.a - mutation_amount <= 0
+                ind.a = 0
+            else
+                ind.a += mutation_amount
+            end
+        end
+
+        if rand() <= u
+            mutation_amount = rand(mutation_direction) * mutation_unit
+
+            if ind.p - mutation_amount <= 0
+                ind.p = 0
+            else
+                ind.p += mutation_amount
+            end
+        end
+
+        # Uncomment below if 'T' trait mutation is required
+        # if rand() <= u
+        #   mutation_amount = rand(mutation_direction) * mutation_unit
+        #
+        #    if ind.T - mutation_amount <= 0
+        #        ind.T = 0
+        #    else
+        #        ind.T += mutation_amount
+        #    end
+        # end
+    end
+
+    nothing
+end
+=#
+
 #######################
 # Simulation Function #
 #######################
