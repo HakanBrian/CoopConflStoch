@@ -391,7 +391,7 @@ function mutate!(pop::population)
         if rand() <= u
             mutation_amount = rand(mutation_direction) * mutation_unit
 
-            if ind.a - mutation_amount <= 0
+            if ind.a + mutation_amount <= 0
                 ind.a = 0
             else
                 ind.a += mutation_amount
@@ -401,7 +401,7 @@ function mutate!(pop::population)
         if rand() <= u
             mutation_amount = rand(mutation_direction) * mutation_unit
 
-            if ind.p - mutation_amount <= 0
+            if ind.p + mutation_amount <= 0
                 ind.p = 0
             else
                 ind.p += mutation_amount
@@ -412,7 +412,7 @@ function mutate!(pop::population)
         # if rand() <= u
         #   mutation_amount = rand(mutation_direction) * mutation_unit
         #
-        #    if ind.T - mutation_amount <= 0
+        #    if ind.T + mutation_amount <= 0
         #        ind.T = 0
         #    else
         #        ind.T += mutation_amount
