@@ -372,10 +372,8 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     nothing
 end
 
-
-# Uncomment below if using mutation units
-#=
-function mutate!(pop::population)
+#= Uncomment below if using mutation units
+function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_unit = pop.parameters.mut_var
 
     # Only mutate if necessary

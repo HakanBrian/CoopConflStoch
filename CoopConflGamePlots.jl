@@ -21,7 +21,7 @@ my_population = population_construction(my_parameter);
 # Simulation
 ##################
 
-my_simulation = simulation(my_population)
+@time my_simulation = simulation(my_population)
 
 
 ##################
