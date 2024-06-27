@@ -21,6 +21,9 @@ my_population = population_construction(my_parameter);
 # Simulation
 ##################
 
+# Update simulation parameters
+my_population.parameters = my_parameter
+
 @time my_simulation = simulation(my_population)
 
 

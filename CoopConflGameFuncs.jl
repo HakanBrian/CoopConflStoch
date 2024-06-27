@@ -276,6 +276,11 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
         total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
+
+        # Uncomment below if turning off payoffs
+        # ind1.payoff, ind2.payoff = 1.0
+        # ind1.interactions += 1
+        # ind2.interactions += 1
     end
 
     nothing
@@ -311,9 +316,6 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    # Uncomment below if testing selection
-    # payoffs = map(individual -> 1 + 0.5 * individual.payoff, values(pop.individuals))
-
     payoffs = map(individual -> individual.payoff, values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 

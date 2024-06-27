@@ -27,21 +27,12 @@ pair = [(individual1, individual2)];
 norm = mean([individual1.a, individual2.a])
 punishment = mean([individual1.p, individual2.p])
 
-individual3 = individual(0.4, 0.2, 0.5, 0.7, 0, 0);
-individual4 = individual(0.5, 0.3, 0.6, 0.8, 0, 0);
-pair_all = [(individual1, individual2), (individual3, individual4)];
-norm_all = mean([individual1.a, individual2.a, individual3.a, individual4.a])
-punishment_all = mean([individual1.p, individual2.p, individual3.p, individual4.p])
-
 # Calculate behave eq
 @time behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
-@time behav_eq!(pair_all, norm_all, punishment_all, my_parameter.tmax, my_parameter.v)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
 individual2  # individual 1 and 2 should have nearly identical values
-individual3  # should be around 0.32913
-individual4  # individual 3 and 4 should have nearly identical values
 
 total_payoff!(individual1, individual2, norm, punishment, 0.0)
 
