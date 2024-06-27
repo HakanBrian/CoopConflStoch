@@ -64,8 +64,10 @@ mutable struct individual
     a::Float64
     p::Float64
     T::Float64
+    norm_pool::Float64
+    punishment_pool::Float64
     payoff::Float64
-    interactions::Int64
+    interactions::Array{Int64}
 end
 
 function Base.copy(ind::individual)
@@ -74,6 +76,8 @@ function Base.copy(ind::individual)
         getfield(ind, :a),
         getfield(ind, :p),
         getfield(ind, :T),
+        getfield(ind, :norm_pool),
+        getfield(ind, :punishment_pool),
         getfield(ind, :payoff),
         getfield(ind, :interactions)
     )
@@ -84,6 +88,8 @@ function Base.copy!(old_ind::individual, new_ind::individual)
     setfield!(old_ind, :a, getfield(new_ind, :a))
     setfield!(old_ind, :p, getfield(new_ind, :p))
     setfield!(old_ind, :T, getfield(new_ind, :T))
+    setfield!(old_ind, :norm_pool, getfield(new_ind, :norm_pool))
+    setfield!(old_ind, :punishment_pool, getfield(new_ind, :punishment_pool))
     setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
     setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
 
@@ -98,24 +104,18 @@ end
 mutable struct population
     parameters::simulation_parameters
     individuals::Dict{Int64, individual}
-    norm_pool::Float64
-    punishment_pool::Float64
 end
 
 function Base.copy(pop::population)
     return population(
         copy(getfield(pop, :parameters)),
-        copy(getfield(pop, :individuals)),
-        copy(getfield(pop, :norm_pool)),
-        copy(getfield(pop, :punishment_pool))
+        copy(getfield(pop, :individuals))
     )
 end
 
 function Base.copy!(old_population::population, new_population::population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
     copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
-    copy!(getfield(old_population, :norm_pool), getfield(new_population, :norm_pool))
-    copy!(getfield(old_population, :punishment_pool), getfield(new_population, :punishment_pool))
 
     nothing
 end

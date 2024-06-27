@@ -52,15 +52,17 @@ function population_construction(parameters::simulation_parameters)
     # Create individuals
     for i in 1:parameters.N
         if use_distribution
-            indiv = individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
+            norm = a0 + rand(a0_dist)
+            punishment = p0 + rand(p0_dist)
+            indiv = individual(action0 + rand(action0_dist), norm, punishment, T0 + rand(T0_dist), norm, punishment, 0.0, [])
         else
-            indiv = individual(action0, a0, p0, T0, 0.0, 0)
+            indiv = individual(action0, a0, p0, T0, a0, p0, 0.0, [])
         end
 
         individuals_dict[i] = indiv
     end
 
-    return population(parameters, individuals_dict, 0, 0)
+    return population(parameters, individuals_dict,)
 end
 
 function output!(outputs::DataFrame, t::Int64, pop::population)
@@ -145,15 +147,22 @@ function objective_derivative(action1::Real, action2::Real, norm_pool::Real, pun
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, v), action1)
 end
 
-function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, v::Float64)
-    payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, v), 0)
-    payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, v), 0)
+function total_payoff!(ind1::individual, idx1::Int64, ind2::individual, idx2::Int64, v::Float64, N::Int64)
+    payoff1 = max(payoff(ind1.action, ind2.action, ind1.norm_pool, ind1.punishment_pool, v), 0)
+    payoff2 = max(payoff(ind2.action, ind1.action, ind2.norm_pool, ind2.punishment_pool, v), 0)
 
-    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
-    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
+    ind1.payoff = (payoff1 + length(ind1.interactions) * ind1.payoff) / (length(ind1.interactions) + 1)
+    ind2.payoff = (payoff2 + length(ind2.interactions) * ind2.payoff) / (length(ind2.interactions) + 1)
 
-    ind1.interactions += 1
-    ind2.interactions += 1
+    push!(ind1.interactions, idx2)
+    if length(ind1.interactions) > N
+        popfirst!(ind1.interactions)
+    end
+
+    push!(ind2.interactions, idx1)
+    if length(ind2.interactions) > N
+        popfirst!(ind2.interactions)
+    end
 
     nothing
 end
@@ -164,13 +173,13 @@ end
 ##################
 
 function behav_ODE_static(u, p, t)
-    dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[5])
-    dy = objective_derivative(u[2], u[1], p[1], p[2], p[4], p[5])
+    dx = objective_derivative(u[1], u[2], p[1], p[3], p[5], p[7])
+    dy = objective_derivative(u[2], u[1], p[2], p[4], p[6], p[7])
 
     return SA[dx, dy]
 end
 
-function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{5}, Float32}}, tmax::Float32, num_pairs::Int64)
+function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{7}, Float32}}, tmax::Float32, num_pairs::Int64)
     tspan = (0.0f0, tmax)
 
     # Initialize a problem with the first set of parameters as a template
@@ -191,11 +200,11 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{
     return final_actions
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float32, v::Float64)
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, tmax::Float32, v::Float64)
     # Extract initial conditions and parameters
     u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
     tspan = (0.0f0, tmax)
-    ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
+    ps = [SA_F32[ind1.norm_pool, ind2.norm_pool, ind1.punishment_pool, ind2.punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -228,16 +237,14 @@ end
     # At the end of the day everyone is picked roughly an equal number of times
 
 function update_norm_punishment_pools!(pop::population)
-    norm_sum = 0.0
-    punishment_sum = 0.0
-    for individual in values(pop.individuals)
-        norm_sum += individual.a
-        punishment_sum += individual.p
-    end
+    norms = map(individual -> individual.a, values(pop.individuals))
+    punishments = map(individual -> individual.p, values(pop.individuals))
 
     # Update norm and punishment pools
-    pop.norm_pool = norm_sum / pop.parameters.N
-    pop.punishment_pool = punishment_sum / pop.parameters.N
+    for individual in values(pop.individuals)
+        individual.norm_pool = mean(push!(map(i -> norms[i], individual.interactions), individual.a))
+        individual.punishment_pool = mean(push!(map(i -> punishments[i], individual.interactions), individual.p))
+    end
 
     nothing
 end
@@ -258,13 +265,13 @@ end
 
 function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::population)
     u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
-    ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
+    ps = Vector{SArray{Tuple{7}, Float32}}(undef, num_pairs)
 
     for (i, (idx1, idx2)) in enumerate(pairs)
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         u0s[i] = SA_F32[ind1.action; ind2.action]
-        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
+        ps[i] = SA_F32[ind1.norm_pool, ind2.norm_pool, ind1.punishment_pool, ind2.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
     end
 
     return u0s, ps
@@ -275,7 +282,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
-        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
+        total_payoff!(ind1, idx1, ind2, idx2, pop.parameters.v, pop.parameters.N)
     end
 
     nothing
@@ -311,9 +318,6 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    # Uncomment below if testing selection
-    # payoffs = map(individual -> 1 + 0.5 * individual.payoff, values(pop.individuals))
-
     payoffs = map(individual -> individual.payoff, values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
