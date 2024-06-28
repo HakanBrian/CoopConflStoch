@@ -148,19 +148,25 @@ function objective_derivative(action1::Real, action2::Real, norm_pool::Real, pun
 end
 
 function total_payoff!(ind1::individual, idx1::Int64, ind2::individual, idx2::Int64, v::Float64, N::Int64)
+    # Calculate payoffs and ensure non-negative
     payoff1 = max(payoff(ind1.action, ind2.action, ind1.norm_pool, ind1.punishment_pool, v), 0)
     payoff2 = max(payoff(ind2.action, ind1.action, ind2.norm_pool, ind2.punishment_pool, v), 0)
 
-    ind1.payoff = (payoff1 + length(ind1.interactions) * ind1.payoff) / (length(ind1.interactions) + 1)
-    ind2.payoff = (payoff2 + length(ind2.interactions) * ind2.payoff) / (length(ind2.interactions) + 1)
+    # Update payoffs
+    interactions1_length = length(ind1.interactions)
+    interactions2_length = length(ind2.interactions)
 
+    ind1.payoff = (payoff1 + interactions1_length * ind1.payoff) / (interactions1_length + 1)
+    ind2.payoff = (payoff2 + interactions2_length * ind2.payoff) / (interactions2_length + 1)
+
+    # Update interactions
     push!(ind1.interactions, idx2)
-    if length(ind1.interactions) > N
+    if interactions1_length + 1 > N
         popfirst!(ind1.interactions)
     end
 
     push!(ind2.interactions, idx1)
-    if length(ind2.interactions) > N
+    if interactions2_length + 1 > N
         popfirst!(ind2.interactions)
     end
 
@@ -236,14 +242,22 @@ end
     # Everyone has the same chance of picking a partner / getting picked
     # At the end of the day everyone is picked roughly an equal number of times
 
-function update_norm_punishment_pools!(pop::population)
-    norms = map(individual -> individual.a, values(pop.individuals))
-    punishments = map(individual -> individual.p, values(pop.individuals))
+function update_norm_punishment_pools!(pop::Population)
+    # Extract norms and punishments once
+    individuals = values(pop.individuals)
+    norms = map(ind -> ind.a, individuals)
+    punishments = map(ind -> ind.p, individuals)
 
-    # Update norm and punishment pools
-    for individual in values(pop.individuals)
-        individual.norm_pool = mean(push!(map(i -> norms[i], individual.interactions), individual.a))
-        individual.punishment_pool = mean(push!(map(i -> punishments[i], individual.interactions), individual.p))
+    for individual in individuals
+        # Extract interactions once
+        interactions = individual.interactions
+
+        # Efficiently compute the mean of norms and punishments
+        norm_sum = sum((norms[i] for i in interactions), init=0.0) + individual.a
+        individual.norm_pool = norm_sum / (length(interactions) + 1)
+
+        punishment_sum = sum((punishments[i] for i in interactions), init=0.0) + individual.p
+        individual.punishment_pool = punishment_sum / (length(interactions) + 1)
     end
 
     nothing
