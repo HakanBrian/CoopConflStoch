@@ -1,4 +1,4 @@
-using StatsPlots
+using BenchmarkTools, StatsPlots
 
 
 ##################
@@ -45,29 +45,13 @@ function simulation_replicate(my_parameter::simulation_parameters, num_replicate
                                     :payoff => mean)
 
         # Add a column for replicate identifier
-        insertcols!(my_simulation_mean, 1, :replicate => fill(i, nrow(my_simulation_mean)))
+        rows_to_insert = nrow(my_simulation_mean)
+        insertcols!(my_simulation_mean, 1, :replicate => fill(i, rows_to_insert))
 
         # Insert rows into preallocated DataFrame
-        rows_to_insert = nrow(my_simulation_mean)
         all_simulation_means[row_index:row_index + rows_to_insert - 1, :] .= my_simulation_mean
         row_index += rows_to_insert
     end
 
     return all_simulation_means
 end
-
-
-##################
-# Parameter Construction
-##################
-
-my_parameter = simulation_parameters(0.2, 0.5, 0.4, 0.0, 1000, 5, 500, 0.0, 0.5, 0.0, 0.0005, 10)
-
-
-##################
-# Simulation Run
-##################
-
-@time my_simulation = simulation_replicate(my_parameter, 2)
-
-@df my_simulation plot(:generation, cols(3:7))

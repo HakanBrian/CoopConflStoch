@@ -17,7 +17,7 @@ mutable struct simulation_parameters
     trait_var::Float64  # trait variance
     mut_var::Float64  # mutation variance
     #file/simulation params
-    output_save_tick::Int64
+    output_save_tick::Int64  # when to save output
 end
 
 function Base.copy(parameters::simulation_parameters)
