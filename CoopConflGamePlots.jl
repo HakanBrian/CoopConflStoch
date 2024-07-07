@@ -1,4 +1,4 @@
-using Plots
+using StatsPlots
 
 
 ##################
@@ -9,51 +9,65 @@ include("CoopConflGameFuncs.jl")
 
 
 ##################
-# Population Construction
+# Simulation Function
 ##################
 
-my_parameter = simulation_parameters(0.2, 0.5, 0.4, 0.0, 100000, 5, 500, 0.0, 0.5, 0.0, 0.0005, 10)
+function simulation_replicate(my_parameter::simulation_parameters, num_replicates::Int64)
+    # Container to hold mean data of each simulation
+    output_length = floor(Int64, my_parameter.gmax/my_parameter.output_save_tick) * num_replicates
+    all_simulation_means = DataFrame(
+        replicate = Vector{Int64}(undef, output_length),
+        generation = Vector{Int64}(undef, output_length),
+        action_mean = Vector{Float64}(undef, output_length),
+        a_mean = Vector{Float64}(undef, output_length),
+        p_mean = Vector{Float64}(undef, output_length),
+        T_mean = Vector{Float64}(undef, output_length),
+        payoff_mean = Vector{Float64}(undef, output_length)
+    )
 
-my_population = population_construction(my_parameter);
+    # Index to keep track of where to insert rows
+    row_index = 1
 
+    for i in 1:num_replicates
+        println("Running simulation replicate $i")
 
-##################
-# Simulation
-##################
+        # Run the simulation
+        my_population = population_construction(my_parameter)
+        my_simulation = simulation(my_population)
 
-# Update simulation parameters
-my_population.parameters = my_parameter
+        # Group by generation and compute mean for each generation
+        my_simulation_gdf = groupby(my_simulation, :generation)
+        my_simulation_mean = combine(my_simulation_gdf,
+                                    :action => mean,
+                                    :a => mean,
+                                    :p => mean,
+                                    :T => mean,
+                                    :payoff => mean)
 
-@time my_simulation = simulation(my_population)
+        # Add a column for replicate identifier
+        insertcols!(my_simulation_mean, 1, :replicate => fill(i, nrow(my_simulation_mean)))
 
+        # Insert rows into preallocated DataFrame
+        rows_to_insert = nrow(my_simulation_mean)
+        all_simulation_means[row_index:row_index + rows_to_insert - 1, :] .= my_simulation_mean
+        row_index += rows_to_insert
+    end
 
-##################
-# Plot
-##################
-
-# Plotting each of generations's average data
-my_simulation_gdf = groupby(my_simulation, :generation);
-my_simulation_mean = combine(my_simulation_gdf, :action => mean, :a => mean, :p => mean, :T => mean, :payoff => mean);
-plot(my_simulation_mean.generation,
-    [my_simulation_mean.action_mean, my_simulation_mean.a_mean, my_simulation_mean.p_mean, my_simulation_mean.T_mean, my_simulation_mean.payoff_mean],
-    title=string(my_parameter),
-    titlefontsize=8,
-    xlabel="Generation", ylabel="Traits",
-    label=["action" "a" "p" "T" "payoff"])
-
-# Plotting each individual's data
-plot()
-for i in 1:my_population.parameters.N
-    individual_data = filter(row -> row[:individual] == 10, my_simulation)
-    plot!(individual_data.generation, individual_data.action, label="", linestyle=:solid, color=:blue)
-    plot!(individual_data.generation, individual_data.a, label="", linestyle=:dash, color=:red)
-    plot!(individual_data.generation, individual_data.p, label="", linestyle=:dot, color=:green)
-    plot!(individual_data.generation, individual_data.T, label="", linestyle=:dashdot, color=:magenta)
-    plot!(individual_data.generation, individual_data.payoff, label="", linestyle=:dashdotdot, color=:brown)
+    return all_simulation_means
 end
 
-# Display the plot with appropriate labels and title
-plot!(title=string(my_parameter),
-      xlabel="Generation", ylabel="Traits", legend=:outertopright, titlefontsize=8)
 
-display(plot)
+##################
+# Parameter Construction
+##################
+
+my_parameter = simulation_parameters(0.2, 0.5, 0.4, 0.0, 1000, 5, 500, 0.0, 0.5, 0.0, 0.0005, 10)
+
+
+##################
+# Simulation Run
+##################
+
+@time my_simulation = simulation_replicate(my_parameter, 2)
+
+@df my_simulation plot(:generation, cols(3:7))
