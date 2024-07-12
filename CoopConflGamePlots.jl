@@ -1,4 +1,4 @@
-using BenchmarkTools, StatsPlots
+using BenchmarkTools, Plots
 
 
 ##################
@@ -53,5 +53,36 @@ function simulation_replicate(my_parameter::simulation_parameters, num_replicate
         row_index += rows_to_insert
     end
 
-    return all_simulation_means
+    return all_simulation_means, num_replicates
+end
+
+function plot_simulation_data(all_simulation_means::Tuple{DataFrame, Int64})
+    num_replicates = all_simulation_means[2]
+
+    # Define color palette for each trait type
+    colors = Dict(
+        "action" => :blue,
+        "a" => :red,
+        "p" => :green,
+        "T" => :purple,
+        "payoff" => :orange
+    )
+
+    # Initialize the plot
+    p = plot(legend=false)
+
+    # Plot each replicate's data with consistent colors and labels
+    for i in 1:num_replicates
+        sim_data = filter(row -> row.replicate == i, all_simulation_means[1])
+        plot!(p, sim_data.generation, sim_data.action_mean, color=colors["action"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.a_mean, color=colors["a"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.p_mean, color=colors["p"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.T_mean, color=colors["T"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.payoff_mean, color=colors["payoff"], linewidth=1, alpha=0.6)
+    end
+
+    # Customize and display the plot
+    xlabel!("Generation")
+    ylabel!("Traits")
+    display(p)
 end
