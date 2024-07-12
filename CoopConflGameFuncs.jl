@@ -242,7 +242,7 @@ end
     # Everyone has the same chance of picking a partner / getting picked
     # At the end of the day everyone is picked roughly an equal number of times
 
-function update_norm_punishment_pools!(pop::Population)
+function update_norm_punishment_pools!(pop::population)
     # Extract norms and punishments once
     individuals = values(pop.individuals)
     norms = map(ind -> ind.a, individuals)
@@ -297,6 +297,12 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
         total_payoff!(ind1, idx1, ind2, idx2, pop.parameters.v, pop.parameters.N)
+
+        # Uncomment below if turning off payoffs
+        # ind1.payoff = 1.0
+        # ind1.interactions += 1
+        # ind2.payoff = 1.0
+        # ind2.interactions += 1
     end
 
     nothing
@@ -342,7 +348,7 @@ function reproduce!(pop::population)
     sort!(sampled_keys)
 
     # Update population individuals based on sampled keys
-    for (key, sampled_key) in zip(1:pop.parameters.N, sampled_keys)
+    for (key, sampled_key) in enumerate(sampled_keys)
         copy!(pop.individuals[key], pop.individuals[sampled_key])
     end
 
