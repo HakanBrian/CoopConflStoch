@@ -298,11 +298,9 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1.action, ind2.action = final_actions[i]
         total_payoff!(ind1, idx1, ind2, idx2, pop.parameters.v, pop.parameters.N)
 
-        # Uncomment below if turning off payoffs
+        # Uncomment to turn off payoff
         # ind1.payoff = 1.0
-        # ind1.interactions += 1
         # ind2.payoff = 1.0
-        # ind2.interactions += 1
     end
 
     nothing
