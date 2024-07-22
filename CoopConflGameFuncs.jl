@@ -353,7 +353,7 @@ function reproduce!(pop::population)
 
         # Sample within the group with given weights
         sampled_indices = sample(keys_list, ProbabilityWeights(payoffs), length(group), replace = true, ordered = false)
-        
+
         # Append sampled individuals to the new population list
         append!(new_individuals, [copy(group[sampled_index]) for sampled_index in sampled_indices])
     end
