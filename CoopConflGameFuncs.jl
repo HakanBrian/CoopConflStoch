@@ -317,7 +317,8 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    payoffs = map(individual -> individual.payoff, values(pop.individuals))
+    payoffs = map(individual -> individual.payoff - individual.p, values(pop.individuals))
+    # payoffs = exp.(payoffs * 10.0)  # Make 10.0 a parameter
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
