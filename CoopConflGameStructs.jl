@@ -9,13 +9,14 @@ mutable struct simulation_parameters
     p0::Float64
     T0::Float64
     #popgen params
-    gmax::Int64  # max generations
-    tmax::Float32  # max timespan for ODE
-    N::Int64  # population size
-    v::Float64  # synergy
-    u::Float64  # mutation rate
-    trait_var::Float64  # trait variance
-    mut_var::Float64  # mutation variance
+    gmax::Int64  # maximum number of generations
+    tmax::Float32  # maximum length of timespan for ODE
+    population_size::Int64
+    synergy::Float64
+    payoff_scaling_factor::Float64
+    mutation_rate::Float64
+    trait_variance::Float64
+    mutation_variance::Float64
     #file/simulation params
     output_save_tick::Int64  # when to save output
 end
@@ -28,11 +29,12 @@ function Base.copy(parameters::simulation_parameters)
         getfield(parameters, :T0),
         getfield(parameters, :gmax),
         getfield(parameters, :tmax),
-        getfield(parameters, :N),
-        getfield(parameters, :v),
-        getfield(parameters, :u),
-        getfield(parameters, :trait_var),
-        getfield(parameters, :mut_var),
+        getfield(parameters, :population_size),
+        getfield(parameters, :synergy),
+        getfield(parameters, :payoff_scaling_factor),
+        getfield(parameters, :mutation_rate),
+        getfield(parameters, :trait_variance),
+        getfield(parameters, :mutation_variance),
         getfield(parameters, :output_save_tick)
     )
 end
@@ -44,11 +46,12 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     setfield!(old_params, :T0, getfield(new_params, :T0))
     setfield!(old_params, :gmax, getfield(new_params, :gmax))
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
-    setfield!(old_params, :N, getfield(new_params, :N))
-    setfield!(old_params, :v, getfield(new_params, :v))
-    setfield!(old_params, :u, getfield(new_params, :u))
-    setfield!(old_params, :trait_var, getfield(new_params, :trait_var))
-    setfield!(old_params, :mut_var, getfield(new_params, :mut_var))
+    setfield!(old_params, :population_size, getfield(new_params, :population_size))
+    setfield!(old_params, :synergy, getfield(new_params, :synergy))
+    setfield!(old_params, :payoff_scaling_factor, getfield(new_params, :payoff_scaling_factor))
+    setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
+    setfield!(old_params, :trait_variance, getfield(new_params, :trait_variance))
+    setfield!(old_params, :mutation_variance, getfield(new_params, :mutation_variance))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
     nothing

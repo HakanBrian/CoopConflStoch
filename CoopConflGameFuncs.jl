@@ -31,8 +31,8 @@ end
 
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
-    trait_var = parameters.trait_var
-    use_distribution = trait_var != 0
+    trait_variance = parameters.trait_variance
+    use_distribution = trait_variance != 0
 
     # Collect initial traits
     action0 = parameters.action0
@@ -42,15 +42,15 @@ function population_construction(parameters::simulation_parameters)
 
     # Construct distributions if necessary
     if use_distribution
-        lower_bound, upper_bound = truncation_bounds(trait_var, 0.99)
-        action0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -action0), upper=upper_bound)
-        a0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -a0), upper=upper_bound)
-        p0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -p0), upper=upper_bound)
-        T0_dist = truncated(Normal(0, trait_var), lower=max(lower_bound, -T0), upper=upper_bound)
+        lower_bound, upper_bound = truncation_bounds(trait_variance, 0.99)
+        action0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -action0), upper=upper_bound)
+        a0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -a0), upper=upper_bound)
+        p0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -p0), upper=upper_bound)
+        T0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -T0), upper=upper_bound)
     end
 
     # Create individuals
-    for i in 1:parameters.N
+    for i in 1:parameters.population_size
         if use_distribution
             indiv = individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
         else
@@ -68,11 +68,11 @@ function output!(outputs::DataFrame, t::Int64, pop::population)
     if t == 1
         output_row_base = 1
     else
-        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.N + 1
+        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.population_size + 1
     end
 
     # Preallocate vectors for batch assignment
-    N = pop.parameters.N
+    N = pop.parameters.population_size
     generation_col = fill(t, N)
     individual_col = 1:N
     action_col = Vector{Float64}(undef, N)
@@ -236,8 +236,8 @@ function update_norm_punishment_pools!(pop::population)
     end
 
     # Update norm and punishment pools
-    pop.norm_pool = norm_sum / pop.parameters.N
-    pop.punishment_pool = punishment_sum / pop.parameters.N
+    pop.norm_pool = norm_sum / pop.parameters.population_size
+    pop.punishment_pool = punishment_sum / pop.parameters.population_size
 
     nothing
 end
@@ -264,7 +264,7 @@ function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, In
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         u0s[i] = SA_F32[ind1.action; ind2.action]
-        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.v]
+        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.synergy]
     end
 
     return u0s, ps
@@ -275,7 +275,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
-        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.v)
+        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
 
         # Uncomment below if turning off payoffs
         # ind1.payoff = 1.0
@@ -317,12 +317,11 @@ end
     # number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    payoffs = map(individual -> individual.payoff - individual.p, values(pop.individuals))
-    # payoffs = exp.(payoffs * 10.0)  # Make 10.0 a parameter
+    payoffs = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
-    sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.N, replace=true, ordered=false)
+    sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.population_size, replace=true, ordered=false)
 
     # Sort keys
     sort!(sampled_keys)
@@ -360,7 +359,7 @@ function reproduce!(pop::population)
     end
 
     # Ensure the new population size matches the original population size
-    while length(new_individuals) < pop.parameters.N
+    while length(new_individuals) < pop.parameters.population_size
         append!(new_individuals, copy(sample(new_individuals, 1)))
     end
 
@@ -381,31 +380,31 @@ end
     # use an independent draw function for each of the traits that could mutate
 
 function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
-    mut_var = pop.parameters.mut_var
+    mutation_variance = pop.parameters.mutation_variance
 
     # Only mutate if necessary
-    if mut_var == 0
+    if mutation_variance == 0
         return nothing
     end
 
-    u = pop.parameters.u
+    mutation_rate = pop.parameters.mutation_rate
     lower_bound, upper_bound = truncate_bounds
 
     # Indpendent draw for each of the traits to mutate
     for ind in values(pop.individuals)
-        if rand() <= u
-            a_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.a), upper=upper_bound)
+        if rand() <= mutation_rate
+            a_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.a), upper=upper_bound)
             ind.a += rand(a_dist)
         end
 
-        if rand() <= u
-            p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.p), upper=upper_bound)
+        if rand() <= mutation_rate
+            p_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.p), upper=upper_bound)
             ind.p += rand(p_dist)
         end
 
         # Uncomment below if 'T' trait mutation is required
-        # if rand() <= u
-        #     T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
+        # if rand() <= mutation_rate
+        #     T_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.T), upper=upper_bound)
         #     ind.T += rand(T_dist)
         # end
     end
@@ -415,7 +414,7 @@ end
 
 #= Uncomment below if using mutation units
 function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
-    mutation_unit = pop.parameters.mut_var
+    mutation_unit = pop.parameters.mutation_variance
 
     # Only mutate if necessary
     if mutation_unit == 0
@@ -423,11 +422,11 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     end
 
     mutation_direction = [-1, 1]
-    u = pop.parameters.u
+    mutation_rate = pop.parameters.mutation_rate
 
     # Indpendent draw for each of the traits to mutate
     for ind in values(pop.individuals)
-        if rand() <= u
+        if rand() <= mutation_rate
             mutation_amount = rand(mutation_direction) * mutation_unit
 
             if ind.a + mutation_amount <= 0
@@ -437,7 +436,7 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
             end
         end
 
-        if rand() <= u
+        if rand() <= mutation_rate
             mutation_amount = rand(mutation_direction) * mutation_unit
 
             if ind.p + mutation_amount <= 0
@@ -448,7 +447,7 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
         end
 
         # Uncomment below if 'T' trait mutation is required
-        # if rand() <= u
+        # if rand() <= mutation_rate
         #   mutation_amount = rand(mutation_direction) * mutation_unit
         #
         #    if ind.T + mutation_amount <= 0
@@ -465,14 +464,14 @@ end
 
 #= Uncomment below if using cultural evolution
 function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
-    mut_var = pop.parameters.mut_var
+    mutation_variance = pop.parameters.mutation_variance
 
     # Only mutate if necessary
-    if mut_var == 0
+    if mutation_variance == 0
         return nothing
     end
 
-    u = pop.parameters.u
+    mutation_rate = pop.parameters.mutation_rate
     cultural_prob = 0.5  # Probability of cultural evolution
     lower_bound, upper_bound = truncate_bounds
 
@@ -480,39 +479,39 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     individuals = collect(values(pop.individuals))
 
     for ind in individuals
-        if rand() <= u
+        if rand() <= mutation_rate
             if rand() <= cultural_prob
                 # Cultural evolution: adopt 'a' trait from another individual
                 model = rand(individuals)
                 ind.a = model.a
             else
                 # Genetic mutation
-                a_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.a), upper=upper_bound)
+                a_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.a), upper=upper_bound)
                 ind.a += rand(a_dist)
             end
         end
 
-        if rand() <= u
+        if rand() <= mutation_rate
             if rand() <= cultural_prob
                 # Cultural evolution: adopt 'p' trait from another individual
                 model = rand(individuals)
                 ind.p = model.p
             else
                 # Genetic mutation
-                p_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.p), upper=upper_bound)
+                p_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.p), upper=upper_bound)
                 ind.p += rand(p_dist)
             end
         end
 
         # Uncomment below if 'T' trait mutation is required
-        # if rand() <= u
+        # if rand() <= mutation_rate
         #     if rand() <= cultural_prob
         #         # Cultural evolution: adopt 'T' trait from another individual
         #         model = rand(individuals)
         #         ind.T = model.T
         #     else
         #         # Genetic mutation
-        #         T_dist = truncated(Normal(0, mut_var), lower=max(lower_bound, -ind.T), upper=upper_bound)
+        #         T_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.T), upper=upper_bound)
         #         ind.T += rand(T_dist)
         #     end
         # end
@@ -532,7 +531,7 @@ function simulation(pop::population)
     # Sim init #
     ############
 
-    output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.N
+    output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.population_size
     outputs = DataFrame(
         generation = Vector{Int64}(undef, output_length),
         individual = Vector{Int64}(undef, output_length),
@@ -543,7 +542,7 @@ function simulation(pop::population)
         payoff = Vector{Float64}(undef, output_length)
     )
 
-    truncate_bounds = truncation_bounds(pop.parameters.mut_var, 0.99)
+    truncate_bounds = truncation_bounds(pop.parameters.mutation_variance, 0.99)
 
     ############
     # Sim Loop #
@@ -557,7 +556,7 @@ function simulation(pop::population)
         reproduce!(pop)
 
         # Mutation function iterates over population and mutates at chance probability μ
-        if pop.parameters.u > 0
+        if pop.parameters.mutation_rate > 0
             mutate!(pop, truncate_bounds)
         end
 
