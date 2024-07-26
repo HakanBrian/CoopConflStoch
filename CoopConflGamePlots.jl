@@ -9,7 +9,7 @@ include("CoopConflGameFuncs.jl")
 
 
 ##################
-# Simulation Function
+# Plot Simulation Function
 ##################
 
 function simulation_replicate(my_parameter::simulation_parameters, num_replicates::Int64)
@@ -56,8 +56,38 @@ function simulation_replicate(my_parameter::simulation_parameters, num_replicate
     return all_simulation_means, num_replicates
 end
 
+function calculate_statistics(all_simulation_means::DataFrame)
+    # Group by generation
+    grouped = groupby(all_simulation_means, :generation)
+
+    # Calculate mean and variance for each trait across replicates
+    stats = combine(grouped,
+                    :action_mean => mean => :action_mean_mean,
+                    :action_mean => var => :action_mean_var,
+                    :a_mean => mean => :a_mean_mean,
+                    :a_mean => var => :a_mean_var,
+                    :p_mean => mean => :p_mean_mean,
+                    :p_mean => var => :p_mean_var,
+                    :T_mean => mean => :T_mean_mean,
+                    :T_mean => var => :T_mean_var,
+                    :payoff_mean => mean => :payoff_mean_mean,
+                    :payoff_mean => var => :payoff_mean_var)
+    
+    # Compute standard deviation
+    stats[:, "action_mean_std"] = sqrt.(stats[:, "action_mean_var"])
+    stats[:, "a_mean_std"] = sqrt.(stats[:, "a_mean_var"])
+    stats[:, "p_mean_std"] = sqrt.(stats[:, "p_mean_var"])
+    stats[:, "T_mean_std"] = sqrt.(stats[:, "T_mean_var"])
+    stats[:, "payoff_mean_std"] = sqrt.(stats[:, "payoff_mean_var"])
+
+    return stats
+end
+
 function plot_simulation_data(all_simulation_means::Tuple{DataFrame, Int64})
     num_replicates = all_simulation_means[2]
+
+    # Calculate statistics
+    statistics = calculate_statistics(all_simulation_means[1])
 
     # Define color palette for each trait type
     colors = Dict(
@@ -81,7 +111,14 @@ function plot_simulation_data(all_simulation_means::Tuple{DataFrame, Int64})
         plot!(p, sim_data.generation, sim_data.payoff_mean, color=colors["payoff"], linewidth=1, alpha=0.6)
     end
 
-    # Customize and display the plot
+    # Plot mean and ribbons for each trait
+    plot!(p, statistics.generation, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), label="action mean")
+    plot!(p, statistics.generation, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), label="a mean")
+    plot!(p, statistics.generation, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), label="p mean")
+    plot!(p, statistics.generation, statistics.T_mean_mean, ribbon=(statistics.T_mean_std, statistics.T_mean_std), label="T mean")
+    plot!(p, statistics.generation, statistics.payoff_mean_mean, ribbon=(statistics.payoff_mean_std, statistics.payoff_mean_std), label="payoff mean")
+
+    # Display the plot
     xlabel!("Generation")
     ylabel!("Traits")
     display(p)

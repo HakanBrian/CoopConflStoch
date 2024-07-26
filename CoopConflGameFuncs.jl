@@ -9,7 +9,7 @@ include("CoopConflGameStructs.jl")
 
 
 ###############################
-# Population Simulation Funcs #
+# Population Simulation Function
 ###############################
 
     # Create an initial population
@@ -108,7 +108,7 @@ end
 
 
 ##################
-# Fitness function
+# Fitness Function
 ##################
 
     # Calculate payoff, and keep a running average of payoff for each individual
@@ -160,7 +160,7 @@ end
 
 
 ##################
-# Behavioral Equilibrium function
+# Behavioral Equilibrium Function
 ##################
 
 function behav_ODE_static(u, p, t)
@@ -220,7 +220,7 @@ end
 
 
 ##################
-# Social Interactions function
+# Social Interactions Function
 ##################
 
     # Pair individuals with the possibiliy of pairing more than once
@@ -310,11 +310,11 @@ end
 
 
 ##################
-# Reproduction function
+# Reproduction Function
 ##################
 
-    # offspring inherit the payoff or traits of the parents
-    # number of individuals in population remains the same
+    # Offspring inherit the payoff and traits of the parent
+    # Number of individuals in population remains the same
 
 function reproduce!(pop::population)
     payoffs = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
@@ -373,11 +373,11 @@ end
 =#
 
 ##################
-#  Mutation Function 
+# Mutation Function 
 ##################
 
-    # offspring have slightly different trait values from their parents
-    # use an independent draw function for each of the traits that could mutate
+    # Offspring have slightly different trait values from their parents
+    # Use an independent draw function for each of the traits that could mutate
 
 function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_variance = pop.parameters.mutation_variance
