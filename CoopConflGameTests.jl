@@ -12,7 +12,7 @@ include("CoopConflGameFuncs.jl")
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 100000, 0.0, 0.5, 0.0, 0.0005, 10);
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 100000, 0.0, 10.0, 0.5, 0.0, 0.0005, 10);
 my_population = population_construction(my_parameter);
 
 
@@ -49,7 +49,7 @@ total_payoff!(individual1, individual2, norm, punishment, 0.0)
 ##################
 
 # Create sample population
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 0.0, 0.0, 0.0, 1)
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 10.0, 0.0, 0.0, 0.0, 1)
 individuals_dict = Dict{Int64, individual}()
 my_population = population(my_parameter, individuals_dict, 0, 0)
 

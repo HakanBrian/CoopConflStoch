@@ -317,6 +317,7 @@ end
     # Number of individuals in population remains the same
 
 function reproduce!(pop::population)
+    # Calculate fitness
     fitnesses = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
@@ -334,38 +335,18 @@ function reproduce!(pop::population)
     nothing
 end
 
-#= Uncomment below if using some kind of grouped reproduction
+#= Uncomment below if using maximal fitness reproduction
 function reproduce!(pop::population)
-    # Extract payoffs and sort individuals by payoffs
-    individuals = collect(values(pop.individuals))
-    sorted_individuals = sort!(individuals, by = x -> x.payoff)
+    # Calculate fitness
+    fitnesses = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
+    keys_list = collect(keys(pop.individuals))
 
-    # Split sorted individuals into groups for assortative mating
-    group_size = ceil(Int, length(sorted_individuals) / 10)  # Adjust the number of groups as needed
-    groups = [sorted_individuals[i:min(i+group_size-1, end)] for i in 1:group_size:length(sorted_individuals)]
+    # Find the highest fitness individual
+    highest_fitness_individual = pop.individuals[keys_list[argmax(fitnesses)]]
 
-    new_individuals = []
-
-    for group in groups
-        # Extract payoffs for individuals in the group
-        payoffs = map(individual -> individual.payoff, group)
-        keys_list = 1:length(group)
-
-        # Sample within the group with given weights
-        sampled_indices = sample(keys_list, ProbabilityWeights(payoffs), length(group), replace=true, ordered=false)
-
-        # Append sampled individuals to the new population list
-        append!(new_individuals, [copy(group[sampled_index]) for sampled_index in sampled_indices])
-    end
-
-    # Ensure the new population size matches the original population size
-    while length(new_individuals) < pop.parameters.population_size
-        append!(new_individuals, copy(sample(new_individuals, 1)))
-    end
-
-    # Assign new individuals to the population
-    for (i, new_individual) in enumerate(new_individuals)
-        copy!(pop.individuals[i], new_individual)
+    # Update population individuals based on maximal fitness
+    for i in 1:pop.parameters.population_size
+        copy!(pop.individuals[i], highest_fitness_individual)
     end
 
     nothing
