@@ -317,11 +317,11 @@ end
     # Number of individuals in population remains the same
 
 function reproduce!(pop::population)
-    payoffs = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
+    fitnesses = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
-    sampled_keys = sample(keys_list, ProbabilityWeights(payoffs), pop.parameters.population_size, replace=true, ordered=false)
+    sampled_keys = sample(keys_list, ProbabilityWeights(fitnesses), pop.parameters.population_size, replace=true, ordered=false)
 
     # Sort keys
     sort!(sampled_keys)
@@ -334,7 +334,7 @@ function reproduce!(pop::population)
     nothing
 end
 
-#= Uncomment below if using assortive mating
+#= Uncomment below if using some kind of grouped reproduction
 function reproduce!(pop::population)
     # Extract payoffs and sort individuals by payoffs
     individuals = collect(values(pop.individuals))
@@ -352,7 +352,7 @@ function reproduce!(pop::population)
         keys_list = 1:length(group)
 
         # Sample within the group with given weights
-        sampled_indices = sample(keys_list, ProbabilityWeights(payoffs), length(group), replace = true, ordered = false)
+        sampled_indices = sample(keys_list, ProbabilityWeights(payoffs), length(group), replace=true, ordered=false)
 
         # Append sampled individuals to the new population list
         append!(new_individuals, [copy(group[sampled_index]) for sampled_index in sampled_indices])
@@ -371,6 +371,7 @@ function reproduce!(pop::population)
     nothing
 end
 =#
+
 
 ##################
 # Mutation Function 
@@ -462,64 +463,6 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
 end
 =#
 
-#= Uncomment below if using cultural evolution
-function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
-    mutation_variance = pop.parameters.mutation_variance
-
-    # Only mutate if necessary
-    if mutation_variance == 0
-        return nothing
-    end
-
-    mutation_rate = pop.parameters.mutation_rate
-    cultural_prob = 0.5  # Probability of cultural evolution
-    lower_bound, upper_bound = truncate_bounds
-
-    # Independent draw for each of the traits to mutate
-    individuals = collect(values(pop.individuals))
-
-    for ind in individuals
-        if rand() <= mutation_rate
-            if rand() <= cultural_prob
-                # Cultural evolution: adopt 'a' trait from another individual
-                model = rand(individuals)
-                ind.a = model.a
-            else
-                # Genetic mutation
-                a_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.a), upper=upper_bound)
-                ind.a += rand(a_dist)
-            end
-        end
-
-        if rand() <= mutation_rate
-            if rand() <= cultural_prob
-                # Cultural evolution: adopt 'p' trait from another individual
-                model = rand(individuals)
-                ind.p = model.p
-            else
-                # Genetic mutation
-                p_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.p), upper=upper_bound)
-                ind.p += rand(p_dist)
-            end
-        end
-
-        # Uncomment below if 'T' trait mutation is required
-        # if rand() <= mutation_rate
-        #     if rand() <= cultural_prob
-        #         # Cultural evolution: adopt 'T' trait from another individual
-        #         model = rand(individuals)
-        #         ind.T = model.T
-        #     else
-        #         # Genetic mutation
-        #         T_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.T), upper=upper_bound)
-        #         ind.T += rand(T_dist)
-        #     end
-        # end
-    end
-
-    nothing
-end
-=#
 
 #######################
 # Simulation Function #
