@@ -12,7 +12,7 @@ include("CoopConflGameFuncs.jl")
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 100000, 0.0, 10.0, 0.5, 0.0, 0.0005, 10);
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 50, 0.0, 10.0, 0.5, 0.0, 0.0005, 10);
 my_population = population_construction(my_parameter);
 
 
@@ -21,14 +21,14 @@ my_population = population_construction(my_parameter);
 ##################
 
 # Define starting parameters
-individual1 = individual(0.2, 0.4, 0.1, 0.5, 0, 0);
-individual2 = individual(0.3, 0.5, 0.2, 0.5, 0, 0);
+individual1 = individual(0.2, 0.4, 0.1, 0.5, 0.0, 0.0, 0);
+individual2 = individual(0.3, 0.5, 0.2, 0.5, 0.0, 0.0, 0);
 pair = [(individual1, individual2)];
 norm = mean([individual1.a, individual2.a])
 punishment = mean([individual1.p, individual2.p])
 
 # Calculate behave eq
-@time behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
+@time behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.synergy)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -53,10 +53,10 @@ my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 10, 5, 1000, 0.0, 10.0,
 individuals_dict = Dict{Int64, individual}()
 my_population = population(my_parameter, individuals_dict, 0, 0)
 
-my_population.individuals[1] = individual(0.5, 0.5, 0.5, 0.0, 1, 0)
-my_population.individuals[2] = individual(0.5, 0.5, 0.5, 0.0, 2, 0)
-my_population.individuals[3] = individual(0.5, 0.5, 0.5, 0.0, 3, 0)
-my_population.individuals[4] = individual(0.5, 0.5, 0.5, 0.0, 4, 0)
+my_population.individuals[1] = individual(0.5, 0.5, 0.5, 0.0, 1, 0.0, 0)
+my_population.individuals[2] = individual(0.5, 0.5, 0.5, 0.0, 2, 0.0, 0)
+my_population.individuals[3] = individual(0.5, 0.5, 0.5, 0.0, 3, 0.0, 0)
+my_population.individuals[4] = individual(0.5, 0.5, 0.5, 0.0, 4, 0.0, 0)
 
 # Bootstrap to increase sample size
 original_size = length(my_population.individuals)
