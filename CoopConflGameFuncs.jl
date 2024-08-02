@@ -52,15 +52,15 @@ function population_construction(parameters::simulation_parameters)
     # Create individuals
     for i in 1:parameters.population_size
         if use_distribution
-            indiv = individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0.0, 0)
+            indiv = individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
         else
-            indiv = individual(action0, a0, p0, T0, 0.0, 0.0, 0)
+            indiv = individual(action0, a0, p0, T0, 0.0, 0)
         end
 
         individuals_dict[i] = indiv
     end
 
-    return population(parameters, individuals_dict, 0, 0)
+    return population(parameters, individuals_dict, 0.0, 0.0)
 end
 
 function output!(outputs::DataFrame, t::Int64, pop::population)
@@ -158,11 +158,17 @@ function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, p
     nothing
 end
 
-function fitness!(ind1::individual, ind2::individual)
-    ind1.fitness = ind1.payoff - ind1.p
-    ind2.fitness = ind2.payoff - ind2.p
+function total_payoff_relative!(ind::individual)
+    payoff = ind.payoff
+    ind.payoff = (payoff + ind.interactions * payoff) / (ind.interactions + 1)
+
+    ind.interactions += 1
 
     nothing
+end
+
+function fitness(ind::individual, fitness_scaling_factor::Float64)
+    return exp((ind.payoff - ind.p) * fitness_scaling_factor)
 end
 
 
@@ -235,24 +241,36 @@ end
     # At the end of the day everyone is picked roughly an equal number of times
 
 function update_norm_punishment_pools!(pop::population)
+    N = pop.parameters.population_size
+
     norm_sum = 0.0
     punishment_sum = 0.0
+
     for individual in values(pop.individuals)
         norm_sum += individual.a
         punishment_sum += individual.p
     end
 
     # Update norm and punishment pools
-    pop.norm_pool = norm_sum / pop.parameters.population_size
-    pop.punishment_pool = punishment_sum / pop.parameters.population_size
+    pop.norm_pool = norm_sum / N
+    pop.punishment_pool = punishment_sum / N
 
     nothing
 end
 
-function shuffle_and_pair(individuals_key::Vector{Int64})
+function shuffle_and_pair(individuals_key::Vector{Int64}, relatedness::Float64)
     shuffle!(individuals_key)
     num_pairs = length(individuals_key) ÷ 2
-    pairs = [(individuals_key[2i-1], individuals_key[2i]) for i in 1:num_pairs]
+    pairs = Vector{Tuple{Int64, Int64}}()
+    for i in 1:num_pairs
+        if rand() <= relatedness
+            push!(pairs, (individuals_key[2i-1], individuals_key[2i-1]))
+            push!(pairs, (individuals_key[2i], individuals_key[2i]))
+            num_pairs += 1
+        else
+            push!(pairs, (individuals_key[2i-1], individuals_key[2i]))
+        end
+    end
 
     if isodd(length(individuals_key))
         # Pair the last individual with a random individual
@@ -277,7 +295,7 @@ function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, In
     return u0s, ps
 end
 
-function calculate_payoff_and_fitness!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::population)
+function calculate_payoff!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::population)
     for (i, (idx1, idx2)) in enumerate(pairs)
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
@@ -285,9 +303,12 @@ function calculate_payoff_and_fitness!(final_actions::Vector{SVector{2, Float32}
         # Update actions
         ind1.action, ind2.action = final_actions[i]
 
-        # Calculate payoff and fitness
-        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
-        fitness!(ind1, ind2)
+        # Calculate payoff
+        if idx1 == idx2
+            total_payoff_relative!(ind1)
+        else
+            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+        end
 
         # Uncomment below if turning off payoffs
         # ind1.payoff = 1.0
@@ -306,14 +327,14 @@ function social_interactions!(pop::population)
     update_norm_punishment_pools!(pop)
 
     # Shuffle and pair individuals
-    pairs, num_pairs = shuffle_and_pair(individuals_key)
+    pairs, num_pairs = shuffle_and_pair(individuals_key, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
     u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
     final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
 
     # Update payoff and fitness for all pairs based on final actions
-    calculate_payoff_and_fitness!(final_actions, pairs, pop)
+    calculate_payoff!(final_actions, pairs, pop)
 
     nothing
 end
@@ -328,7 +349,8 @@ end
 
 function reproduce!(pop::population)
     # Collect fitnesses and keys
-    fitnesses = map(individual -> exp(individual.fitness * pop.parameters.fitness_scaling_factor), values(pop.individuals))
+    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -348,7 +370,8 @@ end
 #= Uncomment below if using maximal fitness reproduction
 function reproduce!(pop::population)
     # Collect fitnesses and keys
-    fitnesses = map(individual -> exp(individual.fitness * pop.parameters.fitness_scaling_factor), values(pop.individuals))
+    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Get the highest fitness individual
