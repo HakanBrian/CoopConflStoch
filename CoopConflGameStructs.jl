@@ -13,7 +13,6 @@ mutable struct simulation_parameters
     tmax::Float32  # maximum length of timespan for ODE
     population_size::Int64
     synergy::Float64
-    relatedness::Float64
     fitness_scaling_factor::Float64
     mutation_rate::Float64
     trait_variance::Float64
@@ -32,7 +31,6 @@ function Base.copy(parameters::simulation_parameters)
         getfield(parameters, :tmax),
         getfield(parameters, :population_size),
         getfield(parameters, :synergy),
-        getfield(parameters, :relatedness),
         getfield(parameters, :fitness_scaling_factor),
         getfield(parameters, :mutation_rate),
         getfield(parameters, :trait_variance),
@@ -50,7 +48,6 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
     setfield!(old_params, :synergy, getfield(new_params, :synergy))
-    setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
     setfield!(old_params, :fitness_scaling_factor, getfield(new_params, :fitness_scaling_factor))
     setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
     setfield!(old_params, :trait_variance, getfield(new_params, :trait_variance))
@@ -71,6 +68,7 @@ mutable struct individual
     p::Float64
     T::Float64
     payoff::Float64
+    fitness::Float64
     interactions::Int64
 end
 
@@ -81,6 +79,7 @@ function Base.copy(ind::individual)
         getfield(ind, :p),
         getfield(ind, :T),
         getfield(ind, :payoff),
+        getfield(ind, :fitness),
         getfield(ind, :interactions)
     )
 end
@@ -91,6 +90,7 @@ function Base.copy!(old_ind::individual, new_ind::individual)
     setfield!(old_ind, :p, getfield(new_ind, :p))
     setfield!(old_ind, :T, getfield(new_ind, :T))
     setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
+    setfield!(old_ind, :fitness, getfield(new_ind, :fitness))
     setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
 
     nothing
