@@ -13,7 +13,8 @@ mutable struct simulation_parameters
     tmax::Float32  # maximum length of timespan for ODE
     population_size::Int64
     synergy::Float64
-    payoff_scaling_factor::Float64
+    relatedness::Float64
+    fitness_scaling_factor::Float64
     mutation_rate::Float64
     trait_variance::Float64
     mutation_variance::Float64
@@ -31,7 +32,8 @@ function Base.copy(parameters::simulation_parameters)
         getfield(parameters, :tmax),
         getfield(parameters, :population_size),
         getfield(parameters, :synergy),
-        getfield(parameters, :payoff_scaling_factor),
+        getfield(parameters, :relatedness),
+        getfield(parameters, :fitness_scaling_factor),
         getfield(parameters, :mutation_rate),
         getfield(parameters, :trait_variance),
         getfield(parameters, :mutation_variance),
@@ -48,7 +50,8 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
     setfield!(old_params, :synergy, getfield(new_params, :synergy))
-    setfield!(old_params, :payoff_scaling_factor, getfield(new_params, :payoff_scaling_factor))
+    setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
+    setfield!(old_params, :fitness_scaling_factor, getfield(new_params, :fitness_scaling_factor))
     setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
     setfield!(old_params, :trait_variance, getfield(new_params, :trait_variance))
     setfield!(old_params, :mutation_variance, getfield(new_params, :mutation_variance))

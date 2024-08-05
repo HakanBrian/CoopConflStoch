@@ -114,11 +114,11 @@ end
     # Calculate payoff, and keep a running average of payoff for each individual
     # After each session of interaction the running average becomes the individual's payoff
 
-function benefit(action1::Real, action2::Real, v::Real)
+function benefit(action1::Real, action2::Real, synergy::Real)
     sqrt_action1 = √max(action1, 0)
     sqrt_action2 = √max(action2, 0)
     sqrt_sum = √max((action1 + action2), 0)
-    return (1 - v) * (sqrt_action1 + sqrt_action2) + v * sqrt_sum
+    return (1 - synergy) * (sqrt_action1 + sqrt_action2) + synergy * sqrt_sum
 end
 
 function cost(action::Real)
@@ -133,21 +133,21 @@ function internal_punishment(action::Real, norm_pool::Real, T::Real)
     return T * (action - norm_pool)^2
 end
 
-function payoff(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, v::Real)
-    return benefit(action1, action2, v) - cost(action1) - external_punishment(action1, norm_pool, punishment_pool)
+function payoff(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, synergy::Real)
+    return benefit(action1, action2, synergy) - cost(action1) - external_punishment(action1, norm_pool, punishment_pool)
 end
 
-function objective(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
-    return payoff(action1, action2, norm_pool, punishment_pool, v) - internal_punishment(action1, norm_pool, T)
+function objective(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return payoff(action1, action2, norm_pool, punishment_pool, synergy) - internal_punishment(action1, norm_pool, T)
 end
 
-function objective_derivative(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, v::Real)
-    return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, v), action1)
+function objective_derivative(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, synergy), action1)
 end
 
-function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, v::Float64)
-    payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, v), 0)
-    payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, v), 0)
+function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
+    payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy), 0)
+    payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy), 0)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -156,6 +156,19 @@ function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, p
     ind2.interactions += 1
 
     nothing
+end
+
+function total_payoff_relative!(ind::individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
+    payoff_ind = max(payoff(ind.action, ind.action, norm_pool, punishment_pool, synergy), 0)
+    ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
+
+    ind.interactions += 1
+
+    nothing
+end
+
+function fitness(ind::individual, fitness_scaling_factor::Float64)
+    return exp((ind.payoff - ind.p) * fitness_scaling_factor)
 end
 
 
@@ -191,11 +204,11 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{
     return final_actions
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float32, v::Float64)
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float32, synergy::Float64)
     # Extract initial conditions and parameters
     u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
     tspan = (0.0f0, tmax)
-    ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, v] for (ind1, ind2) in pairs]
+    ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, synergy] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -242,16 +255,31 @@ function update_norm_punishment_pools!(pop::population)
     nothing
 end
 
-function shuffle_and_pair(individuals_key::Vector{Int64})
+function shuffle_and_pair(individuals_key::Vector{Int64}, population_size::Int64, relatedness::Float64)
     shuffle!(individuals_key)
-    num_pairs = length(individuals_key) ÷ 2
-    pairs = [(individuals_key[2i-1], individuals_key[2i]) for i in 1:num_pairs]
+    pairs = Vector{Tuple{Int64, Int64}}()
+    i = 1
 
-    if isodd(length(individuals_key))
-        # Pair the last individual with a random individual
-        push!(pairs, (individuals_key[end], rand(individuals_key[1:end-1])))
-        num_pairs += 1
+    while i <= population_size
+        if rand() <= relatedness && i + 1 <= population_size
+            # Pair with themselves (a relative)
+            push!(pairs, (individuals_key[i], individuals_key[i]))
+            # Move to the next individual
+            i += 1
+        else
+            # Pair with the next individual
+            if i + 1 <= population_size
+                push!(pairs, (individuals_key[i], individuals_key[i+1]))
+                i += 2
+            else
+                # Handle the last unpaired individual
+                push!(pairs, (individuals_key[i], rand(individuals_key[1:i-1])))
+                i += 1
+            end
+        end
     end
+
+    num_pairs = length(pairs)
 
     return pairs, num_pairs
 end
@@ -275,7 +303,13 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
-        total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+        #total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+
+        if idx1 == idx2
+            total_payoff_relative!(ind1, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+        else
+            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+        end
 
         # Uncomment below if turning off payoffs
         # ind1.payoff = 1.0
@@ -294,12 +328,10 @@ function social_interactions!(pop::population)
     update_norm_punishment_pools!(pop)
 
     # Shuffle and pair individuals
-    pairs, num_pairs = shuffle_and_pair(individuals_key)
-
-    # Collect initial conditions and parameters for all pairs
-    u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
+    pairs, num_pairs = shuffle_and_pair(individuals_key, pop.parameters.population_size, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
+    u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
     final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
 
     # Update actions and payoffs for all pairs based on final actions
@@ -318,7 +350,8 @@ end
 
 function reproduce!(pop::population)
     # Calculate fitness
-    fitnesses = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
+    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -338,7 +371,8 @@ end
 #= Uncomment below if using maximal fitness reproduction
 function reproduce!(pop::population)
     # Calculate fitness
-    fitnesses = map(individual -> exp((individual.payoff - individual.p) * pop.parameters.payoff_scaling_factor), values(pop.individuals))
+    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Find the highest fitness individual
