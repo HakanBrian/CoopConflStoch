@@ -12,7 +12,7 @@ include("CoopConflGameFuncs.jl")
 # Population Construction
 ##################
 
-my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 100, 5, 101, 0.0, 0.2, 10.0, 0.5, 0.0, 0.0005, 10);
+my_parameter = simulation_parameters(0.5, 0.5, 0.5, 0.0, 1000, 5, 10, 0.0, 1.0, 10.0, 0.5, 0.0, 0.0005, 10);
 my_population = population_construction(my_parameter);
 
 
@@ -43,7 +43,7 @@ total_payoff!(individual1, individual2, norm, punishment, 0.0)
 
 individual1 = individual(0.2, 0.5, 0.4, 0.0, 0.0, 0);
 
-total_payoff_relative!(individual1, 0.5, 0.2, 0.0)
+total_payoff_relative!(individual1, 0.0)
 
 println(individual1.payoff)
 
@@ -107,4 +107,4 @@ println(my_population)
 # compilation
 @btime simulation(my_population);
 # pure runtime
-@profview @time simulation(my_population);
+@time simulation(my_population);

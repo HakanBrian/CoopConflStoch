@@ -158,8 +158,9 @@ function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, p
     nothing
 end
 
-function total_payoff_relative!(ind::individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    payoff_ind = max(payoff(ind.action, ind.action, norm_pool, punishment_pool, synergy), 0)
+function total_payoff!(ind::individual, synergy::Float64)
+    payoff_ind = max(payoff(ind.action, ind.action, ind.a, ind.p, synergy), 0)
+
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
 
     ind.interactions += 1
@@ -167,10 +168,13 @@ function total_payoff_relative!(ind::individual, norm_pool::Float64, punishment_
     nothing
 end
 
-function fitness(ind::individual, fitness_scaling_factor::Float64)
-    return exp((ind.payoff - ind.p) * fitness_scaling_factor)
+function fitness(ind::individual)
+    return ind.payoff - ind.p
 end
 
+function fitness(ind::individual, fitness_scaling_factor::Float64)
+    return 0.004 * exp(fitness(ind) * fitness_scaling_factor)
+end
 
 ##################
 # Behavioral Equilibrium Function
@@ -292,7 +296,12 @@ function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, In
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         u0s[i] = SA_F32[ind1.action; ind2.action]
-        ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.synergy]
+
+        if idx1 == idx2
+            ps[i] = SA_F32[ind1.a, ind1.p, ind1.T, ind1.T, pop.parameters.synergy]
+        else
+            ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.synergy]
+        end
     end
 
     return u0s, ps
@@ -306,7 +315,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         #total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
 
         if idx1 == idx2
-            total_payoff_relative!(ind1, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+            total_payoff!(ind1, pop.parameters.synergy)
         else
             total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
         end
@@ -350,8 +359,8 @@ end
 
 function reproduce!(pop::population)
     # Calculate fitness
-    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
-    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
+    # fitness_scaling_factor = pop.parameters.fitness_scaling_factor
+    fitnesses = map(individual -> fitness(individual), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
