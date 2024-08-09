@@ -265,21 +265,20 @@ function shuffle_and_pair(individuals_key::Vector{Int64}, population_size::Int64
     i = 1
 
     while i <= population_size
-        if rand() <= relatedness && i + 1 <= population_size
-            # Pair with themselves (a relative)
+        if i == population_size
+            # Handle the last individual separately
+            if rand() <= relatedness
+                push!(pairs, (individuals_key[i], individuals_key[i]))
+            else
+                push!(pairs, (individuals_key[i], rand(individuals_key[1:i-1])))
+            end
+            i += 1
+        elseif rand() <= relatedness
             push!(pairs, (individuals_key[i], individuals_key[i]))
-            # Move to the next individual
             i += 1
         else
-            # Pair with the next individual
-            if i + 1 <= population_size
-                push!(pairs, (individuals_key[i], individuals_key[i+1]))
-                i += 2
-            else
-                # Handle the last unpaired individual
-                push!(pairs, (individuals_key[i], rand(individuals_key[1:i-1])))
-                i += 1
-            end
+            push!(pairs, (individuals_key[i], individuals_key[i+1]))
+            i += 2
         end
     end
 
@@ -312,7 +311,6 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
         ind1.action, ind2.action = final_actions[i]
-        #total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
 
         if idx1 == idx2
             total_payoff!(ind1, pop.parameters.synergy)
@@ -359,8 +357,8 @@ end
 
 function reproduce!(pop::population)
     # Calculate fitness
-    # fitness_scaling_factor = pop.parameters.fitness_scaling_factor
-    fitnesses = map(individual -> fitness(individual), values(pop.individuals))
+    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights

@@ -28,7 +28,7 @@ norm = mean([individual1.a, individual2.a])
 punishment = mean([individual1.p, individual2.p])
 
 # Calculate behave eq
-@time behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.v)
+behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.synergy)
 
 # Compare values with mathematica code
 individual1  # should be around 0.41303
@@ -52,7 +52,7 @@ println(individual1.payoff)
 # Social Interactions
 ##################
 
-@time social_interactions!(my_population)
+social_interactions!(my_population)
 
 println(my_population.individuals)
 
@@ -95,7 +95,7 @@ println("New population with payoff 4: ", count(individual -> individual.payoff 
 # Mutate
 ##################
 
-mutate!(my_population, truncation_bounds(my_population.parameters.mut_var, 0.99))
+mutate!(my_population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
 
 println(my_population)
 
