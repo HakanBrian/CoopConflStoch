@@ -104,16 +104,16 @@ function plot_simulation_data(all_simulation_means::Tuple{DataFrame, Int64})
     )
 
     # Initialize the plot
-    p = plot(legend=false)
+    p = plot()
 
     # Plot each replicate's data with consistent colors and labels
     for i in 1:num_replicates
         sim_data = filter(row -> row.replicate == i, all_simulation_means[1])
-        plot!(p, sim_data.generation, sim_data.action_mean, color=colors["action"], linewidth=1, alpha=0.6)
-        plot!(p, sim_data.generation, sim_data.a_mean, color=colors["a"], linewidth=1, alpha=0.6)
-        plot!(p, sim_data.generation, sim_data.p_mean, color=colors["p"], linewidth=1, alpha=0.6)
-        plot!(p, sim_data.generation, sim_data.T_mean, color=colors["T"], linewidth=1, alpha=0.6)
-        plot!(p, sim_data.generation, sim_data.payoff_mean, color=colors["payoff"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.action_mean, label="", color=colors["action"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.a_mean, label="", color=colors["a"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.p_mean, label="", color=colors["p"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.T_mean, label="", color=colors["T"], linewidth=1, alpha=0.6)
+        plot!(p, sim_data.generation, sim_data.payoff_mean, label="", color=colors["payoff"], linewidth=1, alpha=0.6)
     end
 
     # Plot mean and ribbons for each trait
