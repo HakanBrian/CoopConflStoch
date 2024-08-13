@@ -72,7 +72,7 @@ function calculate_statistics(all_simulation_means::DataFrame)
                     :T_mean => var => :T_mean_var,
                     :payoff_mean => mean => :payoff_mean_mean,
                     :payoff_mean => var => :payoff_mean_var)
-    
+
     # Compute standard deviation
     stats[:, "action_mean_std"] = sqrt.(stats[:, "action_mean_var"])
     stats[:, "a_mean_std"] = sqrt.(stats[:, "a_mean_var"])
@@ -95,7 +95,12 @@ function plot_simulation_data(all_simulation_means::Tuple{DataFrame, Int64})
         "a" => :red,
         "p" => :green,
         "T" => :purple,
-        "payoff" => :orange
+        "payoff" => :orange,
+        "action mean" => :blue4,
+        "a mean" => :red4,
+        "p mean" => :green4,
+        "T mean" => :purple4,
+        "payoff mean" => :orange4
     )
 
     # Initialize the plot
@@ -112,11 +117,11 @@ function plot_simulation_data(all_simulation_means::Tuple{DataFrame, Int64})
     end
 
     # Plot mean and ribbons for each trait
-    plot!(p, statistics.generation, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), label="action mean")
-    plot!(p, statistics.generation, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), label="a mean")
-    plot!(p, statistics.generation, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), label="p mean")
-    plot!(p, statistics.generation, statistics.T_mean_mean, ribbon=(statistics.T_mean_std, statistics.T_mean_std), label="T mean")
-    plot!(p, statistics.generation, statistics.payoff_mean_mean, ribbon=(statistics.payoff_mean_std, statistics.payoff_mean_std), label="payoff mean")
+    plot!(p, statistics.generation, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), label="action mean", color=colors["action mean"])
+    plot!(p, statistics.generation, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), label="a mean", color=colors["a mean"])
+    plot!(p, statistics.generation, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), label="p mean", color=colors["p mean"])
+    plot!(p, statistics.generation, statistics.T_mean_mean, ribbon=(statistics.T_mean_std, statistics.T_mean_std), label="T mean", color=colors["T mean"])
+    plot!(p, statistics.generation, statistics.payoff_mean_mean, ribbon=(statistics.payoff_mean_std, statistics.payoff_mean_std), label="payoff mean", color=colors["payoff mean"])
 
     # Display the plot
     xlabel!("Generation")

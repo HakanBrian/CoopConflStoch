@@ -176,6 +176,7 @@ function fitness(ind::individual, fitness_scaling_factor::Float64)
     return 0.004 * exp(fitness(ind) * fitness_scaling_factor)
 end
 
+
 ##################
 # Behavioral Equilibrium Function
 ##################
