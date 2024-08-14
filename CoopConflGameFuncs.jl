@@ -508,17 +508,17 @@ function simulation(pop::population)
         # Execute social interactions and calculate payoffs
         social_interactions!(pop)
 
+        # Per-timestep counters, outputs going to disk
+        if t % pop.parameters.output_save_tick == 0
+            output!(outputs, t, pop)
+        end
+
         # Reproduction function to produce new generation
         reproduce!(pop)
 
         # Mutation function iterates over population and mutates at chance probability μ
         if pop.parameters.mutation_rate > 0
             mutate!(pop, truncate_bounds)
-        end
-
-        # Per-timestep counters, outputs going to disk
-        if t % pop.parameters.output_save_tick == 0
-            output!(outputs, t, pop)
         end
     end
 
