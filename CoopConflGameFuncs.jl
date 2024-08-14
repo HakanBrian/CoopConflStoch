@@ -29,6 +29,15 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     return SA[lower_bound, upper_bound]
 end
 
+function offspring!(offspring::individual, parent::individual)
+    setfield!(offspring, :action, getfield(parent, :action))
+    setfield!(offspring, :a, getfield(parent, :a))
+    setfield!(offspring, :p, getfield(parent, :p))
+    setfield!(offspring, :T, getfield(parent, :T))
+    setfield!(offspring, :payoff, 0.0)
+    setfield!(offspring, :interactions, 0)
+end
+
 function population_construction(parameters::simulation_parameters)
     individuals_dict = Dict{Int64, individual}()
     trait_variance = parameters.trait_variance
@@ -115,9 +124,9 @@ end
     # After each session of interaction the running average becomes the individual's payoff
 
 function benefit(action1::Real, action2::Real, synergy::Real)
-    sqrt_action1 = √max(action1, 0)
-    sqrt_action2 = √max(action2, 0)
-    sqrt_sum = √max((action1 + action2), 0)
+    sqrt_action1 = √action1
+    sqrt_action2 = √action2
+    sqrt_sum = √(action1 + action2)
     return (1 - synergy) * (sqrt_action1 + sqrt_action2) + synergy * sqrt_sum
 end
 
@@ -146,8 +155,8 @@ function objective_derivative(action1::Real, action2::Real, norm_pool::Real, pun
 end
 
 function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    payoff1 = max(payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy), 0)
-    payoff2 = max(payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy), 0)
+    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
+    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -159,7 +168,7 @@ function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, p
 end
 
 function total_payoff!(ind::individual, synergy::Float64)
-    payoff_ind = max(payoff(ind.action, ind.action, ind.a, ind.p, synergy), 0)
+    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
 
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
 
@@ -319,11 +328,9 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
             total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
         end
 
-        # Uncomment below if turning off payoffs
+        # Uncomment below to fix payoffs
         # ind1.payoff = 1.0
-        # ind1.interactions += 1
         # ind2.payoff = 1.0
-        # ind2.interactions += 1
     end
 
     nothing
@@ -370,13 +377,13 @@ function reproduce!(pop::population)
 
     # Update population individuals based on sampled keys
     for (key, sampled_key) in enumerate(sampled_keys)
-        copy!(pop.individuals[key], pop.individuals[sampled_key])
+        offspring!(pop.individuals[key], pop.individuals[sampled_key])
     end
 
     nothing
 end
 
-#= Uncomment below if using maximal fitness reproduction
+#= Maximal fitness reproduction
 function reproduce!(pop::population)
     # Calculate fitness
     fitness_scaling_factor = pop.parameters.fitness_scaling_factor
@@ -426,7 +433,6 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
             ind.p += rand(p_dist)
         end
 
-        # Uncomment below if 'T' trait mutation is required
         # if rand() <= mutation_rate
         #     T_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -ind.T), upper=upper_bound)
         #     ind.T += rand(T_dist)
@@ -436,7 +442,7 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     nothing
 end
 
-#= Uncomment below if using mutation units
+#= Mutation units
 function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_unit = pop.parameters.mutation_variance
 
