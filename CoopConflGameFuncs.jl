@@ -12,8 +12,14 @@ include("CoopConflGameStructs.jl")
 # Population Simulation Function
 ###############################
 
-    # Create an initial population
-    # Format output
+function offspring!(offspring::individual, parent::individual)
+    setfield!(offspring, :action, getfield(parent, :action))
+    setfield!(offspring, :a, getfield(parent, :a))
+    setfield!(offspring, :p, getfield(parent, :p))
+    setfield!(offspring, :T, getfield(parent, :T))
+    setfield!(offspring, :payoff, 0.0)
+    setfield!(offspring, :interactions, 0)
+end
 
 function truncation_bounds(variance::Float64, retain_proportion::Float64)
     # Calculate tail probability alpha
@@ -27,15 +33,6 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     upper_bound = z_alpha_over_2 * sqrt(variance)
 
     return SA[lower_bound, upper_bound]
-end
-
-function offspring!(offspring::individual, parent::individual)
-    setfield!(offspring, :action, getfield(parent, :action))
-    setfield!(offspring, :a, getfield(parent, :a))
-    setfield!(offspring, :p, getfield(parent, :p))
-    setfield!(offspring, :T, getfield(parent, :T))
-    setfield!(offspring, :payoff, 0.0)
-    setfield!(offspring, :interactions, 0)
 end
 
 function population_construction(parameters::simulation_parameters)
@@ -119,9 +116,6 @@ end
 ##################
 # Fitness Function
 ##################
-
-    # Calculate payoff, and keep a running average of payoff for each individual
-    # After each session of interaction the running average becomes the individual's payoff
 
 function benefit(action1::Real, action2::Real, synergy::Real)
     sqrt_action1 = √action1
@@ -250,10 +244,6 @@ end
 # Social Interactions Function
 ##################
 
-    # Pair individuals with the possibiliy of pairing more than once
-    # Everyone has the same chance of picking a partner / getting picked
-    # At the end of the day everyone is picked roughly an equal number of times
-
 function update_norm_punishment_pools!(pop::population)
     norm_sum = 0.0
     punishment_sum = 0.0
@@ -328,7 +318,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
             total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
         end
 
-        # Uncomment below to fix payoffs
+        # Uncomment below to make the payoffs fixed
         # ind1.payoff = 1.0
         # ind2.payoff = 1.0
     end
@@ -359,9 +349,6 @@ end
 ##################
 # Reproduction Function
 ##################
-
-    # Offspring inherit the payoff and traits of the parent
-    # Number of individuals in population remains the same
 
 function reproduce!(pop::population)
     # Calculate fitness
@@ -406,9 +393,6 @@ end
 ##################
 # Mutation Function 
 ##################
-
-    # Offspring have slightly different trait values from their parents
-    # Use an independent draw function for each of the traits that could mutate
 
 function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_variance = pop.parameters.mutation_variance
