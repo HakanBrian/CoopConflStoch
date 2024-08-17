@@ -118,9 +118,9 @@ end
 ##################
 
 function benefit(action1::Real, action2::Real, synergy::Real)
-    sqrt_action1 = √action1
-    sqrt_action2 = √action2
-    sqrt_sum = √(action1 + action2)
+    sqrt_action1 = √max(action1, 0.0)
+    sqrt_action2 = 9 * √max(action2, 0.0)
+    sqrt_sum = √max((action1 + action2), 0.0)
     return (1 - synergy) * (sqrt_action1 + sqrt_action2) + synergy * sqrt_sum
 end
 
@@ -191,8 +191,8 @@ function behav_ODE_static(u, p, t)
     return SA[dx, dy]
 end
 
-function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{5}, Float32}}, tmax::Float32, num_pairs::Int64)
-    tspan = (0.0f0, tmax)
+function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{5}, Float32}}, tmax::Float64, num_pairs::Int64)
+    tspan = (0.0, tmax)
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
@@ -212,10 +212,10 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{
     return final_actions
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float32, synergy::Float64)
+function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, synergy::Float64)
     # Extract initial conditions and parameters
+    tspan = (0.0, tmax)
     u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
-    tspan = (0.0f0, tmax)
     ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, synergy] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template

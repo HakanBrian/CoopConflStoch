@@ -28,24 +28,28 @@ norm = mean([individual1.a, individual2.a])
 punishment = mean([individual1.p, individual2.p])
 
 # Calculate behave eq
-behav_eq!(pair, norm, punishment, my_parameter.tmax, my_parameter.synergy)
+behav_eq!(pair, norm, punishment, 10.0, 0.0)
 
 # Compare values with mathematica code
-individual1  # should be around 0.41303
+individual1  # should be around 0.413
 individual2  # individual 1 and 2 should have nearly identical values
 
-total_payoff!(individual1, individual2, norm, punishment, 0.0)
-
 
 ##################
-# Total payoff relative
+# Fitness and Payoff
 ##################
 
-individual1 = individual(0.2, 0.5, 0.4, 0.0, 0.0, 0);
+individual1 = individual(0.1, 2.0, 0.1, 0.0, 0.0, 0);
+individual2 = copy(individual1);
+pair = [(individual1, individual2)];
+norm = mean([individual1.a, individual2.a])
+punishment = mean([individual1.p, individual2.p])
 
-total_payoff_relative!(individual1, 0.0)
+behav_eq!(pair, norm, punishment, 30.0, 0.0)
 
-println(individual1.payoff)
+total_payoff!(individual1, 0.0)
+
+fitness(individual1)
 
 
 ##################
