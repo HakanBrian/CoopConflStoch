@@ -2,7 +2,7 @@
 # Simulation Parameters
 ##################
 
-mutable struct simulation_parameters
+mutable struct SimulationParameters
     #game params
     action0::Float64
     a0::Float64
@@ -14,34 +14,57 @@ mutable struct simulation_parameters
     population_size::Int64
     synergy::Float64
     relatedness::Float64
-    fitness_scaling_factor::Float64
+    fitness_scaling_factor_a::Float64
+    fitness_scaling_factor_b::Float64
     mutation_rate::Float64
-    trait_variance::Float64
     mutation_variance::Float64
+    trait_variance::Float64
     #file/simulation params
     output_save_tick::Int64  # when to save output
+
+    # Constructor with default values
+    function SimulationParameters(;
+        action0::Float64=0.5,
+        a0::Float64=0.5,
+        p0::Float64=0.5,
+        T0::Float64=0.0,
+        gmax::Int64=100000,
+        tmax::Float64=5.0,
+        population_size::Int64=50,
+        synergy::Float64=0.0,
+        relatedness::Float64=0.5,
+        fitness_scaling_factor_a::Float64=0.004,
+        fitness_scaling_factor_b::Float64=10.0,
+        mutation_rate::Float64=0.05,
+        mutation_variance::Float64=0.005,
+        trait_variance::Float64=0.0,
+        output_save_tick::Int64=10
+    )
+        new(action0, a0, p0, T0, gmax, tmax, population_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
+    end
 end
 
-function Base.copy(parameters::simulation_parameters)
-    return simulation_parameters(
-        getfield(parameters, :action0),
-        getfield(parameters, :a0),
-        getfield(parameters, :p0),
-        getfield(parameters, :T0),
-        getfield(parameters, :gmax),
-        getfield(parameters, :tmax),
-        getfield(parameters, :population_size),
-        getfield(parameters, :synergy),
-        getfield(parameters, :relatedness),
-        getfield(parameters, :fitness_scaling_factor),
-        getfield(parameters, :mutation_rate),
-        getfield(parameters, :trait_variance),
-        getfield(parameters, :mutation_variance),
-        getfield(parameters, :output_save_tick)
+function Base.copy(parameters::SimulationParameters)
+    return SimulationParameters(
+        action0=getfield(parameters, :action0),
+        a0=getfield(parameters, :a0),
+        p0=getfield(parameters, :p0),
+        T0=getfield(parameters, :T0),
+        gmax=getfield(parameters, :gmax),
+        tmax=getfield(parameters, :tmax),
+        population_size=getfield(parameters, :population_size),
+        synergy=getfield(parameters, :synergy),
+        relatedness=getfield(parameters, :relatedness),
+        fitness_scaling_factor_a=getfield(parameters, :fitness_scaling_factor_a),
+        fitness_scaling_factor_b=getfield(parameters, :fitness_scaling_factor_b),
+        mutation_rate=getfield(parameters, :mutation_rate),
+        mutation_variance=getfield(parameters, :mutation_variance),
+        trait_variance=getfield(parameters, :trait_variance),
+        output_save_tick=getfield(parameters, :output_save_tick)
     )
 end
 
-function Base.copy!(old_params::simulation_parameters, new_params::simulation_parameters)
+function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
     setfield!(old_params, :action0, getfield(new_params, :action0))
     setfield!(old_params, :a0, getfield(new_params, :a0))
     setfield!(old_params, :p0, getfield(new_params, :p0))
@@ -51,10 +74,11 @@ function Base.copy!(old_params::simulation_parameters, new_params::simulation_pa
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
     setfield!(old_params, :synergy, getfield(new_params, :synergy))
     setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
-    setfield!(old_params, :fitness_scaling_factor, getfield(new_params, :fitness_scaling_factor))
+    setfield!(old_params, :fitness_scaling_factor_a, getfield(new_params, :fitness_scaling_factor_a))
+    setfield!(old_params, :fitness_scaling_factor_b, getfield(new_params, :fitness_scaling_factor_b))
     setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
-    setfield!(old_params, :trait_variance, getfield(new_params, :trait_variance))
     setfield!(old_params, :mutation_variance, getfield(new_params, :mutation_variance))
+    setfield!(old_params, :trait_variance, getfield(new_params, :trait_variance))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
     nothing
@@ -65,7 +89,7 @@ end
 # Individual
 ##################
 
-mutable struct individual
+mutable struct Individual
     action::Float64
     a::Float64
     p::Float64
@@ -74,8 +98,8 @@ mutable struct individual
     interactions::Int64
 end
 
-function Base.copy(ind::individual)
-    return individual(
+function Base.copy(ind::Individual)
+    return Individual(
         getfield(ind, :action),
         getfield(ind, :a),
         getfield(ind, :p),
@@ -85,7 +109,7 @@ function Base.copy(ind::individual)
     )
 end
 
-function Base.copy!(old_ind::individual, new_ind::individual)
+function Base.copy!(old_ind::Individual, new_ind::Individual)
     setfield!(old_ind, :action, getfield(new_ind, :action))
     setfield!(old_ind, :a, getfield(new_ind, :a))
     setfield!(old_ind, :p, getfield(new_ind, :p))
@@ -101,15 +125,15 @@ end
 # Population
 ##################
 
-mutable struct population
-    parameters::simulation_parameters
-    individuals::Dict{Int64, individual}
+mutable struct Population
+    parameters::SimulationParameters
+    individuals::Dict{Int64, Individual}
     norm_pool::Float64
     punishment_pool::Float64
 end
 
-function Base.copy(pop::population)
-    return population(
+function Base.copy(pop::Population)
+    return Population(
         copy(getfield(pop, :parameters)),
         copy(getfield(pop, :individuals)),
         copy(getfield(pop, :norm_pool)),
@@ -117,7 +141,7 @@ function Base.copy(pop::population)
     )
 end
 
-function Base.copy!(old_population::population, new_population::population)
+function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
     copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
     copy!(getfield(old_population, :norm_pool), getfield(new_population, :norm_pool))

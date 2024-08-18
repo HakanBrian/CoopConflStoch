@@ -12,7 +12,7 @@ include("CoopConflGameStructs.jl")
 # Population Simulation Function
 ###############################
 
-function offspring!(offspring::individual, parent::individual)
+function offspring!(offspring::Individual, parent::Individual)
     setfield!(offspring, :action, getfield(parent, :action))
     setfield!(offspring, :a, getfield(parent, :a))
     setfield!(offspring, :p, getfield(parent, :p))
@@ -35,8 +35,8 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     return SA[lower_bound, upper_bound]
 end
 
-function population_construction(parameters::simulation_parameters)
-    individuals_dict = Dict{Int64, individual}()
+function population_construction(parameters::SimulationParameters)
+    individuals_dict = Dict{Int64, Individual}()
     trait_variance = parameters.trait_variance
     use_distribution = trait_variance != 0
 
@@ -58,18 +58,18 @@ function population_construction(parameters::simulation_parameters)
     # Create individuals
     for i in 1:parameters.population_size
         if use_distribution
-            indiv = individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
+            indiv = Individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
         else
-            indiv = individual(action0, a0, p0, T0, 0.0, 0)
+            indiv = Individual(action0, a0, p0, T0, 0.0, 0)
         end
 
         individuals_dict[i] = indiv
     end
 
-    return population(parameters, individuals_dict, 0, 0)
+    return Population(parameters, individuals_dict, 0, 0)
 end
 
-function output!(outputs::DataFrame, t::Int64, pop::population)
+function output!(outputs::DataFrame, t::Int64, pop::Population)
     # Determine the base row for the current generation
     if t == 1
         output_row_base = 1
@@ -119,7 +119,7 @@ end
 
 function benefit(action1::Real, action2::Real, synergy::Real)
     sqrt_action1 = √max(action1, 0.0)
-    sqrt_action2 = 9 * √max(action2, 0.0)
+    sqrt_action2 = √max(action2, 0.0)
     sqrt_sum = √max((action1 + action2), 0.0)
     return (1 - synergy) * (sqrt_action1 + sqrt_action2) + synergy * sqrt_sum
 end
@@ -148,7 +148,7 @@ function objective_derivative(action1::Real, action2::Real, norm_pool::Real, pun
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, synergy), action1)
 end
 
-function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
+function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
     payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
     payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
 
@@ -161,7 +161,7 @@ function total_payoff!(ind1::individual, ind2::individual, norm_pool::Float64, p
     nothing
 end
 
-function total_payoff!(ind::individual, synergy::Float64)
+function total_payoff!(ind::Individual, synergy::Float64)
     payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
 
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
@@ -171,12 +171,12 @@ function total_payoff!(ind::individual, synergy::Float64)
     nothing
 end
 
-function fitness(ind::individual)
+function fitness(ind::Individual)
     return ind.payoff - ind.p
 end
 
-function fitness(ind::individual, fitness_scaling_factor::Float64)
-    return 0.004 * exp(fitness(ind) * fitness_scaling_factor)
+function fitness(ind::Individual, fitSclFac_a::Float64, fitSclFac_b::Float64)
+    return fitSclFac_a * exp(fitness(ind) * fitSclFac_b)
 end
 
 
@@ -212,7 +212,7 @@ function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{
     return final_actions
 end
 
-function behav_eq!(pairs::Vector{Tuple{individual, individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, synergy::Float64)
+function behav_eq!(pairs::Vector{Tuple{Individual, Individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, synergy::Float64)
     # Extract initial conditions and parameters
     tspan = (0.0, tmax)
     u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
@@ -244,7 +244,7 @@ end
 # Social Interactions Function
 ##################
 
-function update_norm_punishment_pools!(pop::population)
+function update_norm_punishment_pools!(pop::Population)
     norm_sum = 0.0
     punishment_sum = 0.0
     for individual in values(pop.individuals)
@@ -287,7 +287,7 @@ function shuffle_and_pair(individuals_key::Vector{Int64}, population_size::Int64
     return pairs, num_pairs
 end
 
-function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::population)
+function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::Population)
     u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
     ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
 
@@ -306,7 +306,7 @@ function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, In
     return u0s, ps
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::population)
+function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::Population)
     for (i, (idx1, idx2)) in enumerate(pairs)
         ind1 = pop.individuals[idx1]
         ind2 = pop.individuals[idx2]
@@ -326,7 +326,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
     nothing
 end
 
-function social_interactions!(pop::population)
+function social_interactions!(pop::Population)
     individuals_key = collect(keys(pop.individuals))
 
     # Update norm and punishment pools
@@ -350,10 +350,11 @@ end
 # Reproduction Function
 ##################
 
-function reproduce!(pop::population)
+function reproduce!(pop::Population)
     # Calculate fitness
-    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
-    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
+    fitSclFac_a = pop.parameters.fitness_scaling_factor_a
+    fitSclFac_b = pop.parameters.fitness_scaling_factor_b
+    fitnesses = map(individual -> fitness(individual, fitSclFac_a, fitSclFac_b), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -371,10 +372,11 @@ function reproduce!(pop::population)
 end
 
 #= Maximal fitness reproduction
-function reproduce!(pop::population)
+function reproduce!(pop::Population)
     # Calculate fitness
-    fitness_scaling_factor = pop.parameters.fitness_scaling_factor
-    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor), values(pop.individuals))
+    fitSclFac_a = pop.parameters.fitness_scaling_factor_a
+    fitSclFac_b = pop.parameters.fitness_scaling_factor_b
+    fitnesses = map(fitness -> fitness(individual, fitSclFac_a, fitSclFac_b), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Find the highest fitness individual
@@ -394,7 +396,7 @@ end
 # Mutation Function 
 ##################
 
-function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
+function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_variance = pop.parameters.mutation_variance
 
     # Only mutate if necessary
@@ -427,7 +429,7 @@ function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
 end
 
 #= Mutation units
-function mutate!(pop::population, truncate_bounds::SArray{Tuple{2}, Float64})
+function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_unit = pop.parameters.mutation_variance
 
     # Only mutate if necessary
@@ -481,7 +483,7 @@ end
 # Simulation Function #
 #######################
 
-function simulation(pop::population)
+function simulation(pop::Population)
 
     ############
     # Sim init #

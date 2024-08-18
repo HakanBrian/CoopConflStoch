@@ -12,9 +12,9 @@ include("CoopConflGameFuncs.jl")
 # Plot Simulation Function
 ##################
 
-function simulation_replicate(my_parameter::simulation_parameters, num_replicates::Int64)
+function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)
     # Container to hold mean data of each simulation
-    output_length = floor(Int64, my_parameter.gmax/my_parameter.output_save_tick) * num_replicates
+    output_length = floor(Int64, parameters.gmax/parameters.output_save_tick) * num_replicates
     all_simulation_means = DataFrame(
         replicate = Vector{Int64}(undef, output_length),
         generation = Vector{Int64}(undef, output_length),
@@ -32,7 +32,7 @@ function simulation_replicate(my_parameter::simulation_parameters, num_replicate
         println("Running simulation replicate $i")
 
         # Run the simulation
-        my_population = population_construction(my_parameter)
+        my_population = population_construction(parameters)
         my_simulation = simulation(my_population)
 
         # Group by generation and compute mean for each generation
