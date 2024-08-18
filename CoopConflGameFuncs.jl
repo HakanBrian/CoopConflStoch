@@ -175,8 +175,12 @@ function fitness(ind::Individual)
     return ind.payoff - ind.p
 end
 
-function fitness(ind::Individual, fitSclFac_a::Float64, fitSclFac_b::Float64)
-    return fitSclFac_a * exp(fitness(ind) * fitSclFac_b)
+function fitness(ind::Individual, inflation_factor::Int64)
+    return fitness(ind) + ((inflation_factor) * √ind.action)
+end
+
+function fitness(ind::Individual, inflation_factor::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
+    return fitness_scaling_factor_a * exp(fitness(ind, inflation_factor) * fitness_scaling_factor_b)
 end
 
 
@@ -352,9 +356,10 @@ end
 
 function reproduce!(pop::Population)
     # Calculate fitness
-    fitSclFac_a = pop.parameters.fitness_scaling_factor_a
-    fitSclFac_b = pop.parameters.fitness_scaling_factor_b
-    fitnesses = map(individual -> fitness(individual, fitSclFac_a, fitSclFac_b), values(pop.individuals))
+    fitness_scaling_factor_a = pop.parameters.fitness_scaling_factor_a
+    fitness_scaling_factor_b = pop.parameters.fitness_scaling_factor_b
+    inflation_factor = pop.parameters.inflation_factor
+    fitnesses = map(individual -> fitness(individual, inflation_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -374,9 +379,10 @@ end
 #= Maximal fitness reproduction
 function reproduce!(pop::Population)
     # Calculate fitness
-    fitSclFac_a = pop.parameters.fitness_scaling_factor_a
-    fitSclFac_b = pop.parameters.fitness_scaling_factor_b
-    fitnesses = map(fitness -> fitness(individual, fitSclFac_a, fitSclFac_b), values(pop.individuals))
+    fitness_scaling_factor_a = pop.parameters.fitness_scaling_factor_a
+    fitness_scaling_factor_b = pop.parameters.fitness_scaling_factor_b
+    inflation_factor = pop.parameters.inflation_factor
+    fitnesses = map(fitness -> fitness(individual, inflation_factor), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Find the highest fitness individual

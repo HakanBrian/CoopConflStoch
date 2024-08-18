@@ -48,7 +48,7 @@ behav_eq!(pair, norm, punishment, 30.0, 0.0)
 
 total_payoff!(individual1, 0.0)
 
-fitness(individual1)
+fitness(individual1, 50)
 
 
 ##################
