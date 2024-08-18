@@ -29,8 +29,8 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     z_alpha_over_2 = quantile(Normal(), 1 - alpha/2)
 
     # Calculate truncation bounds
-    lower_bound = -z_alpha_over_2 * sqrt(variance)
-    upper_bound = z_alpha_over_2 * sqrt(variance)
+    lower_bound = -z_alpha_over_2 * √variance
+    upper_bound = z_alpha_over_2 * √variance
 
     return SA[lower_bound, upper_bound]
 end
@@ -148,9 +148,9 @@ function objective_derivative(action1::Real, action2::Real, norm_pool::Real, pun
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, synergy), action1)
 end
 
-function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
-    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
+function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64, inflation_factor::Int64)
+    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy) + (inflation_factor * √ind2.action)
+    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy) + (inflation_factor * √ind1.action)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -161,8 +161,8 @@ function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, p
     nothing
 end
 
-function total_payoff!(ind::Individual, synergy::Float64)
-    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
+function total_payoff!(ind::Individual, synergy::Float64, inflation_factor::Int64)
+    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy) + (inflation_factor * √ind.action)
 
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
 
@@ -175,12 +175,8 @@ function fitness(ind::Individual)
     return ind.payoff - ind.p
 end
 
-function fitness(ind::Individual, inflation_factor::Int64)
-    return fitness(ind) + ((inflation_factor) * √ind.action)
-end
-
-function fitness(ind::Individual, inflation_factor::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
-    return fitness_scaling_factor_a * exp(fitness(ind, inflation_factor) * fitness_scaling_factor_b)
+function fitness(ind::Individual, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
+    return fitness_scaling_factor_a * exp(fitness(ind) * fitness_scaling_factor_b)
 end
 
 
@@ -317,9 +313,9 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1.action, ind2.action = final_actions[i]
 
         if idx1 == idx2
-            total_payoff!(ind1, pop.parameters.synergy)
+            total_payoff!(ind1, pop.parameters.synergy, pop.parameters.inflation_factor)
         else
-            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy, pop.parameters.inflation_factor)
         end
 
         # Uncomment below to make the payoffs fixed
@@ -358,8 +354,7 @@ function reproduce!(pop::Population)
     # Calculate fitness
     fitness_scaling_factor_a = pop.parameters.fitness_scaling_factor_a
     fitness_scaling_factor_b = pop.parameters.fitness_scaling_factor_b
-    inflation_factor = pop.parameters.inflation_factor
-    fitnesses = map(individual -> fitness(individual, inflation_factor), values(pop.individuals))
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor_a, fitness_scaling_factor_b), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -381,8 +376,7 @@ function reproduce!(pop::Population)
     # Calculate fitness
     fitness_scaling_factor_a = pop.parameters.fitness_scaling_factor_a
     fitness_scaling_factor_b = pop.parameters.fitness_scaling_factor_b
-    inflation_factor = pop.parameters.inflation_factor
-    fitnesses = map(fitness -> fitness(individual, inflation_factor), values(pop.individuals))
+    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor_a, fitness_scaling_factor_b), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Find the highest fitness individual
