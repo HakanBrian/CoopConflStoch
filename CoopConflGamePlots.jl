@@ -143,6 +143,11 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
         "p" => :green,
         "T" => :purple,
         "payoff" => :orange,
+        "action_stdev" => "rgba(0,0,255,0.2)",
+        "a_stdev" => "rgba(255,0,0,0.2)",
+        "p_stdev" => "rgba(0,255,0,0.2)",
+        "T_stdev" => "rgba(128,0,128,0.2)",
+        "payoff_stdev" => "rgba(255,165,0,0.2)",
     )
 
     # Plot individual replicates
@@ -169,80 +174,22 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
     statistics[!, :payoff_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>Payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
 
     # Plot replicate means with ribbons for standard deviation
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.action_mean_mean,
-                                        mode="lines", line_color=colors["action"], name="Action Mean",
-                                        hovertext=statistics.action_mean_hover,
-                                        hoverinfo="text"))
+    for trait in ["action", "a", "p", "T", "payoff"]
+        add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"],
+                                            mode="lines", line_color=colors[trait], name=trait * " Mean",
+                                            hovertext=statistics.action_mean_hover,
+                                            hoverinfo="text"))
 
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.action_mean_mean .+ statistics.action_mean_std,
-                                        mode="lines", line_color=colors["action"], name="", fill="tonexty",
-                                        fillcolor="rgba(0,0,255,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
+        add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"] .+ statistics[!, trait * "_mean_std"],
+                                            mode="lines", line_color=colors[trait], name="", fill="tonexty",
+                                            fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
+                                            hoverinfo="none", showlegend=false))
 
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.action_mean_mean .- statistics.action_mean_std,
-                                        mode="lines", line_color=colors["action"], name="", fill="tonexty",
-                                        fillcolor="rgba(0,0,255,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.a_mean_mean,
-                                        mode="lines", line_color=colors["a"], name="A Mean",
-                                        hovertext=statistics.a_mean_hover,
-                                        hoverinfo="text"))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.a_mean_mean .+ statistics.a_mean_std,
-                                        mode="lines", line_color=colors["a"], name="", fill="tonexty",
-                                        fillcolor="rgba(255,0,0,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.a_mean_mean .- statistics.a_mean_std,
-                                        mode="lines", line_color=colors["a"], name="", fill="tonexty",
-                                        fillcolor="rgba(255,0,0,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.p_mean_mean,
-                                        mode="lines", line_color=colors["p"], name="P Mean",
-                                        hovertext=statistics.p_mean_hover,
-                                        hoverinfo="text"))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.p_mean_mean .+ statistics.p_mean_std,
-                                        mode="lines", line_color=colors["p"], name="", fill="tonexty",
-                                        fillcolor="rgba(0,255,0,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.p_mean_mean .- statistics.p_mean_std,
-                                        mode="lines", line_color=colors["p"], name="", fill="tonexty",
-                                        fillcolor="rgba(0,255,0,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.T_mean_mean,
-                                        mode="lines", line_color=colors["T"], name="T Mean",
-                                        hovertext=statistics.T_mean_hover,
-                                        hoverinfo="text"))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.T_mean_mean .+ statistics.T_mean_std,
-                                        mode="lines", line_color=colors["T"], name="", fill="tonexty",
-                                        fillcolor="rgba(128,0,128,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.T_mean_mean .- statistics.T_mean_std,
-                                        mode="lines", line_color=colors["T"], name="", fill="tonexty",
-                                        fillcolor="rgba(128,0,128,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.payoff_mean_mean,
-                                        mode="lines", line_color=colors["payoff"], name="Payoff Mean",
-                                        hovertext=statistics.payoff_mean_hover,
-                                        hoverinfo="text"))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.payoff_mean_mean .+ statistics.payoff_mean_std,
-                                        mode="lines", line_color=colors["payoff"], name="", fill="tonexty",
-                                        fillcolor="rgba(255,165,0,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
-
-    add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics.payoff_mean_mean .- statistics.payoff_mean_std,
-                                        mode="lines", line_color=colors["payoff"], name="", fill="tonexty",
-                                        fillcolor="rgba(255,165,0,0.2)", line=Dict(:width => 0),
-                                        hoverinfo="none", showlegend=false))
+        add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"] .- statistics[!, trait * "_mean_std"],
+                                            mode="lines", line_color=colors["action"], name="", fill="tonexty",
+                                            fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
+                                            hoverinfo="none", showlegend=false))
+    end
 
     # Layout for individual replicates
     relayout!(p_replicates, title="Individual Replicates",
