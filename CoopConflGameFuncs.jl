@@ -352,9 +352,7 @@ end
 
 function reproduce!(pop::Population)
     # Calculate fitness
-    fitness_scaling_factor_a = pop.parameters.fitness_scaling_factor_a
-    fitness_scaling_factor_b = pop.parameters.fitness_scaling_factor_b
-    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor_a, fitness_scaling_factor_b), values(pop.individuals))
+    fitnesses = map(individual -> fitness(individual, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Sample with the given weights
@@ -374,9 +372,7 @@ end
 #= Maximal fitness reproduction
 function reproduce!(pop::Population)
     # Calculate fitness
-    fitness_scaling_factor_a = pop.parameters.fitness_scaling_factor_a
-    fitness_scaling_factor_b = pop.parameters.fitness_scaling_factor_b
-    fitnesses = map(individual -> fitness(individual, fitness_scaling_factor_a, fitness_scaling_factor_b), values(pop.individuals))
+    fitnesses = map(individual -> fitness(individual, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), values(pop.individuals))
     keys_list = collect(keys(pop.individuals))
 
     # Find the highest fitness individual
