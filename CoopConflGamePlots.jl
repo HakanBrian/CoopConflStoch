@@ -167,17 +167,17 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
     end
 
     # Create formatted hover text for each trait
-    statistics[!, :action_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>Action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
-    statistics[!, :a_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>A Mean: " .* string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
-    statistics[!, :p_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>P Mean: " .* string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
+    statistics[!, :action_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
+    statistics[!, :a_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>a Mean: " .* string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
+    statistics[!, :p_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>p Mean: " .* string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
     statistics[!, :T_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>T Mean: " .* string.(statistics.T_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_mean_std)
-    statistics[!, :payoff_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>Payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
+    statistics[!, :payoff_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
 
     # Plot replicate means with ribbons for standard deviation
     for trait in ["action", "a", "p", "T", "payoff"]
         add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"],
                                             mode="lines", line_color=colors[trait], name=trait * " Mean",
-                                            hovertext=statistics.action_mean_hover,
+                                            hovertext=statistics[!, trait * "_mean_hover"],
                                             hoverinfo="text"))
 
         add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"] .+ statistics[!, trait * "_mean_std"],
@@ -186,7 +186,7 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
                                             hoverinfo="none", showlegend=false))
 
         add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"] .- statistics[!, trait * "_mean_std"],
-                                            mode="lines", line_color=colors["action"], name="", fill="tonexty",
+                                            mode="lines", line_color=colors[trait], name="", fill="tonexty",
                                             fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
                                             hoverinfo="none", showlegend=false))
     end
