@@ -46,7 +46,7 @@ punishment = mean([individual1.p, individual2.p])
 
 behav_eq!(pair, norm, punishment, 30.0, 0.0)
 
-total_payoff!(individual1, 0.0, 8)
+total_payoff!(individual1, 0.0)
 
 fitness(individual1)
 
