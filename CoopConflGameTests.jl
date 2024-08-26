@@ -22,12 +22,12 @@ my_population = population_construction(params);
 # Define starting parameters
 individual1 = Individual(0.2, 0.4, 0.1, 0.5, 0.0, 0);
 individual2 = Individual(0.3, 0.5, 0.2, 0.5, 0.0, 0);
-group = [[individual1, individual2], [individual1, individual2]];
+pair = [(individual1, individual2)];
 norm = mean([individual1.a, individual2.a])
 punishment = mean([individual1.p, individual2.p])
 
 # Calculate behave eq
-behav_eq!(group, norm, punishment, 0.0, 10.0)
+behav_eq!(pair, norm, punishment, 10.0, 0.0)
 
 # Compare values with mathematica code
 individual1  # should be around 0.413
@@ -54,13 +54,6 @@ fitness(individual1)
 ##################
 # Social Interactions
 ##################
-
-params = SimulationParameters(action0=0.1, a0=2.0, p0=0.1, population_size=10)
-my_population = population_construction(params);
-update_norm_punishment_pools!(my_population)
-groups, num_groups = shuffle_and_group(collect(keys(my_population.individuals)), 10, 2, 0.0);
-u0s, ps = collect_initial_conditions_and_parameters(groups, num_groups, 2, my_population);
-behav_eq(u0s, ps, 10.0, num_groups)
 
 social_interactions!(my_population)
 

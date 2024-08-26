@@ -117,9 +117,10 @@ end
 # Fitness Function
 ##################
 
-function benefit(actioni::Real, actionj, synergy::Real)
-    sum_sqrt_actions = sqrt(max(actioni, 0.0)) + sum(sqrt.(max.(actionj, 0.0)))  # Handles both scalars and vectors
-    sqrt_sum_actions = sqrt(max(actioni + sum(actionj), 0.0))  # Square root of the sum of all actions
+function benefit(actions, synergy::Real)
+    sum_sqrt_actions = sum(sqrt.(max.(actions, 0.0)))  # Handles both scalars and vectors
+    sqrt_sum_actions = sqrt(max(sum(actions), 0.0))  # Square root of the sum of all actions
+
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
@@ -135,21 +136,30 @@ function internal_punishment(action::Real, norm_pool::Real, T::Real)
     return T * (action - norm_pool)^2
 end
 
-function payoff(actioni::Real, actionj, norm_pool::Real, punishment_pool::Real, synergy::Real)
-    return benefit(actioni, actionj, synergy) - cost(actioni) - external_punishment(actioni, norm_pool, punishment_pool)
+function payoff(actions, idx::Int64, norm_pool::Real, punishment_pool::Real, synergy::Real)
+    return benefit(actions, synergy) - cost(actions[idx]) - external_punishment(actions[idx], norm_pool, punishment_pool)
 end
 
-function objective(actioni::Real, actionj, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    return payoff(actioni, actionj, norm_pool, punishment_pool, synergy) - internal_punishment(actioni, norm_pool, T)
+function objective(actions, idx::Int64, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return payoff(actions, idx, norm_pool, punishment_pool, synergy) - internal_punishment(actions[idx], norm_pool, T)
 end
 
-function objective_derivative(actioni::Real, actionj, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    return ForwardDiff.derivative(x -> objective(x, actionj, norm_pool, punishment_pool, T, synergy), actioni)
+function objective_derivative(actions, idx::Int64, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    function modified_objective(x::Real)
+        # Replace the element at index `idx` in `actions` with `x`
+        modified_actions = actions[1:idx-1]
+        modified_actions = vcat(modified_actions, x)
+        modified_actions = vcat(modified_actions, actions[idx+1:end])
+
+        return objective(modified_actions, idx, norm_pool, punishment_pool, T, synergy)
+    end
+
+    return ForwardDiff.derivative(modified_objective, actions[idx])
 end
 
 function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
-    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
+    payoff1 = payoff([ind1.action, ind2.action], 1, norm_pool, punishment_pool, synergy)
+    payoff2 = payoff([ind2.action, ind1.action], 1, norm_pool, punishment_pool, synergy)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -161,7 +171,7 @@ function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, p
 end
 
 function total_payoff!(ind::Individual, synergy::Float64)
-    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
+    payoff_ind = payoff([ind.action, ind.action], 1, ind.a, ind.p, synergy)
 
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
 
@@ -182,25 +192,15 @@ end
 ##################
 # Behavioral Equilibrium Function
 ##################
-#=
-function remove_element(actions::SVector{N, T}, idx::Int) where {N, T}
-    return SVector{N-1}(actions[1:idx-1]..., actions[idx+1:end]...)
-end
 
 function behav_ODE_static(u, p, t)
-    # Construct the SVector using a tuple comprehension
-    return SVector{length(u)}((objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3+i], p[3]) for i in 1:length(u))...)
-end
-=#
+    dx = objective_derivative(u, 1, p[1], p[2], p[3], p[5])
+    dy = objective_derivative(u, 2, p[1], p[2], p[4], p[5])
 
-function behav_ODE_static(u, p, t)
-    dx = objective_derivative(u[1], SVector{1}(u[2]), p[1], p[2], p[4], p[3])
-    dy = objective_derivative(u[2], SVector{1}(u[1]), p[1], p[2], p[5], p[3])
-
-    return SVector{2}(dx, dy)
+    return SA[dx, dy]
 end
 
-function behav_eq(u0s, ps, tmax::Float64, num_groups::Int64)
+function behav_eq(u0s::Array{SArray{Tuple{2}, Float32}}, ps::Array{SArray{Tuple{5}, Float32}}, tmax::Float64, num_pairs::Int64)
     tspan = (0.0, tmax)
 
     # Initialize a problem with the first set of parameters as a template
@@ -213,7 +213,7 @@ function behav_eq(u0s, ps, tmax::Float64, num_groups::Int64)
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_groups, save_on = false)
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_pairs, save_on = false)
 
     # Extract final action values
     final_actions = [sol[end] for sol in sim]
@@ -221,42 +221,28 @@ function behav_eq(u0s, ps, tmax::Float64, num_groups::Int64)
     return final_actions
 end
 
-function behav_eq!(groups::Vector{Vector{Individual}}, norm_pool::Float64, punishment_pool::Float64, synergy::Float64, tmax::Float64)
-    tspan = (0.0, tmax)
-
-    group_size = length(groups[1])
-    num_groups = length(groups)
-
-    u0s = Vector{SVector{group_size, Float32}}(undef, num_groups)
-    ps = Vector{SVector{3 + group_size, Float32}}(undef, num_groups)
-
+function behav_eq!(pairs::Vector{Tuple{Individual, Individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, synergy::Float64)
     # Extract initial conditions and parameters
-    for (i, group) in enumerate(groups)
-        # Collect initial actions
-        actions = [Float32(group[j].action) for j in eachindex(group)]
-        u0s[i] = SVector{group_size, Float32}(actions...)
-
-        # Collect parameters
-        T_values = [Float32(group[j].T) for j in eachindex(group)]
-        ps[i] = SVector{3 + group_size, Float32}(norm_pool, punishment_pool, synergy, T_values...)
-    end
+    u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
+    tspan = (0.0, tmax)
+    ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, synergy] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
 
-    # Function to remake the problem for each group
+    # Function to remake the problem for each pair
     prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
 
     # Create an ensemble problem
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
     # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_groups, save_on = false)
+    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = length(pairs), save_on = false)
 
     # Update action values
     final_actions = [sol[end] for sol in sim]
-    for (group, action) in zip(groups, final_actions)
-        setproperty!.(group, :action, action)
+    for ((ind1, ind2), action) in zip(pairs, final_actions)
+        ind1.action, ind2.action = action
     end
 
     nothing
@@ -282,61 +268,48 @@ function update_norm_punishment_pools!(pop::Population)
     nothing
 end
 
-function probabilistic_round(x::Float64)::Int
-    lower = floor(Int, x)
-    upper = ceil(Int, x)
-    probability_up = x - lower  # Probability of rounding up
-
-    return rand() < probability_up ? upper : lower
-end
-
-function shuffle_and_group(individuals_key::Vector{Int64}, population_size::Int64, group_size::Int64, relatedness::Float64)
+function shuffle_and_pair(individuals_key::Vector{Int64}, population_size::Int64, relatedness::Float64)
     shuffle!(individuals_key)
-    groups = Vector{Vector{Int64}}()
+    pairs = Vector{Tuple{Int64, Int64}}()
+    i = 1
 
-    # Iterate over each individual and form a group
-    for i in 1:population_size
-        focal_individual = individuals_key[i]
-
-        # Create a list of potential candidates excluding the focal individual
-        candidates = filter(x -> x != focal_individual, individuals_key)
-
-        # Calculate the number of related individuals using probabilistic rounding
-        num_related = probabilistic_round(relatedness * group_size)
-        num_random = group_size - num_related
-
-        if num_related > 0
-            # Sample random individuals from the filtered candidates
-            random_individuals = sample(candidates, num_random, replace=false)
-
-            # Fill the group with related individuals and sampled individuals
-            related_individuals = fill(focal_individual, num_related)
-            final_group = [related_individuals; random_individuals]
+    while i <= population_size
+        if i == population_size
+            # Handle the last individual separately
+            if rand() <= relatedness
+                push!(pairs, (individuals_key[i], individuals_key[i]))
+            else
+                push!(pairs, (individuals_key[i], rand(individuals_key[1:i-1])))
+            end
+            i += 1
+        elseif rand() <= relatedness
+            push!(pairs, (individuals_key[i], individuals_key[i]))
+            i += 1
         else
-            # If relatedness is 0, just sample a full group
-            random_individuals = sample(candidates, group_size - 1, replace=false)
-            final_group = [focal_individual; random_individuals]
+            push!(pairs, (individuals_key[i], individuals_key[i+1]))
+            i += 2
         end
-
-        push!(groups, final_group)
     end
 
-    num_groups = length(groups)
-    return groups, num_groups
+    num_pairs = length(pairs)
+
+    return pairs, num_pairs
 end
 
-function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}, num_groups::Int64, group_size::Int64, pop::Population)
-    u0s = Vector{SVector{group_size, Float32}}(undef, num_groups)
-    ps = Vector{SVector{3 + group_size, Float32}}(undef, num_groups)
+function collect_initial_conditions_and_parameters(pairs::Vector{Tuple{Int64, Int64}}, num_pairs::Int64, pop::Population)
+    u0s = Vector{SArray{Tuple{2}, Float32}}(undef, num_pairs)
+    ps = Vector{SArray{Tuple{5}, Float32}}(undef, num_pairs)
 
-    for (i, group) in enumerate(groups)
-        # Collect initial actions
-        actions = [Float32(pop.individuals[idx].action) for idx in group]
-        u0s[i] = SVector{group_size, Float32}(actions...)
+    for (i, (idx1, idx2)) in enumerate(pairs)
+        ind1 = pop.individuals[idx1]
+        ind2 = pop.individuals[idx2]
+        u0s[i] = SA_F32[ind1.action; ind2.action]
 
-        # Collect parameters
-        T_values = [Float32(pop.individuals[idx].T) for idx in group]
-        ps[i] = SVector{3 + group_size, Float32}(pop.norm_pool, pop.punishment_pool, pop.parameters.synergy, T_values...)
+        if idx1 == idx2
+            ps[i] = SA_F32[ind1.a, ind1.p, ind1.T, ind1.T, pop.parameters.synergy]
+        else
+            ps[i] = SA_F32[pop.norm_pool, pop.punishment_pool, ind1.T, ind2.T, pop.parameters.synergy]
+        end
     end
 
     return u0s, ps
@@ -372,8 +345,8 @@ function social_interactions!(pop::Population)
     pairs, num_pairs = shuffle_and_pair(individuals_key, pop.parameters.population_size, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
-    #u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
-    #final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
+    u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
+    final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
 
     # Update actions and payoffs for all pairs based on final actions
     update_actions_and_payoffs!(final_actions, pairs, pop)
