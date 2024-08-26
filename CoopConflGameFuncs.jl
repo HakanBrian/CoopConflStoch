@@ -148,9 +148,9 @@ function objective_derivative(action1::Real, action2::Real, norm_pool::Real, pun
     return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, synergy), action1)
 end
 
-function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
-    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
+function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64, inflation_factor::Int64)
+    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy) + (inflation_factor * √ind2.action)
+    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy) + (inflation_factor * √ind1.action)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -161,8 +161,8 @@ function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, p
     nothing
 end
 
-function total_payoff!(ind::Individual, synergy::Float64)
-    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
+function total_payoff!(ind::Individual, synergy::Float64, inflation_factor::Int64)
+    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy) + (inflation_factor * √ind.action)
 
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
 
@@ -313,9 +313,9 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}},
         ind1.action, ind2.action = final_actions[i]
 
         if idx1 == idx2
-            total_payoff!(ind1, pop.parameters.synergy)
+            total_payoff!(ind1, pop.parameters.synergy, pop.parameters.inflation_factor)
         else
-            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
+            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy, pop.parameters.inflation_factor)
         end
 
         # Uncomment below to make the payoffs fixed
