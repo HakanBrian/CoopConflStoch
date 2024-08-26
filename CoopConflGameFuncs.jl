@@ -117,9 +117,9 @@ end
 # Fitness Function
 ##################
 
-function benefit(action_i::Real, actions_j, synergy::Real)
-    sum_sqrt_actions = sqrt(max(action_i, 0.0)) + sum(sqrt.(max.(actions_j, 0.0)))
-    sqrt_sum_actions = sqrt(max(action_i + sum(actions_j), 0.0))
+function benefit(actioni::Real, actionj, synergy::Real)
+    sum_sqrt_actions = sqrt(max(actioni, 0.0)) + sum(sqrt.(max.(actionj, 0.0)))  # Handles both scalars and vectors
+    sqrt_sum_actions = sqrt(max(actioni + sum(actionj), 0.0))  # Square root of the sum of all actions
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
@@ -135,41 +135,37 @@ function internal_punishment(action::Real, norm_pool::Real, T::Real)
     return T * (action - norm_pool)^2
 end
 
-function payoff(action_i::Real, actions_j, norm_pool::Real, punishment_pool::Real, synergy::Real)
-    return benefit(action_i, actions_j, synergy) - cost(action_i) - external_punishment(action_i, norm_pool, punishment_pool)
+function payoff(actioni::Real, actionj, norm_pool::Real, punishment_pool::Real, synergy::Real)
+    return benefit(actioni, actionj, synergy) - cost(actioni) - external_punishment(actioni, norm_pool, punishment_pool)
 end
 
-function objective(action_i::Real, actions_j, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment(action_i, norm_pool, T)
+function objective(actioni::Real, actionj, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return payoff(actioni, actionj, norm_pool, punishment_pool, synergy) - internal_punishment(actioni, norm_pool, T)
 end
 
-function objective_derivative(action_i::Real, actions_j::SVector{N, <:Real}, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real) where N
-    return ForwardDiff.derivative(x -> objective(x, actions_j, norm_pool, punishment_pool, T, synergy), action_i)
+function objective_derivative(actioni::Real, actionj, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return ForwardDiff.derivative(x -> objective(x, actionj, norm_pool, punishment_pool, T, synergy), actioni)
 end
 
-function total_payoff!(group::Vector{Tuple{Int64, Individual}}, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    group_size = length(group)
+function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
+    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
+    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
 
-    for i in 1:group_size
-        # Ensure we are not accessing out-of-bounds elements or virtual elements
-        if i < group_size && group[i][1] != group[i + 1][1]
-            # Extract the individual and action from the current tuple
-            individual_i = group[i][2]
-            action_i = individual_i.action
+    ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
+    ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
 
-            # Collect actions from the other individuals
-            actions_j = [group[j][2].action for j in 1:group_size if j != i]
+    ind1.interactions += 1
+    ind2.interactions += 1
 
-            # Compute the payoff for the individual
-            payoff_foc = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
+    nothing
+end
 
-            # Update the individual's payoff
-            individual_i.payoff = (payoff_foc + individual_i.interactions * individual_i.payoff) / (individual_i.interactions + 1)
+function total_payoff!(ind::Individual, synergy::Float64)
+    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
 
-            # Update the individual's interactions
-            individual_i.interactions += 1
-        end
-    end
+    ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
+
+    ind.interactions += 1
 
     nothing
 end
@@ -186,14 +182,22 @@ end
 ##################
 # Behavioral Equilibrium Function
 ##################
-
+#=
 function remove_element(actions::SVector{N, T}, idx::Int) where {N, T}
-    return SVector{N-1}(ntuple(i -> i < idx ? actions[i] : actions[i + 1], N - 1))
+    return SVector{N-1}(actions[1:idx-1]..., actions[idx+1:end]...)
 end
 
-function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
-    du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3 + i], p[3]), N)
-    return SVector{N}(du)
+function behav_ODE_static(u, p, t)
+    # Construct the SVector using a tuple comprehension
+    return SVector{length(u)}((objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3+i], p[3]) for i in 1:length(u))...)
+end
+=#
+
+function behav_ODE_static(u, p, t)
+    dx = objective_derivative(u[1], SVector{1}(u[2]), p[1], p[2], p[4], p[3])
+    dy = objective_derivative(u[2], SVector{1}(u[1]), p[1], p[2], p[5], p[3])
+
+    return SVector{2}(dx, dy)
 end
 
 function behav_eq(u0s, ps, tmax::Float64, num_groups::Int64)
@@ -321,9 +325,7 @@ function shuffle_and_group(individuals_key::Vector{Int64}, population_size::Int6
     return groups, num_groups
 end
 
-function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}, num_groups::Int64, pop::Population)
-    group_size = pop.parameters.group_size
-
+function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}, num_groups::Int64, group_size::Int64, pop::Population)
     u0s = Vector{SVector{group_size, Float32}}(undef, num_groups)
     ps = Vector{SVector{3 + group_size, Float32}}(undef, num_groups)
 
@@ -340,21 +342,21 @@ function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}
     return u0s, ps
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, pop::Population) where N
-    for (group_keys, actions) in zip(groups, final_actions)
-        # Convert group keys to a vector of (key, individual) tuples
-        group = [(key, pop.individuals[key]) for key in group_keys]
+function update_actions_and_payoffs!(final_actions::Vector{SVector{2, Float32}}, pairs::Vector{Tuple{Int64, Int64}}, pop::Population)
+    for (i, (idx1, idx2)) in enumerate(pairs)
+        ind1 = pop.individuals[idx1]
+        ind2 = pop.individuals[idx2]
+        ind1.action, ind2.action = final_actions[i]
 
-        # Update the action for each individual in the group
-        for (i, (_, individual)) in enumerate(group)
-            individual.action = actions[i]
+        if idx1 == idx2
+            total_payoff!(ind1, pop.parameters.synergy)
+        else
+            total_payoff!(ind1, ind2, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
         end
 
-        # Update the payoffs
-        total_payoff!(group, pop.norm_pool, pop.punishment_pool, pop.parameters.synergy)
-
         # Uncomment below to make the payoffs fixed
-        # setproperty!.(group, :action, 1.0)
+        # ind1.payoff = 1.0
+        # ind2.payoff = 1.0
     end
 
     nothing
@@ -367,14 +369,14 @@ function social_interactions!(pop::Population)
     update_norm_punishment_pools!(pop)
 
     # Shuffle and pair individuals
-    groups, num_groups = shuffle_and_group(individuals_key, pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
+    pairs, num_pairs = shuffle_and_pair(individuals_key, pop.parameters.population_size, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
-    u0s, ps = collect_initial_conditions_and_parameters(groups, num_groups, pop)
-    final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_groups)
+    #u0s, ps = collect_initial_conditions_and_parameters(pairs, num_pairs, pop)
+    #final_actions = behav_eq(u0s, ps, pop.parameters.tmax, num_pairs)
 
     # Update actions and payoffs for all pairs based on final actions
-    update_actions_and_payoffs!(final_actions, groups, pop)
+    update_actions_and_payoffs!(final_actions, pairs, pop)
 
     nothing
 end

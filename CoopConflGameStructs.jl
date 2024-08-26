@@ -12,7 +12,6 @@ mutable struct SimulationParameters
     gmax::Int64  # maximum number of generations
     tmax::Float64  # maximum length of timespan for ODE
     population_size::Int64
-    group_size::Int64
     synergy::Float64
     relatedness::Float64
     fitness_scaling_factor_a::Float64
@@ -32,7 +31,6 @@ mutable struct SimulationParameters
         gmax::Int64=100000,
         tmax::Float64=5.0,
         population_size::Int64=50,
-        group_size::Int64 = 10,
         synergy::Float64=0.0,
         relatedness::Float64=0.5,
         fitness_scaling_factor_a::Float64=0.004,
@@ -42,7 +40,7 @@ mutable struct SimulationParameters
         trait_variance::Float64=0.0,
         output_save_tick::Int64=10
     )
-        new(action0, a0, p0, T0, gmax, tmax, population_size, group_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
+        new(action0, a0, p0, T0, gmax, tmax, population_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
     end
 end
 
@@ -55,7 +53,6 @@ function Base.copy(parameters::SimulationParameters)
         gmax=getfield(parameters, :gmax),
         tmax=getfield(parameters, :tmax),
         population_size=getfield(parameters, :population_size),
-        group_size=getfield(parameters, :group_size),
         synergy=getfield(parameters, :synergy),
         relatedness=getfield(parameters, :relatedness),
         fitness_scaling_factor_a=getfield(parameters, :fitness_scaling_factor_a),
@@ -75,7 +72,6 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
     setfield!(old_params, :gmax, getfield(new_params, :gmax))
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
-    setfield!(old_params, :group_size, getfield(new_params, :group_size))
     setfield!(old_params, :synergy, getfield(new_params, :synergy))
     setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
     setfield!(old_params, :fitness_scaling_factor_a, getfield(new_params, :fitness_scaling_factor_a))

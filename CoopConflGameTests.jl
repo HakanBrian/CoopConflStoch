@@ -15,7 +15,6 @@ include("CoopConflGameFuncs.jl")
 params = SimulationParameters()  # uses all default values
 my_population = population_construction(params);
 
-
 ##################
 # Behav Eq
 ##################
@@ -36,20 +35,35 @@ individual2  # individual 1 and 2 should have nearly identical values
 
 
 ##################
+# Fitness and Payoff
+##################
+
+individual1 = Individual(0.1, 2.0, 0.1, 0.0, 0.0, 0);
+individual2 = copy(individual1);
+pair = [(individual1, individual2)];
+norm = mean([individual1.a, individual2.a])
+punishment = mean([individual1.p, individual2.p])
+
+behav_eq!(pair, norm, punishment, 30.0, 0.0)
+
+total_payoff!(individual1, 0.0)
+
+fitness(individual1)
+
+
+##################
 # Social Interactions
 ##################
 
-params = SimulationParameters(action0=0.1, a0=2.0, p0=0.1, population_size=10, group_size=2)
+params = SimulationParameters(action0=0.1, a0=2.0, p0=0.1, population_size=10)
 my_population = population_construction(params);
-
 update_norm_punishment_pools!(my_population)
-groups, num_groups = shuffle_and_group(collect(keys(my_population.individuals)), params.population_size, params.group_size, params.relatedness);
-u0s, ps = collect_initial_conditions_and_parameters(groups, num_groups, my_population);
-final_actions = behav_eq(u0s, ps, 10.0, num_groups)
-update_actions_and_payoffs!(final_actions, groups, my_population)
-println(my_population.individuals)
+groups, num_groups = shuffle_and_group(collect(keys(my_population.individuals)), 10, 2, 0.0);
+u0s, ps = collect_initial_conditions_and_parameters(groups, num_groups, 2, my_population);
+behav_eq(u0s, ps, 10.0, num_groups)
 
 social_interactions!(my_population)
+
 println(my_population.individuals)
 
 
@@ -105,4 +119,4 @@ println(my_population)
 # compilation
 @time simulation(my_population);
 # pure runtime
-@profview @time simulation(my_population);
+@time simulation(my_population);
