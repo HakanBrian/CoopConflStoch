@@ -101,28 +101,18 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
     if t == 1
         output_row_base = 1
     else
-        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.population_size + 1
+        output_row_base = (floor(Int, t / pop.parameters.output_save_tick) - 1) * pop.parameters.population_size + 1
     end
 
     # Preallocate vectors for batch assignment
     N = pop.parameters.population_size
     generation_col = fill(t, N)
     individual_col = 1:N
-    action_col = Vector{Float64}(undef, N)
-    a_col = Vector{Float64}(undef, N)
-    p_col = Vector{Float64}(undef, N)
-    T_col = Vector{Float64}(undef, N)
-    payoff_col = Vector{Float64}(undef, N)
-
-    # Collect the data for each individual
-    for i in 1:N
-        ind = pop.individuals[i]
-        action_col[i] = ind.action
-        a_col[i] = ind.a
-        p_col[i] = ind.p
-        T_col[i] = ind.T
-        payoff_col[i] = ind.payoff
-    end
+    action_col = pop.action
+    norm_col = pop.norm
+    ext_pun_col = pop.ext_pun
+    int_pun_col = pop.int_pun
+    payoff_col = pop.payoff
 
     # Calculate the range of rows to be updated
     output_rows = output_row_base:(output_row_base + N - 1)
@@ -131,9 +121,9 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
     outputs.generation[output_rows] = generation_col
     outputs.individual[output_rows] = individual_col
     outputs.action[output_rows] = action_col
-    outputs.a[output_rows] = a_col
-    outputs.p[output_rows] = p_col
-    outputs.T[output_rows] = T_col
+    outputs.a[output_rows] = norm_col
+    outputs.p[output_rows] = ext_pun_col
+    outputs.T[output_rows] = int_pun_col
     outputs.payoff[output_rows] = payoff_col
 
     nothing
