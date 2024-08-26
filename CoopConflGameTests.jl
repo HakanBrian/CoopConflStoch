@@ -19,45 +19,41 @@ population = population_construction(params);
 # Behav Eq
 ##################
 
-# Define starting parameters
-individual1 = Individual(0.2, 0.4, 0.1, 0.5, 0.0, 0);
-individual2 = Individual(0.3, 0.5, 0.2, 0.5, 0.0, 0);
-pair = [(individual1, individual2)];
-norm = mean([individual1.a, individual2.a])
-punishment = mean([individual1.p, individual2.p])
+params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=2, group_size=2)
+population = population_construction(params)
 
 # Calculate behave eq
-behav_eq!(pair, norm, punishment, 10.0, 0.0)
+update_norm_punishment_pools!(population)
+behav_eq!([[1, 2]], population, 5.0)
 
 # Compare values with mathematica code
-individual1  # should be around 0.413
-individual2  # individual 1 and 2 should have nearly identical values
+println(population)
 
 
 ##################
-# Fitness and Payoff
+# Payoff & Fitness
 ##################
 
-individual1 = Individual(0.1, 2.0, 0.1, 0.0, 0.0, 0);
-individual2 = copy(individual1);
-pair = [(individual1, individual2)];
-norm = mean([individual1.a, individual2.a])
-punishment = mean([individual1.p, individual2.p])
+params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=10, group_size=2)
+population = population_construction(params)
 
-behav_eq!(pair, norm, punishment, 30.0, 0.0)
+# Calculate behave eq
+update_norm_punishment_pools!(population)
+behav_eq!([[1, 2], [2, 1]], population, 5.0)
 
-total_payoff!(individual1, 0.0, 8)
+total_payoff!(collect(1:params.population_size), population)
+fitness(population, 1)
 
-fitness(individual1)
+println(population)
 
 
 ##################
 # Social Interactions
 ##################
 
-social_interactions!(my_population)
+social_interactions!(population)
 
-println(my_population.individuals)
+println(population)
 
 
 ##################
@@ -67,42 +63,37 @@ println(my_population.individuals)
 # To use this test payoffs need to be copied into the next generation
 
 # Create sample population
-my_parameter = SimulationParameters(p0=0.0, gmax=10, population_size=1000, mutation_rate=0.0)
-individuals_dict = Dict{Int64, Individual}()
-my_population = Population(my_parameter, individuals_dict, 0, 0)
-
-my_population.individuals[1] = Individual(0.5, 0.5, 0.0, 0.0, 1, 0)
-my_population.individuals[2] = Individual(0.5, 0.5, 0.0, 0.0, 2, 0)
-my_population.individuals[3] = Individual(0.5, 0.5, 0.0, 0.0, 3, 0)
-my_population.individuals[4] = Individual(0.5, 0.5, 0.0, 0.0, 4, 0)
+param = SimulationParameters(action0=0.5f0, norm0=0.5f0, ext_pun0=0.0f0, int_pun0=0.0f0, gmax=10, population_size=1000, mutation_rate=0.0)
+population = population_construction(param)
+population.payoff[1:4] .= [1.0f0, 2.0f0, 3.0f0, 4.0f0]
 
 # Bootstrap to increase sample size
-original_size = length(my_population.individuals)
+original_size = 4
 new_key = original_size + 1
 for i in 1:original_size
     for j in 1:249
-        my_population.individuals[new_key] = copy(my_population.individuals[i])
+        population.payoff[new_key] = copy(population.payoff[i])
         new_key += 1
     end
 end
 
 # Ensure 250 copies of each parent
-println("Initial population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
+println("Initial population with payoff 4: ", count(payoff -> payoff == 4.0f0, population.payoff))
 
 # Complete a round of reproduction
-reproduce!(my_population)
+reproduce!(population)
 
 # Offspring should have parent 4 as their parent ~40% of the time (only if there is no scaling)
-println("New population with payoff 4: ", count(individual -> individual.payoff == 4, values(my_population.individuals)))
+println("New population with payoff 4: ", count(payoff -> payoff == 4.0f0, population.payoff))
 
 
 ##################
 # Mutate
 ##################
 
-mutate!(my_population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
+mutate!(population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
 
-println(my_population)
+println(population)
 
 
 ##################
@@ -110,6 +101,6 @@ println(my_population)
 ##################
 
 # compilation
-@time simulation(my_population);
+@time simulation(population);
 # pure runtime
-@time simulation(my_population);
+@time simulation(population);

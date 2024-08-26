@@ -9,40 +9,42 @@ mutable struct SimulationParameters
     ext_pun0::Float32
     int_pun0::Float32
     #popgen params
-    gmax::Int  # maximum number of generations
+    gmax::Int64  # maximum number of generations
     tmax::Float64  # maximum length of timespan for ODE
-    population_size::Int
-    synergy::Float32
-    relatedness::Float32
-    inflation_factor::Int
-    fitness_scaling_factor_a::Float32
-    fitness_scaling_factor_b::Float32
-    mutation_rate::Float32
-    mutation_variance::Float32
-    trait_variance::Float32
+    population_size::Int64
+    group_size::Int64
+    synergy::Float64
+    relatedness::Float64
+    inflation_factor::Int64
+    fitness_scaling_factor_a::Float64
+    fitness_scaling_factor_b::Float64
+    mutation_rate::Float64
+    mutation_variance::Float64
+    trait_variance::Float64
     #file/simulation params
-    output_save_tick::Int  # when to save output
+    output_save_tick::Int64  # when to save output
 
     # Constructor with default values
     function SimulationParameters(;
         action0::Float32=0.5f0,
         norm0::Float32=0.5f0,
         ext_pun0::Float32=0.5f0,
-        int_pun0::Float32=0.5f0,
-        gmax::Int=100000,
-        tmax::Float32=5.0f0,
-        population_size::Int=50,
-        synergy::Float32=0.0f0,
-        relatedness::Float32=0.5f0,
-        inflation_factor::Int=0,
-        fitness_scaling_factor_a::Float32=0.004f0,
-        fitness_scaling_factor_b::Float32=10.0f0,
-        mutation_rate::Float32=0.05f0,
-        mutation_variance::Float32=0.005f0,
-        trait_variance::Float32=0.0f0,
-        output_save_tick::Int=10
+        int_pun0::Float32=0.0f0,
+        gmax::Int64=100000,
+        tmax::Float64=5.0,
+        population_size::Int64=50,
+        group_size::Int64=10,
+        synergy::Float64=0.0,
+        relatedness::Float64=0.5,
+        inflation_factor::Int64=0,
+        fitness_scaling_factor_a::Float64=0.004,
+        fitness_scaling_factor_b::Float64=10.0,
+        mutation_rate::Float64=0.05,
+        mutation_variance::Float64=0.005,
+        trait_variance::Float64=0.0,
+        output_save_tick::Int64=10
     )
-        new(action0, norm0, ext_pun0, int_pun0, gmax, tmax, population_size, synergy, relatedness, inflation_factor, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
+        new(action0, norm0, ext_pun0, int_pun0, gmax, tmax, population_size, group_size, synergy, relatedness, inflation_factor, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
     end
 end
 
@@ -55,6 +57,7 @@ function Base.copy(parameters::SimulationParameters)
         gmax=getfield(parameters, :gmax),
         tmax=getfield(parameters, :tmax),
         population_size=getfield(parameters, :population_size),
+        group_size=getfield(parameters, :group_size),
         synergy=getfield(parameters, :synergy),
         relatedness=getfield(parameters, :relatedness),
         inflation_factor=getfield(parameters, :inflation_factor),
@@ -75,6 +78,7 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
     setfield!(old_params, :gmax, getfield(new_params, :gmax))
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
+    setfield!(old_params, :group_size, getfield(new_params, :group_size))
     setfield!(old_params, :synergy, getfield(new_params, :synergy))
     setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
     setfield!(old_params, :inflation_factor, getfield(new_params, :inflation_factor))
@@ -100,7 +104,7 @@ mutable struct Population
     ext_pun::Vector{Float32}
     int_pun::Vector{Float32}
     payoff::Vector{Float32}
-    interactions::Vector{Int}
+    interactions::Vector{Int64}
     norm_pool::Float32
     pun_pool::Float32
 end
