@@ -4,45 +4,45 @@
 
 mutable struct SimulationParameters
     #game params
-    action0::Float64
-    a0::Float64
-    p0::Float64
-    T0::Float64
+    action0::Float32
+    norm0::Float32
+    ext_pun0::Float32
+    int_pun0::Float32
     #popgen params
-    gmax::Int64  # maximum number of generations
+    gmax::Int  # maximum number of generations
     tmax::Float64  # maximum length of timespan for ODE
-    population_size::Int64
-    synergy::Float64
-    relatedness::Float64
-    inflation_factor::Int64
-    fitness_scaling_factor_a::Float64
-    fitness_scaling_factor_b::Float64
-    mutation_rate::Float64
-    mutation_variance::Float64
-    trait_variance::Float64
+    population_size::Int
+    synergy::Float32
+    relatedness::Float32
+    inflation_factor::Int
+    fitness_scaling_factor_a::Float32
+    fitness_scaling_factor_b::Float32
+    mutation_rate::Float32
+    mutation_variance::Float32
+    trait_variance::Float32
     #file/simulation params
-    output_save_tick::Int64  # when to save output
+    output_save_tick::Int  # when to save output
 
     # Constructor with default values
     function SimulationParameters(;
-        action0::Float64=0.5,
-        a0::Float64=0.5,
-        p0::Float64=0.5,
-        T0::Float64=0.0,
-        gmax::Int64=100000,
-        tmax::Float64=5.0,
-        population_size::Int64=50,
-        synergy::Float64=0.0,
-        relatedness::Float64=0.5,
-        inflation_factor::Int64=0,
-        fitness_scaling_factor_a::Float64=0.004,
-        fitness_scaling_factor_b::Float64=10.0,
-        mutation_rate::Float64=0.05,
-        mutation_variance::Float64=0.005,
-        trait_variance::Float64=0.0,
-        output_save_tick::Int64=10
+        action0::Float32=0.5f0,
+        norm0::Float32=0.5f0,
+        ext_pun0::Float32=0.5f0,
+        int_pun0::Float32=0.5f0,
+        gmax::Int=100000,
+        tmax::Float32=5.0f0,
+        population_size::Int=50,
+        synergy::Float32=0.0f0,
+        relatedness::Float32=0.5f0,
+        inflation_factor::Int=0,
+        fitness_scaling_factor_a::Float32=0.004f0,
+        fitness_scaling_factor_b::Float32=10.0f0,
+        mutation_rate::Float32=0.05f0,
+        mutation_variance::Float32=0.005f0,
+        trait_variance::Float32=0.0f0,
+        output_save_tick::Int=10
     )
-        new(action0, a0, p0, T0, gmax, tmax, population_size, synergy, relatedness, inflation_factor, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
+        new(action0, norm0, ext_pun0, int_pun0, gmax, tmax, population_size, synergy, relatedness, inflation_factor, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
     end
 end
 
@@ -90,66 +90,45 @@ end
 
 
 ##################
-# Individual
-##################
-
-mutable struct Individual
-    action::Float64
-    a::Float64
-    p::Float64
-    T::Float64
-    payoff::Float64
-    interactions::Int64
-end
-
-function Base.copy(ind::Individual)
-    return Individual(
-        getfield(ind, :action),
-        getfield(ind, :a),
-        getfield(ind, :p),
-        getfield(ind, :T),
-        getfield(ind, :payoff),
-        getfield(ind, :interactions)
-    )
-end
-
-function Base.copy!(old_ind::Individual, new_ind::Individual)
-    setfield!(old_ind, :action, getfield(new_ind, :action))
-    setfield!(old_ind, :a, getfield(new_ind, :a))
-    setfield!(old_ind, :p, getfield(new_ind, :p))
-    setfield!(old_ind, :T, getfield(new_ind, :T))
-    setfield!(old_ind, :payoff, getfield(new_ind, :payoff))
-    setfield!(old_ind, :interactions, getfield(new_ind, :interactions))
-
-    nothing
-end
-
-
-##################
 # Population
 ##################
 
 mutable struct Population
     parameters::SimulationParameters
-    individuals::Dict{Int64, Individual}
-    norm_pool::Float64
-    punishment_pool::Float64
+    action::Vector{Float32}
+    norm::Vector{Float32}
+    ext_pun::Vector{Float32}
+    int_pun::Vector{Float32}
+    payoff::Vector{Float32}
+    interactions::Vector{Int}
+    norm_pool::Float32
+    pun_pool::Float32
 end
 
 function Base.copy(pop::Population)
     return Population(
         copy(getfield(pop, :parameters)),
-        copy(getfield(pop, :individuals)),
+        copy(getfield(pop, :action)),
+        copy(getfield(pop, :norm)),
+        copy(getfield(pop, :ext_pun)),
+        copy(getfield(pop, :int_pun)),
+        copy(getfield(pop, :payoff)),
+        copy(getfield(pop, :interactions)),
         copy(getfield(pop, :norm_pool)),
-        copy(getfield(pop, :punishment_pool))
+        copy(getfield(pop, :pun_pool))
     )
 end
 
 function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
-    copy!(getfield(old_population, :individuals), getfield(new_population, :individuals))
+    copy!(getfield(old_population, :action), getfield(new_population, :action))
+    copy!(getfield(old_population, :norm), getfield(new_population, :norm))
+    copy!(getfield(old_population, :ext_pun), getfield(new_population, :ext_pun))
+    copy!(getfield(old_population, :int_pun), getfield(new_population, :int_pun))
+    copy!(getfield(old_population, :payoff), getfield(new_population, :payoff))
+    copy!(getfield(old_population, :interactions), getfield(new_population, :interactions))
     copy!(getfield(old_population, :norm_pool), getfield(new_population, :norm_pool))
-    copy!(getfield(old_population, :punishment_pool), getfield(new_population, :punishment_pool))
+    copy!(getfield(old_population, :pun_pool), getfield(new_population, :pun_pool))
 
     nothing
 end

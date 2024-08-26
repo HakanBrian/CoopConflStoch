@@ -12,13 +12,16 @@ include("CoopConflGameStructs.jl")
 # Population Simulation Function
 ###############################
 
-function offspring!(offspring::Individual, parent::Individual)
-    setfield!(offspring, :action, getfield(parent, :action))
-    setfield!(offspring, :a, getfield(parent, :a))
-    setfield!(offspring, :p, getfield(parent, :p))
-    setfield!(offspring, :T, getfield(parent, :T))
-    setfield!(offspring, :payoff, 0.0)
-    setfield!(offspring, :interactions, 0)
+function offspring!(pop::Population, offspring_index::Int, parent_index::Int)
+    # Copy attributes from parent to offspring
+    pop.actions[offspring_index] = pop.actions[parent_index]
+    pop.norm[offspring_index] = pop.norm[parent_index]
+    pop.ext_pun[offspring_index] = pop.ext_pun[parent_index]
+    pop.int_pun[offspring_index] = pop.int_pun[parent_index]
+
+    # Set initial values for offspring
+    pop.payoffs[offspring_index] = 0.0
+    pop.interactions[offspring_index] = 0
 end
 
 function truncation_bounds(variance::Float64, retain_proportion::Float64)
