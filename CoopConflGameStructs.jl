@@ -49,9 +49,9 @@ end
 function Base.copy(parameters::SimulationParameters)
     return SimulationParameters(
         action0=getfield(parameters, :action0),
-        a0=getfield(parameters, :a0),
-        p0=getfield(parameters, :p0),
-        T0=getfield(parameters, :T0),
+        norm0=getfield(parameters, :norm0),
+        ext_pun0=getfield(parameters, :ext_pun0),
+        int_pun0=getfield(parameters, :int_pun0),
         gmax=getfield(parameters, :gmax),
         tmax=getfield(parameters, :tmax),
         population_size=getfield(parameters, :population_size),
@@ -69,9 +69,9 @@ end
 
 function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
     setfield!(old_params, :action0, getfield(new_params, :action0))
-    setfield!(old_params, :a0, getfield(new_params, :a0))
-    setfield!(old_params, :p0, getfield(new_params, :p0))
-    setfield!(old_params, :T0, getfield(new_params, :T0))
+    setfield!(old_params, :norm0, getfield(new_params, :norm0))
+    setfield!(old_params, :ext_pun0, getfield(new_params, :ext_pun0))
+    setfield!(old_params, :int_pun0, getfield(new_params, :int_pun0))
     setfield!(old_params, :gmax, getfield(new_params, :gmax))
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))

@@ -13,18 +13,18 @@ include("CoopConflGameStructs.jl")
 ###############################
 
 function offspring!(pop::Population, offspring_index::Int, parent_index::Int)
-    # Copy attributes from parent to offspring
+    # Copy traits from parent to offspring
     pop.actions[offspring_index] = pop.actions[parent_index]
     pop.norm[offspring_index] = pop.norm[parent_index]
     pop.ext_pun[offspring_index] = pop.ext_pun[parent_index]
     pop.int_pun[offspring_index] = pop.int_pun[parent_index]
 
     # Set initial values for offspring
-    pop.payoffs[offspring_index] = 0.0
+    pop.payoff[offspring_index] = 0.0
     pop.interactions[offspring_index] = 0
 end
 
-function truncation_bounds(variance::Float64, retain_proportion::Float64)
+function truncation_bounds(variance::Float32, retain_proportion::Float32)
     # Calculate tail probability alpha
     alpha = 1 - retain_proportion
 
@@ -39,37 +39,61 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
 end
 
 function population_construction(parameters::SimulationParameters)
-    individuals_dict = Dict{Int64, Individual}()
     trait_variance = parameters.trait_variance
     use_distribution = trait_variance != 0
 
     # Collect initial traits
     action0 = parameters.action0
-    a0 = parameters.a0
-    p0 = parameters.p0
-    T0 = parameters.T0
+    norm0 = parameters.norm0
+    ext_pun0 = parameters.ext_pun0
+    int_pun0 = parameters.int_pun0
+    pop_size = parameters.population_size
+
+    # Initialize arrays for attributes
+    actions = Vector{Float32}(undef, pop_size)
+    norms = Vector{Float32}(undef, pop_size)
+    ext_puns = Vector{Float32}(undef, pop_size)
+    int_puns = Vector{Float32}(undef, pop_size)
+    payoffs = Vector{Float32}(undef, pop_size)
+    interactions = Vector{Int}(undef, pop_size)
 
     # Construct distributions if necessary
     if use_distribution
         lower_bound, upper_bound = truncation_bounds(trait_variance, 0.99)
         action0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -action0), upper=upper_bound)
-        a0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -a0), upper=upper_bound)
-        p0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -p0), upper=upper_bound)
-        T0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -T0), upper=upper_bound)
+        norm0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -norm0), upper=upper_bound)
+        ext_pun0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -ext_pun0), upper=upper_bound)
+        int_pun0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -int_pun0), upper=upper_bound)
     end
 
     # Create individuals
-    for i in 1:parameters.population_size
+    for i in 1:pop_size
         if use_distribution
-            indiv = Individual(action0 + rand(action0_dist), a0 + rand(a0_dist), p0 + rand(p0_dist), T0 + rand(T0_dist), 0.0, 0)
+            actions[i] = action0 + rand(action0_dist)
+            norms[i] = norm0 + rand(norm0_dist)
+            ext_puns[i] = ext_pun0 + rand(ext_pun0_dist)
+            int_puns[i] = int_pun0 + rand(int_pun0_dist)
         else
-            indiv = Individual(action0, a0, p0, T0, 0.0, 0)
+            actions[i] = action0
+            norms[i] = norm0
+            ext_puns[i] = ext_pun0
+            int_puns[i] = int_pun0
         end
-
-        individuals_dict[i] = indiv
+        payoffs[i] = 0.0f0
+        interactions[i] = 0
     end
 
-    return Population(parameters, individuals_dict, 0, 0)
+    return Population(
+        parameters,
+        actions,
+        norms,
+        ext_puns,
+        int_puns,
+        payoffs,
+        interactions,
+        0.0f0,
+        0.0f0
+    )
 end
 
 function output!(outputs::DataFrame, t::Int64, pop::Population)

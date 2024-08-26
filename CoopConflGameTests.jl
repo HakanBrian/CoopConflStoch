@@ -13,7 +13,7 @@ include("CoopConflGameFuncs.jl")
 ##################
 
 params = SimulationParameters()  # uses all default values
-my_population = population_construction(params);
+population = population_construction(params);
 
 ##################
 # Behav Eq
