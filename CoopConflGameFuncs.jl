@@ -29,8 +29,8 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     z_alpha_over_2 = quantile(Normal(), 1 - alpha/2)
 
     # Calculate truncation bounds
-    lower_bound = -z_alpha_over_2 * sqrt(variance)
-    upper_bound = z_alpha_over_2 * sqrt(variance)
+    lower_bound = -z_alpha_over_2 * √variance
+    upper_bound = z_alpha_over_2 * √variance
 
     return SA[lower_bound, upper_bound]
 end
@@ -117,11 +117,11 @@ end
 # Fitness Function
 ##################
 
-function benefit(actions, synergy::Real)
-    sum_sqrt_actions = sum(sqrt.(max.(actions, 0.0)))  # Handles both scalars and vectors
-    sqrt_sum_actions = sqrt(max(sum(actions), 0.0))  # Square root of the sum of all actions
-
-    return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
+function benefit(action1::Real, action2::Real, synergy::Real)
+    sqrt_action1 = √max(action1, 0.0)
+    sqrt_action2 = √max(action2, 0.0)
+    sqrt_sum = √max((action1 + action2), 0.0)
+    return (1 - synergy) * (sqrt_action1 + sqrt_action2) + synergy * sqrt_sum
 end
 
 function cost(action::Real)
@@ -136,30 +136,21 @@ function internal_punishment(action::Real, norm_pool::Real, T::Real)
     return T * (action - norm_pool)^2
 end
 
-function payoff(actions, idx::Int64, norm_pool::Real, punishment_pool::Real, synergy::Real)
-    return benefit(actions, synergy) - cost(actions[idx]) - external_punishment(actions[idx], norm_pool, punishment_pool)
+function payoff(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, synergy::Real)
+    return benefit(action1, action2, synergy) - cost(action1) - external_punishment(action1, norm_pool, punishment_pool)
 end
 
-function objective(actions, idx::Int64, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    return payoff(actions, idx, norm_pool, punishment_pool, synergy) - internal_punishment(actions[idx], norm_pool, T)
+function objective(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return payoff(action1, action2, norm_pool, punishment_pool, synergy) - internal_punishment(action1, norm_pool, T)
 end
 
-function objective_derivative(actions, idx::Int64, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    function modified_objective(x::Real)
-        # Replace the element at index `idx` in `actions` with `x`
-        modified_actions = actions[1:idx-1]
-        modified_actions = vcat(modified_actions, x)
-        modified_actions = vcat(modified_actions, actions[idx+1:end])
-
-        return objective(modified_actions, idx, norm_pool, punishment_pool, T, synergy)
-    end
-
-    return ForwardDiff.derivative(modified_objective, actions[idx])
+function objective_derivative(action1::Real, action2::Real, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+    return ForwardDiff.derivative(x -> objective(x, action2, norm_pool, punishment_pool, T, synergy), action1)
 end
 
 function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, punishment_pool::Float64, synergy::Float64)
-    payoff1 = payoff([ind1.action, ind2.action], 1, norm_pool, punishment_pool, synergy)
-    payoff2 = payoff([ind2.action, ind1.action], 1, norm_pool, punishment_pool, synergy)
+    payoff1 = payoff(ind1.action, ind2.action, norm_pool, punishment_pool, synergy)
+    payoff2 = payoff(ind2.action, ind1.action, norm_pool, punishment_pool, synergy)
 
     ind1.payoff = (payoff1 + ind1.interactions * ind1.payoff) / (ind1.interactions + 1)
     ind2.payoff = (payoff2 + ind2.interactions * ind2.payoff) / (ind2.interactions + 1)
@@ -171,7 +162,7 @@ function total_payoff!(ind1::Individual, ind2::Individual, norm_pool::Float64, p
 end
 
 function total_payoff!(ind::Individual, synergy::Float64)
-    payoff_ind = payoff([ind.action, ind.action], 1, ind.a, ind.p, synergy)
+    payoff_ind = payoff(ind.action, ind.action, ind.a, ind.p, synergy)
 
     ind.payoff = (payoff_ind + ind.interactions * ind.payoff) / (ind.interactions + 1)
 
@@ -194,8 +185,8 @@ end
 ##################
 
 function behav_ODE_static(u, p, t)
-    dx = objective_derivative(u, 1, p[1], p[2], p[3], p[5])
-    dy = objective_derivative(u, 2, p[1], p[2], p[4], p[5])
+    dx = objective_derivative(u[1], u[2], p[1], p[2], p[3], p[5])
+    dy = objective_derivative(u[2], u[1], p[1], p[2], p[4], p[5])
 
     return SA[dx, dy]
 end
@@ -223,8 +214,8 @@ end
 
 function behav_eq!(pairs::Vector{Tuple{Individual, Individual}}, norm_pool::Float64, punishment_pool::Float64, tmax::Float64, synergy::Float64)
     # Extract initial conditions and parameters
-    u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
     tspan = (0.0, tmax)
+    u0s = [SA_F32[ind1.action, ind2.action] for (ind1, ind2) in pairs]
     ps = [SA_F32[norm_pool, punishment_pool, ind1.T, ind2.T, synergy] for (ind1, ind2) in pairs]
 
     # Initialize a problem with the first set of parameters as a template
