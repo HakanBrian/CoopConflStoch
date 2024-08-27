@@ -103,4 +103,4 @@ println(population)
 # compilation
 @time simulation(population);
 # pure runtime
-@time simulation(population);
+@profview @time simulation(population);

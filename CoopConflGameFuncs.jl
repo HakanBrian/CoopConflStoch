@@ -104,27 +104,19 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
         output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.population_size + 1
     end
 
-    # Preallocate vectors for batch assignment
     N = pop.parameters.population_size
-    generation_col = fill(t, N)
-    individual_col = 1:N
-    action_col = pop.action
-    norm_col = pop.norm
-    ext_pun_col = pop.ext_pun
-    int_pun_col = pop.int_pun
-    payoff_col = pop.payoff
 
     # Calculate the range of rows to be updated
     output_rows = output_row_base:(output_row_base + N - 1)
 
     # Update the DataFrame with batch assignment
-    outputs.generation[output_rows] = generation_col
-    outputs.individual[output_rows] = individual_col
-    outputs.action[output_rows] = action_col
-    outputs.a[output_rows] = norm_col
-    outputs.p[output_rows] = ext_pun_col
-    outputs.T[output_rows] = int_pun_col
-    outputs.payoff[output_rows] = payoff_col
+    outputs.generation[output_rows] = fill(t, N)
+    outputs.individual[output_rows] = 1:N
+    outputs.action[output_rows] = pop.action
+    outputs.a[output_rows] = pop.norm
+    outputs.p[output_rows] = pop.ext_pun
+    outputs.T[output_rows] = pop.int_pun
+    outputs.payoff[output_rows] = pop.payoff
 
     nothing
 end
@@ -214,14 +206,16 @@ function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
     return SVector{N}(du)
 end
 
-function behav_eq(u0s, ps, tmax::Float64, num_groups::Int64)
-    tspan = (0.0, tmax)
+function behav_eq(u0s::Matrix{Float32}, ps::Matrix{Float32}, tmax::Float64, num_groups::Int64)
+    tspan = Float32[0.0, tmax]
 
     # Initialize a problem with the first set of parameters as a template
-    prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
+    u0 = SVector{size(u0s, 1)}(u0s[:, 1])
+    p = SVector{size(ps, 1)}(ps[:, 1])
+    prob = ODEProblem{false}(behav_ODE_static, u0, tspan, p)
 
     # Function to remake the problem for each pair
-    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
+    prob_func = (prob, i, repeat) -> remake(prob, u0 = SVector{size(u0s, 1)}(u0s[:, i]), p = SVector{size(ps, 1)}(ps[:, i]))
 
     # Create an ensemble problem
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
@@ -337,18 +331,27 @@ end
 function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}, pop::Population)
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
-
-    u0s = Vector{SVector{group_size, Float32}}(undef, num_groups)
-    ps = Vector{SVector{3 + group_size, Float32}}(undef, num_groups)
-
+    
+    u0s = Matrix{Float32}(undef, group_size, num_groups)
+    ps = Matrix{Float32}(undef, 3 + group_size, num_groups)
+    
+    norm_pool = pop.norm_pool
+    pun_pool = pop.pun_pool
+    synergy = pop.parameters.synergy
+    
+    actions = Vector{Float32}(undef, group_size)
+    int_pun_values = Vector{Float32}(undef, group_size)
+    
     for (i, group) in enumerate(groups)
-        # Collect initial actions
-        actions = [pop.action[idx] for idx in group]
-        u0s[i] = SVector{group_size, Float32}(actions...)
-
-        # Collect parameters
-        int_pun_values = [pop.int_pun[idx] for idx in group]
-        ps[i] = SVector{3 + group_size, Float32}(pop.norm_pool, pop.pun_pool, pop.parameters.synergy, int_pun_values...)
+        for j in 1:group_size
+            @inbounds actions[j] = pop.action[group[j]]
+        end
+        u0s[:, i] = actions
+        
+        for j in 1:group_size
+            @inbounds int_pun_values[j] = pop.int_pun[group[j]]
+        end
+        ps[:, i] = vcat(norm_pool, pun_pool, synergy, int_pun_values)
     end
 
     return u0s, ps
