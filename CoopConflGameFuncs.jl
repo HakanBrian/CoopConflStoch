@@ -376,7 +376,7 @@ function social_interactions!(pop::Population)
     update_norm_punishment_pools!(pop)
 
     # Shuffle and pair individuals
-    groups= shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
+    groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
     u0s, ps = collect_initial_conditions_and_parameters(groups, pop)
