@@ -90,9 +90,7 @@ function population_construction(parameters::SimulationParameters)
         ext_puns,
         int_puns,
         payoffs,
-        interactions,
-        0.0f0,
-        0.0f0
+        interactions
     )
 end
 
@@ -156,29 +154,20 @@ function objective_derivative(action_i::Real, actions_j::SVector{N, <:Real}, nor
     return ForwardDiff.derivative(x -> objective(x, actions_j, norm_pool, punishment_pool, T, synergy), action_i)
 end
 
-function total_payoff!(group_indices::Vector{Int64}, pop::Population)
-    group_size = pop.parameters.group_size
+function total_payoff!(group_indices::Vector{Int64}, group_pool::Vector{Float32}, pop::Population)
+    # Extract the action of the focal individual
+    action_i = pop.action[group_indices[1]]
 
-    for i in 1:group_size
-        # Skip processing if current individual is a virtual copy
-        if i < group_size && group_indices[i] == group_indices[i + 1]
-            continue
-        end
+    # Collect actions from the other individuals in the group
+    actions_j = pop.action[group_indices[2:end]]
 
-        # Extract the action of the focal individual
-        action_i = pop.action[group_indices[i]]
+    # Compute the payoff for the focal individual
+    payoff_foc = payoff(action_i, actions_j, group_pool[1], group_pool[2], pop.parameters.synergy)
 
-        # Collect actions from the other individuals in the group
-        actions_j = [pop.action[group_indices[j]] for j in 1:group_size if j != i]
-
-        # Compute the payoff for the focal individual
-        payoff_foc = payoff(action_i, actions_j, pop.norm_pool, pop.pun_pool, pop.parameters.synergy)
-
-        # Update the individual's payoff and interactions
-        idx = group_indices[i]
-        pop.payoff[idx] = (payoff_foc + pop.interactions[idx] * pop.payoff[idx]) / (pop.interactions[idx] + 1)
-        pop.interactions[idx] += 1
-    end
+    # Update the individual's payoff and interactions
+    idx = group_indices[1]
+    pop.payoff[idx] = (payoff_foc + pop.interactions[idx] * pop.payoff[idx]) / (pop.interactions[idx] + 1)
+    pop.interactions[idx] += 1
 
     nothing
 end
@@ -206,16 +195,19 @@ function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
     return SVector{N}(du)
 end
 
-function behav_eq(u0s::Matrix{Float32}, ps::Matrix{Float32}, tmax::Float64, num_groups::Int64)
+function behav_eq(u0s::Matrix{Float32}, ps::Matrix{Float32}, group_pools::Matrix{Float32}, synergy::Float64, tmax::Float64, num_groups::Int64, group_size::Int64)
     tspan = Float32[0.0, tmax]
 
-    # Initialize a problem with the first set of parameters as a template
-    u0 = SVector{size(u0s, 1)}(u0s[:, 1])
-    p = SVector{size(ps, 1)}(ps[:, 1])
-    prob = ODEProblem{false}(behav_ODE_static, u0, tspan, p)
+    # Create an initial problem with the first set of parameters as a template
+    u0 = SVector{group_size}(u0s[:, 1])
+    p = SVector{group_size}(ps[:, 1])
+
+    prob = ODEProblem{false}(behav_ODE_static, u0, tspan, SVector{3 + group_size, Float32}(vcat(group_pools[1, 1], group_pools[1, 2], synergy, p)))
 
     # Function to remake the problem for each pair
-    prob_func = (prob, i, repeat) -> remake(prob, u0 = SVector{size(u0s, 1)}(u0s[:, i]), p = SVector{size(ps, 1)}(ps[:, i]))
+    prob_func = (prob, i, repeat) -> remake(prob,
+                                            u0 = SVector{size(u0s, 1)}(u0s[:, i]),
+                                            p = SVector{3 + group_size, Float32}(vcat(group_pools[1, i], group_pools[2, i], synergy, ps[:, i])))
 
     # Create an ensemble problem
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
@@ -279,14 +271,6 @@ end
 # Social Interactions Function
 ##################
 
-function update_norm_punishment_pools!(pop::Population)
-    # Update norm and punishment pools
-    pop.norm_pool = mean(pop.norm)
-    pop.pun_pool = mean(pop.ext_pun)
-
-    nothing
-end
-
 function probabilistic_round(x::Float64)::Int64
     lower = floor(Int64, x)
     upper = ceil(Int64, x)
@@ -317,11 +301,11 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
 
             # Fill the group with related individuals and sampled individuals
             related_individuals = fill(focal_individual_index, num_related)
-            final_group = [related_individuals; random_individuals]
+            final_group = vcat(related_individuals, random_individuals)
         else
             # If relatedness is 0, just sample a full group
             random_individuals = sample(candidates, group_size - 1, replace=false)
-            final_group = [focal_individual_index; random_individuals]
+            final_group = vcat(focal_individual_index, random_individuals)
         end
 
         groups[i] = final_group
@@ -334,60 +318,66 @@ function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
 
-    u0s = Matrix{Float32}(undef, group_size, num_groups)
-    ps = Matrix{Float32}(undef, 3 + group_size, num_groups)
-
-    norm_pool = Float32(pop.norm_pool)
-    pun_pool = Float32(pop.pun_pool)
-    synergy = Float32(pop.parameters.synergy)
+    # Initialize u0s for action values and ps for individual punishments
+    u0s = zeros(Float32, group_size, num_groups)
+    ps = zeros(Float32, group_size, num_groups)
 
     action_values = Vector{Float32}(undef, group_size)
     norm_values = Vector{Float32}(undef, group_size)
     int_pun_values = Vector{Float32}(undef, group_size)
     ext_pun_values = Vector{Float32}(undef, group_size)
 
+    group_pools = zeros(Float32, 2, num_groups)  # 2 rows: norm_pools, pun_pools
+
     # Collect initial conditions and parameters for each group
     for (i, group) in enumerate(groups)
         for j in 1:group_size
-            @inbounds action_values[j] = pop.action[group[j]]
-            @inbounds norm_values[j] = pop.norm[group[j]]
-            @inbounds ext_pun_values[j] = pop.ext_pun[group[j]]
-            @inbounds int_pun_values[j] = pop.int_pun[group[j]]
+            member_index = group[j]
+            action_values[j] = pop.action[member_index]
+            norm_values[j] = pop.norm[member_index]
+            ext_pun_values[j] = pop.ext_pun[member_index]
+            int_pun_values[j] = pop.int_pun[member_index]
         end
+
+        # Calculate the pools and store them in the matrix
+        group_pools[1, i] = mean(norm_values)  # norm_pools
+        group_pools[2, i] = mean(ext_pun_values)  # pun_pools
+
+        # Assign values to matrices
         u0s[:, i] = action_values
-        ps[:, i] = vcat(mean(norm_values), mean(ext_pun_values), synergy, int_pun_values)
+        ps[:, i] = int_pun_values
     end
 
-    return u0s, ps
+    return u0s, ps, group_pools
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, pop::Population) where N
-    for (group_indices, actions) in zip(groups, final_actions)
+function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, group_pools::Matrix{Float32}, pop::Population) where N
+    # Transpose the matrix to access columns as rows
+    transposed_pools = group_pools'
+
+    for (actions, group_indices, group_pool) in zip(final_actions, groups, eachrow(transposed_pools))
         # Update the action for each individual in the group
         for (i, idx) in enumerate(group_indices)
             pop.action[idx] = actions[i]
         end
 
         # Calculate and update payoffs for the group
-        total_payoff!(group_indices, pop)
+        total_payoff!(group_indices, collect(group_pool), pop)
     end
 
     nothing
 end
 
 function social_interactions!(pop::Population)
-    # Update norm and punishment pools
-    update_norm_punishment_pools!(pop)
-
     # Shuffle and pair individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
-    u0s, ps = collect_initial_conditions_and_parameters(groups, pop)
-    final_actions = behav_eq(u0s, ps, pop.parameters.tmax, pop.parameters.population_size)
+    u0s, ps, group_pools = collect_initial_conditions_and_parameters(groups, pop)
+    final_actions = behav_eq(u0s, ps, group_pools, pop.parameters.synergy, pop.parameters.tmax, pop.parameters.population_size, pop.parameters.group_size)
 
     # Update actions and payoffs for all pairs based on final actions
-    update_actions_and_payoffs!(final_actions, groups, pop)
+    update_actions_and_payoffs!(final_actions, groups, group_pools, pop)
 
     nothing
 end
