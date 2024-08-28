@@ -1,4 +1,4 @@
-using BenchmarkTools, Plots, PlotlyJS
+using Plots, PlotlyJS
 
 
 ##################

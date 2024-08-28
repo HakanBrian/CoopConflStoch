@@ -15,36 +15,29 @@ include("CoopConflGameFuncs.jl")
 params = SimulationParameters()  # uses all default values
 population = population_construction(params);
 
+
 ##################
-# Behav Eq
+# BehavEq & Payoff & Fitness
 ##################
 
-params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=2, group_size=2)
+params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=10, group_size=10)
 population = population_construction(params)
 
-# Calculate behave eq
 update_norm_punishment_pools!(population)
-behav_eq!([[1, 2]], population, 5.0)
-
-# Compare values with mathematica code
-println(population)
-
-
-##################
-# Payoff & Fitness
-##################
-
-params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=10, group_size=2)
-population = population_construction(params)
+groups = shuffle_and_group(params.population_size, params.group_size, 0.0)
 
 # Calculate behave eq
-update_norm_punishment_pools!(population)
-behav_eq!([[1, 2], [2, 1]], population, 5.0)
+behav_eq!(groups, population, params.tmax)
+println(population.action)
 
-total_payoff!(collect(1:params.population_size), population)
+# Calculate payoff
+for group in groups
+    total_payoff!(group, population)
+end
+println(population.payoff)
+
+# Calculate fitness
 fitness(population, 1)
-
-println(population)
 
 
 ##################
@@ -52,7 +45,6 @@ println(population)
 ##################
 
 social_interactions!(population)
-
 println(population)
 
 
@@ -60,7 +52,7 @@ println(population)
 # Reproduce
 ##################
 
-# To use this test payoffs need to be copied into the next generation
+# IMPORTANT: To use this test payoffs need to be copied into the next generation !!!
 
 # Create sample population
 param = SimulationParameters(action0=0.5f0, norm0=0.5f0, ext_pun0=0.0f0, int_pun0=0.0f0, gmax=10, population_size=1000, mutation_rate=0.0)
@@ -92,7 +84,6 @@ println("New population with payoff 4: ", count(payoff -> payoff == 4.0f0, popul
 ##################
 
 mutate!(population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
-
 println(population)
 
 

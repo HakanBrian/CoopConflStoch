@@ -230,23 +230,25 @@ function behav_eq(u0s::Matrix{Float32}, ps::Matrix{Float32}, tmax::Float64, num_
 end
 
 function behav_eq!(groups::Vector{Vector{Int64}}, pop::Population, tmax::Float64)
-    tspan = (0.0, tmax)
-    
-    group_size = length(groups[1])
-    num_groups = length(groups)
+    tspan = Float32[0.0, tmax]
+
+    num_groups = pop.parameters.population_size
+    group_size = pop.parameters.group_size
 
     u0s = Vector{SVector{group_size, Float32}}(undef, num_groups)
     ps = Vector{SVector{3 + group_size, Float32}}(undef, num_groups)
 
     # Extract initial conditions and parameters
     for (i, group_indices) in enumerate(groups)
-        # Collect initial actions using SoA approach
-        actions = [Float32(pop.action[idx]) for idx in group_indices]
-        u0s[i] = SVector{group_size, Float32}(actions...)
+        # Collect initial actions
+        action_values = [pop.action[idx] for idx in group_indices]
+        u0s[i] = SVector{group_size, Float32}(action_values...)
 
-        # Collect parameters using SoA approach
+        # Collect parameters
+        norm_values = [pop.norm[idx] for idx in group_indices]
+        ext_pun_values = [pop.ext_pun[idx] for idx in group_indices]
         int_pun_values = [pop.int_pun[idx] for idx in group_indices]
-        ps[i] = SVector{3 + group_size, Float32}(pop.norm_pool, pop.pun_pool, pop.parameters.synergy, int_pun_values...)
+        ps[i] = SVector{3 + group_size, Float32}(mean(norm_values), mean(ext_pun_values), Float32(pop.parameters.synergy), int_pun_values...)
     end
 
     # Initialize a problem with the first set of parameters as a template
@@ -261,7 +263,7 @@ function behav_eq!(groups::Vector{Vector{Int64}}, pop::Population, tmax::Float64
     # Solve the ensemble problem
     sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_groups, save_on = false)
 
-    # Update action values using the SoA approach
+    # Update actions
     final_actions = [sol[end] for sol in sim]
     for (group_indices, action) in zip(groups, final_actions)
         for (idx, action_value) in zip(group_indices, action)
@@ -294,16 +296,16 @@ function probabilistic_round(x::Float64)::Int64
 end
 
 function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
-    individuals_key = collect(1:population_size)
-    shuffle!(individuals_key)
+    individuals_indices = collect(1:population_size)
+    shuffle!(individuals_indices)
     groups = Vector{Vector{Int64}}(undef, population_size)
 
     # Iterate over each individual index and form a group
     for i in 1:population_size
-        focal_individual_index = individuals_key[i]
+        focal_individual_index = individuals_indices[i]
 
         # Create a list of potential candidates excluding the focal individual
-        candidates = filter(x -> x != focal_individual_index, individuals_key)
+        candidates = filter(x -> x != focal_individual_index, individuals_indices)
 
         # Calculate the number of related individuals using probabilistic rounding
         num_related = probabilistic_round(relatedness * group_size)
@@ -331,27 +333,29 @@ end
 function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}, pop::Population)
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
-    
+
     u0s = Matrix{Float32}(undef, group_size, num_groups)
     ps = Matrix{Float32}(undef, 3 + group_size, num_groups)
-    
-    norm_pool = pop.norm_pool
-    pun_pool = pop.pun_pool
-    synergy = pop.parameters.synergy
-    
-    actions = Vector{Float32}(undef, group_size)
+
+    norm_pool = Float32(pop.norm_pool)
+    pun_pool = Float32(pop.pun_pool)
+    synergy = Float32(pop.parameters.synergy)
+
+    action_values = Vector{Float32}(undef, group_size)
+    norm_values = Vector{Float32}(undef, group_size)
     int_pun_values = Vector{Float32}(undef, group_size)
-    
+    ext_pun_values = Vector{Float32}(undef, group_size)
+
+    # Collect initial conditions and parameters for each group
     for (i, group) in enumerate(groups)
         for j in 1:group_size
-            @inbounds actions[j] = pop.action[group[j]]
-        end
-        u0s[:, i] = actions
-        
-        for j in 1:group_size
+            @inbounds action_values[j] = pop.action[group[j]]
+            @inbounds norm_values[j] = pop.norm[group[j]]
+            @inbounds ext_pun_values[j] = pop.ext_pun[group[j]]
             @inbounds int_pun_values[j] = pop.int_pun[group[j]]
         end
-        ps[:, i] = vcat(norm_pool, pun_pool, synergy, int_pun_values)
+        u0s[:, i] = action_values
+        ps[:, i] = vcat(mean(norm_values), mean(ext_pun_values), synergy, int_pun_values)
     end
 
     return u0s, ps
@@ -421,20 +425,9 @@ function reproduce!(pop::Population)
     # Find the index of the individual with the highest fitness
     highest_fitness_index = argmax(fitnesses)
 
-    # Get the traits of the highest fitness individual
-    best_action = pop.action[highest_fitness_index]
-    best_norm = pop.norm[highest_fitness_index]
-    best_ext_pun = pop.ext_pun[highest_fitness_index]
-    best_int_pun = pop.int_pun[highest_fitness_index]
-
     # Update population individuals based on maximal fitness
     for i in 1:pop.parameters.population_size
-        pop.action[i] = best_action
-        pop.norm[i] = best_norm
-        pop.ext_pun[i] = best_ext_pun
-        pop.int_pun[i] = best_int_pun
-        pop.payoff[i] = 0.0      # Reset payoff for the new generation
-        pop.interactions[i] = 0  # Reset interactions count
+        offspring!(pop, i, highest_fitness_index)
     end
 
     nothing
