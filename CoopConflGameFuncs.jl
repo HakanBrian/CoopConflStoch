@@ -125,8 +125,8 @@ end
 ##################
 
 function benefit(action_i::Real, actions_j, synergy::Real)
-    sum_sqrt_actions = sqrt(max(action_i, 0.0)) + sum(sqrt.(max.(actions_j, 0.0)))
-    sqrt_sum_actions = sqrt(max(action_i + sum(actions_j), 0.0))
+    sum_sqrt_actions = sqrt(action_i) + sum(sqrt.(actions_j))
+    sqrt_sum_actions = sqrt(action_i + sum(actions_j))
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
@@ -196,74 +196,28 @@ function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
 end
 
 function behav_eq(u0s::Matrix{Float32}, ps::Matrix{Float32}, group_pools::Matrix{Float32}, synergy::Float64, tmax::Float64, num_groups::Int64, group_size::Int64)
+    u0 = SVector{group_size, Float32}(u0s[:, 1])
     tspan = Float32[0.0, tmax]
+    p = SVector{3 + group_size, Float32}(vcat(group_pools[1, 1], group_pools[2, 1], synergy, ps[:, 1]))
 
     # Create an initial problem with the first set of parameters as a template
-    u0 = SVector{group_size}(u0s[:, 1])
-    p = SVector{group_size}(ps[:, 1])
+    prob = ODEProblem{false}(behav_ODE_static, u0, tspan, p)
 
-    prob = ODEProblem{false}(behav_ODE_static, u0, tspan, SVector{3 + group_size, Float32}(vcat(group_pools[1, 1], group_pools[1, 2], synergy, p)))
-
-    # Function to remake the problem for each pair
+    # Function to remake the problem for each group
     prob_func = (prob, i, repeat) -> remake(prob,
-                                            u0 = SVector{size(u0s, 1)}(u0s[:, i]),
+                                            u0 = SVector{group_size, Float32}(u0s[:, i]),
                                             p = SVector{3 + group_size, Float32}(vcat(group_pools[1, i], group_pools[2, i], synergy, ps[:, i])))
 
-    # Create an ensemble problem
+    # Create an ensemble problem, configured for GPU execution
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
 
-    # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_groups, save_on = false)
+    # Solve the ensemble problem using a GPU kernel
+    sim = solve(ensemble_prob, EnsembleGPUKernel(CUDA.CUDABackend()), trajectories=num_groups, save_start=false, save_on=false)
 
     # Extract final action values
     final_actions = [sol[end] for sol in sim]
 
     return final_actions
-end
-
-function behav_eq!(groups::Vector{Vector{Int64}}, pop::Population, tmax::Float64)
-    tspan = Float32[0.0, tmax]
-
-    num_groups = pop.parameters.population_size
-    group_size = pop.parameters.group_size
-
-    u0s = Vector{SVector{group_size, Float32}}(undef, num_groups)
-    ps = Vector{SVector{3 + group_size, Float32}}(undef, num_groups)
-
-    # Extract initial conditions and parameters
-    for (i, group_indices) in enumerate(groups)
-        # Collect initial actions
-        action_values = [pop.action[idx] for idx in group_indices]
-        u0s[i] = SVector{group_size, Float32}(action_values...)
-
-        # Collect parameters
-        norm_values = [pop.norm[idx] for idx in group_indices]
-        ext_pun_values = [pop.ext_pun[idx] for idx in group_indices]
-        int_pun_values = [pop.int_pun[idx] for idx in group_indices]
-        ps[i] = SVector{3 + group_size, Float32}(mean(norm_values), mean(ext_pun_values), Float32(pop.parameters.synergy), int_pun_values...)
-    end
-
-    # Initialize a problem with the first set of parameters as a template
-    prob = ODEProblem{false}(behav_ODE_static, u0s[1], tspan, ps[1])
-
-    # Function to remake the problem for each group
-    prob_func = (prob, i, repeat) -> remake(prob, u0 = u0s[i], p = ps[i])
-
-    # Create an ensemble problem
-    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
-
-    # Solve the ensemble problem
-    sim = solve(ensemble_prob, GPUTsit5(), EnsembleGPUKernel(CUDA.CUDABackend()), trajectories = num_groups, save_on = false)
-
-    # Update actions
-    final_actions = [sol[end] for sol in sim]
-    for (group_indices, action) in zip(groups, final_actions)
-        for (idx, action_value) in zip(group_indices, action)
-            pop.action[idx] = action_value
-        end
-    end
-
-    nothing
 end
 
 
