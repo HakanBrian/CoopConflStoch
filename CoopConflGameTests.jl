@@ -20,7 +20,7 @@ population = population_construction(params);
 # BehavEq & Payoff & Fitness & Social Interactions
 ##################
 
-params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=10, group_size=10, relatedness=1.0)
+params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=10, group_size=2, relatedness=1.0)
 population = population_construction(params)
 
 groups = shuffle_and_group(params.population_size, params.group_size, params.relatedness)

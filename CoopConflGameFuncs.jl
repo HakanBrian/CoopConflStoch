@@ -124,8 +124,10 @@ end
 # Fitness Function
 ##################
 
-function benefit(action_i::Real, actions_j, synergy::Real)
-    sum_sqrt_actions = sqrt(action_i) + sum(sqrt.(actions_j))
+function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Real)
+    sqrt_action_i = sqrt(action_i)
+    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
+    sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
     sqrt_sum_actions = sqrt(action_i + sum(actions_j))
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
@@ -142,15 +144,15 @@ function internal_punishment(action::Real, norm_pool::Real, T::Real)
     return T * (action - norm_pool)^2
 end
 
-function payoff(action_i::Real, actions_j, norm_pool::Real, punishment_pool::Real, synergy::Real)
+function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
     return benefit(action_i, actions_j, synergy) - cost(action_i) - external_punishment(action_i, norm_pool, punishment_pool)
 end
 
-function objective(action_i::Real, actions_j, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
+function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment(action_i, norm_pool, T)
 end
 
-function objective_derivative(action_i::Real, actions_j::SVector{N, <:Real}, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real) where N
+function objective_derivative(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
     return ForwardDiff.derivative(x -> objective(x, actions_j, norm_pool, punishment_pool, T, synergy), action_i)
 end
 
