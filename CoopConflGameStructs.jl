@@ -7,7 +7,8 @@ mutable struct SimulationParameters
     action0::Float32
     norm0::Float32
     ext_pun0::Float32
-    int_pun0::Float32
+    int_pun_ext0::Float32
+    int_pun_self0::Float32
     #popgen params
     gmax::Int64  # maximum number of generations
     tmax::Float64  # maximum length of timespan for ODE
@@ -28,7 +29,8 @@ mutable struct SimulationParameters
         action0::Float32=0.5f0,
         norm0::Float32=0.5f0,
         ext_pun0::Float32=0.5f0,
-        int_pun0::Float32=0.0f0,
+        int_pun_ext0::Float32=0.0f0,
+        int_pun_self0::Float32=0.0f0,
         gmax::Int64=100000,
         tmax::Float64=5.0,
         population_size::Int64=50,
@@ -42,7 +44,7 @@ mutable struct SimulationParameters
         trait_variance::Float64=0.0,
         output_save_tick::Int64=10
     )
-        new(action0, norm0, ext_pun0, int_pun0, gmax, tmax, population_size, group_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
+        new(action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0, gmax, tmax, population_size, group_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
     end
 end
 
@@ -51,7 +53,8 @@ function Base.copy(parameters::SimulationParameters)
         action0=getfield(parameters, :action0),
         norm0=getfield(parameters, :norm0),
         ext_pun0=getfield(parameters, :ext_pun0),
-        int_pun0=getfield(parameters, :int_pun0),
+        int_pun_ext0=getfield(parameters, :int_pun_ext0),
+        int_pun_self0=getfield(parameters, :int_pun_self0),
         gmax=getfield(parameters, :gmax),
         tmax=getfield(parameters, :tmax),
         population_size=getfield(parameters, :population_size),
@@ -71,7 +74,8 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
     setfield!(old_params, :action0, getfield(new_params, :action0))
     setfield!(old_params, :norm0, getfield(new_params, :norm0))
     setfield!(old_params, :ext_pun0, getfield(new_params, :ext_pun0))
-    setfield!(old_params, :int_pun0, getfield(new_params, :int_pun0))
+    setfield!(old_params, :int_pun_ext0, getfield(new_params, :int_pun_ext0))
+    setfield!(old_params, :int_pun_self0, getfield(new_params, :int_pun_self0))
     setfield!(old_params, :gmax, getfield(new_params, :gmax))
     setfield!(old_params, :tmax, getfield(new_params, :tmax))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
@@ -98,7 +102,7 @@ mutable struct Population
     action::Vector{Float32}
     norm::Vector{Float32}
     ext_pun::Vector{Float32}
-    int_pun::Vector{Float32}
+    int_pun::Matrix{Float32}
     payoff::Vector{Float32}
     interactions::Vector{Int64}
 end

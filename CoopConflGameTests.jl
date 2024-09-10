@@ -20,17 +20,17 @@ population = population_construction(params);
 # BehavEq & Payoff & Fitness & Social Interactions
 ##################
 
-params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, population_size=10, group_size=2, relatedness=1.0)
+params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, int_pun_self0=0.5f0, population_size=10, group_size=2, relatedness=1.0)
 population = population_construction(params)
 
 groups = shuffle_and_group(params.population_size, params.group_size, params.relatedness)
 
 # Calculate behave eq
-u0s, ps, group_pools = collect_initial_conditions_and_parameters(groups, population)
-@time final_actions = behav_eq(u0s, ps, group_pools, params.synergy, params.tmax, params.population_size, params.group_size)
+action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools = collect_initial_conditions_and_parameters(groups, population)
+@time final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools, params.synergy, params.tmax, params.population_size, params.group_size)
 
 # Calculate payoff
-update_actions_and_payoffs!(final_actions, groups, group_pools, population)
+update_actions_and_payoffs!(final_actions, groups, group_norm_pools, group_pun_pools, population)
 println(population.payoff)
 
 # Calculate fitness
@@ -47,7 +47,7 @@ println(population)
 # IMPORTANT: To use this test payoffs need to be copied into the next generation !!!
 
 # Create sample population
-param = SimulationParameters(action0=0.5f0, norm0=0.5f0, ext_pun0=0.0f0, int_pun0=0.0f0, gmax=10, population_size=1000, mutation_rate=0.0)
+param = SimulationParameters(action0=0.5f0, norm0=0.5f0, ext_pun0=0.0f0, gmax=10, population_size=1000, mutation_rate=0.0)
 population = population_construction(param)
 population.payoff[1:4] .= [1.0f0, 2.0f0, 3.0f0, 4.0f0]
 

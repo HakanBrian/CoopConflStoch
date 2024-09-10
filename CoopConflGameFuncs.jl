@@ -46,14 +46,15 @@ function population_construction(parameters::SimulationParameters)
     action0 = parameters.action0
     norm0 = parameters.norm0
     ext_pun0 = parameters.ext_pun0
-    int_pun0 = parameters.int_pun0
+    int_pun_ext0 = parameters.int_pun_ext0
+    int_pun_self0 = parameters.int_pun_self0
     pop_size = parameters.population_size
 
     # Initialize arrays for attributes
     actions = Vector{Float32}(undef, pop_size)
     norms = Vector{Float32}(undef, pop_size)
     ext_puns = Vector{Float32}(undef, pop_size)
-    int_puns = Vector{Float32}(undef, pop_size)
+    int_puns = zeros(Float32, 2, pop_size)
     payoffs = Vector{Float32}(undef, pop_size)
     interactions = Vector{Int64}(undef, pop_size)
 
@@ -63,7 +64,8 @@ function population_construction(parameters::SimulationParameters)
         action0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -action0), upper=upper_bound)
         norm0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -norm0), upper=upper_bound)
         ext_pun0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -ext_pun0), upper=upper_bound)
-        int_pun0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -int_pun0), upper=upper_bound)
+        int_pun_ext0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -int_pun_ext0), upper=upper_bound)
+        int_pun_self0_dist = truncated(Normal(0, trait_variance), lower=max(lower_bound, -int_pun_self0), upper=upper_bound)
     end
 
     # Create individuals
@@ -72,12 +74,14 @@ function population_construction(parameters::SimulationParameters)
             actions[i] = action0 + rand(action0_dist)
             norms[i] = norm0 + rand(norm0_dist)
             ext_puns[i] = ext_pun0 + rand(ext_pun0_dist)
-            int_puns[i] = int_pun0 + rand(int_pun0_dist)
+            int_puns[1, i] = int_pun_ext0 + rand(int_pun_ext0_dist)
+            int_puns[2, i] = int_pun_self0 + rand(int_pun_self0_dist)
         else
             actions[i] = action0
             norms[i] = norm0
             ext_puns[i] = ext_pun0
-            int_puns[i] = int_pun0
+            int_puns[1, i] = int_pun_ext0
+            int_puns[2, i] = int_pun_self0
         end
         payoffs[i] = 0.0f0
         interactions[i] = 0
@@ -95,14 +99,14 @@ function population_construction(parameters::SimulationParameters)
 end
 
 function output!(outputs::DataFrame, t::Int64, pop::Population)
+    N = pop.parameters.population_size
+
     # Determine the base row for the current generation
     if t == 1
         output_row_base = 1
     else
-        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * pop.parameters.population_size + 1
+        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * N + 1
     end
-
-    N = pop.parameters.population_size
 
     # Calculate the range of rows to be updated
     output_rows = output_row_base:(output_row_base + N - 1)
@@ -113,7 +117,8 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
     outputs.action[output_rows] = pop.action
     outputs.a[output_rows] = pop.norm
     outputs.p[output_rows] = pop.ext_pun
-    outputs.T[output_rows] = pop.int_pun
+    outputs.T_ext[output_rows] = pop.int_pun[1, :]
+    outputs.T_self[output_rows] = pop.int_pun[2, :]
     outputs.payoff[output_rows] = pop.payoff
 
     nothing
@@ -132,31 +137,35 @@ function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Rea
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
-function cost(action::Real)
-    return action^2
+function cost(action_i::Real)
+    return action_i^2
 end
 
-function external_punishment(action::Real, norm_pool::Real, punishment_pool::Real)
-    return punishment_pool * (action - norm_pool)^2
+function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::Real)
+    return punishment_pool * (action_i - norm_pool)^2
 end
 
-function internal_punishment(action::Real, norm_pool::Real, T::Real)
-    return T * (action - norm_pool)^2
+function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
+    return T_ext * (action_i - norm_pool_mini)^2
+end
+
+function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
+    return T_self * (action_i - norm_i)^2
 end
 
 function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
     return benefit(action_i, actions_j, synergy) - cost(action_i) - external_punishment(action_i, norm_pool, punishment_pool)
 end
 
-function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment(action_i, norm_pool, T)
+function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
+    return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function objective_derivative(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T::Real, synergy::Real)
-    return ForwardDiff.derivative(x -> objective(x, actions_j, norm_pool, punishment_pool, T, synergy), action_i)
+function objective_derivative(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
+    return ForwardDiff.derivative(x -> objective(x, actions_j, norm_i, norm_mini, norm_pool, punishment_pool, T_ext, T_self, synergy), action_i)
 end
 
-function total_payoff!(group_indices::Vector{Int64}, group_pool::Vector{Float32}, pop::Population)
+function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
     # Extract the action of the focal individual
     action_i = pop.action[group_indices[1]]
 
@@ -164,7 +173,7 @@ function total_payoff!(group_indices::Vector{Int64}, group_pool::Vector{Float32}
     actions_j = pop.action[group_indices[2:end]]
 
     # Compute the payoff for the focal individual
-    payoff_foc = payoff(action_i, actions_j, group_pool[1], group_pool[2], pop.parameters.synergy)
+    payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
 
     # Update the individual's payoff and interactions
     idx = group_indices[1]
@@ -174,11 +183,11 @@ function total_payoff!(group_indices::Vector{Int64}, group_pool::Vector{Float32}
     nothing
 end
 
-function fitness(pop::Population, idx::Int)
+function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
 end
 
-function fitness(pop::Population, idx::Int, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
+function fitness(pop::Population, idx::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
     base_fitness = fitness(pop, idx)
     return fitness_scaling_factor_a * exp(base_fitness * fitness_scaling_factor_b)
 end
@@ -193,22 +202,22 @@ function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
 end
 
 function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
-    du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3 + i], p[3]), N)
+    du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3], p[4], p[5 + i], p[5 + i + N], p[5]), N)
     return SVector{N}(du)
 end
 
-function behav_eq(u0s::Matrix{Float32}, ps::Matrix{Float32}, group_pools::Matrix{Float32}, synergy::Float64, tmax::Float64, num_groups::Int64, group_size::Int64)
-    u0 = SVector{group_size, Float32}(u0s[:, 1])
-    tspan = Float32[0.0, tmax]
-    p = SVector{3 + group_size, Float32}(vcat(group_pools[1, 1], group_pools[2, 1], synergy, ps[:, 1]))
+function behav_eq(action0s::Matrix{Float32}, T_ext::Matrix{Float32}, T_self::Matrix{Float32}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, synergy::Float64, tmax::Float64, num_groups::Int64, group_size::Int64)
+    u0 = SVector{group_size, Float32}(action0s[:, 1])
+    tspan = Float32[0.0f0, tmax]
+    p = SVector{5 + 2*group_size, Float32}(vcat(group_norm_pools[:, 1][1], mean(group_norm_pools[:, 1][2:end]), mean(group_norm_pools[:, 1]), mean(group_pun_pools[:, 1]), synergy, T_ext[:, 1], T_self[:, 1]))
 
     # Create an initial problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0, tspan, p)
 
     # Function to remake the problem for each group
     prob_func = (prob, i, repeat) -> remake(prob,
-                                            u0 = SVector{group_size, Float32}(u0s[:, i]),
-                                            p = SVector{3 + group_size, Float32}(vcat(group_pools[1, i], group_pools[2, i], synergy, ps[:, i])))
+                                            u0 = SVector{group_size, Float32}(action0s[:, i]),
+                                            p = SVector{5 + 2*group_size, Float32}(vcat(group_norm_pools[:, i][1], mean(group_norm_pools[:, i][2:end]), mean(group_norm_pools[:, i]), mean(group_pun_pools[:, i]), synergy, T_ext[:, i], T_self[:, i])))
 
     # Create an ensemble problem, configured for GPU execution
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
@@ -259,7 +268,6 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
             related_individuals = fill(focal_individual_index, num_related)
             final_group = vcat(related_individuals, random_individuals)
         else
-            # If relatedness is 0, just sample a full group
             random_individuals = sample(candidates, group_size - 1, replace=false)
             final_group = vcat(focal_individual_index, random_individuals)
         end
@@ -274,51 +282,37 @@ function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
 
-    # Initialize u0s for action values and ps for individual punishments
-    u0s = zeros(Float32, group_size, num_groups)
-    ps = zeros(Float32, group_size, num_groups)
+    action0s = zeros(Float32, group_size, num_groups)
 
-    action_values = Vector{Float32}(undef, group_size)
-    norm_values = Vector{Float32}(undef, group_size)
-    int_pun_values = Vector{Float32}(undef, group_size)
-    ext_pun_values = Vector{Float32}(undef, group_size)
+    group_norm_pools = zeros(Float32, group_size, num_groups)
+    group_pun_pools = zeros(Float32, group_size, num_groups)
 
-    group_pools = zeros(Float32, 2, num_groups)  # 2 rows: norm_pools, pun_pools
+    int_pun_ext = zeros(Float32, group_size, num_groups)
+    int_pun_self = zeros(Float32, group_size, num_groups)
 
-    # Collect initial conditions and parameters for each group
     for (i, group) in enumerate(groups)
         for j in 1:group_size
             member_index = group[j]
-            action_values[j] = pop.action[member_index]
-            norm_values[j] = pop.norm[member_index]
-            ext_pun_values[j] = pop.ext_pun[member_index]
-            int_pun_values[j] = pop.int_pun[member_index]
+            action0s[j, i] = pop.action[member_index]
+            group_norm_pools[j, i] = pop.norm[member_index]
+            group_pun_pools[j, i] = pop.ext_pun[member_index]
+            int_pun_ext[j, i] = pop.int_pun[1, member_index]
+            int_pun_self[j, i] = pop.int_pun[2, member_index]
         end
-
-        # Calculate the pools and store them in the matrix
-        group_pools[1, i] = mean(norm_values)  # norm_pools
-        group_pools[2, i] = mean(ext_pun_values)  # pun_pools
-
-        # Assign values to matrices
-        u0s[:, i] = action_values
-        ps[:, i] = int_pun_values
     end
 
-    return u0s, ps, group_pools
+    return action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, group_pools::Matrix{Float32}, pop::Population) where N
-    # Transpose the matrix to access columns as rows
-    transposed_pools = group_pools'
-
-    for (actions, group_indices, group_pool) in zip(final_actions, groups, eachrow(transposed_pools))
+function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, pop::Population) where N
+    for (j, actions, group_indices) in zip(1:pop.parameters.population_size, final_actions, groups)
         # Update the action for each individual in the group
         for (i, idx) in enumerate(group_indices)
             pop.action[idx] = actions[i]
         end
 
         # Calculate and update payoffs for the group
-        total_payoff!(group_indices, collect(group_pool), pop)
+        total_payoff!(group_indices, mean(group_norm_pools[:, j]), mean(group_pun_pools[:, j]), pop)
     end
 
     nothing
@@ -329,11 +323,11 @@ function social_interactions!(pop::Population)
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Calculate final actions for all pairs
-    u0s, ps, group_pools = collect_initial_conditions_and_parameters(groups, pop)
-    final_actions = behav_eq(u0s, ps, group_pools, pop.parameters.synergy, pop.parameters.tmax, pop.parameters.population_size, pop.parameters.group_size)
+    action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools = collect_initial_conditions_and_parameters(groups, pop)
+    final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools, pop.parameters.synergy, pop.parameters.tmax, pop.parameters.population_size, pop.parameters.group_size)
 
     # Update actions and payoffs for all pairs based on final actions
-    update_actions_and_payoffs!(final_actions, groups, group_pools, pop)
+    update_actions_and_payoffs!(final_actions, groups, group_norm_pools, group_pun_pools, pop)
 
     nothing
 end
@@ -475,7 +469,8 @@ function simulation(pop::Population)
         action = Vector{Float64}(undef, output_length),
         a = Vector{Float64}(undef, output_length),
         p = Vector{Float64}(undef, output_length),
-        T = Vector{Float64}(undef, output_length),
+        T_ext = Vector{Float64}(undef, output_length),
+        T_self = Vector{Float64}(undef, output_length),
         payoff = Vector{Float64}(undef, output_length)
     )
 

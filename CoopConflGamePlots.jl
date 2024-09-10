@@ -21,7 +21,8 @@ function simulation_replicate(parameters::SimulationParameters, num_replicates::
         action_mean = Vector{Float64}(undef, output_length),
         a_mean = Vector{Float64}(undef, output_length),
         p_mean = Vector{Float64}(undef, output_length),
-        T_mean = Vector{Float64}(undef, output_length),
+        T_ext_mean = Vector{Float64}(undef, output_length),
+        T_self_mean = Vector{Float64}(undef, output_length),
         payoff_mean = Vector{Float64}(undef, output_length)
     )
 
@@ -41,7 +42,8 @@ function simulation_replicate(parameters::SimulationParameters, num_replicates::
                                     :action => mean,
                                     :a => mean,
                                     :p => mean,
-                                    :T => mean,
+                                    :T_ext => mean,
+                                    :T_self => mean,
                                     :payoff => mean)
 
         # Add a column for replicate identifier
@@ -68,8 +70,10 @@ function calculate_statistics(all_simulation_means::DataFrame)
                     :a_mean => var => :a_mean_var,
                     :p_mean => mean => :p_mean_mean,
                     :p_mean => var => :p_mean_var,
-                    :T_mean => mean => :T_mean_mean,
-                    :T_mean => var => :T_mean_var,
+                    :T_ext_mean => mean => :T_ext_mean_mean,
+                    :T_ext_mean => var => :T_ext_mean_var,
+                    :T_self_mean => mean => :T_self_mean_mean,
+                    :T_self_mean => var => :T_self_mean_var,
                     :payoff_mean => mean => :payoff_mean_mean,
                     :payoff_mean => var => :payoff_mean_var)
 
@@ -77,7 +81,8 @@ function calculate_statistics(all_simulation_means::DataFrame)
     stats[:, "action_mean_std"] = sqrt.(stats[:, "action_mean_var"])
     stats[:, "a_mean_std"] = sqrt.(stats[:, "a_mean_var"])
     stats[:, "p_mean_std"] = sqrt.(stats[:, "p_mean_var"])
-    stats[:, "T_mean_std"] = sqrt.(stats[:, "T_mean_var"])
+    stats[:, "T_ext_mean_std"] = sqrt.(stats[:, "T_ext_mean_var"])
+    stats[:, "T_self_mean_std"] = sqrt.(stats[:, "T_self_mean_var"])
     stats[:, "payoff_mean_std"] = sqrt.(stats[:, "payoff_mean_var"])
 
     return stats
@@ -94,12 +99,14 @@ function plot_simulation_data_Plots(all_simulation_means::Tuple{DataFrame, Int64
         "action" => :blue,
         "a" => :red,
         "p" => :green,
-        "T" => :purple,
+        "T_ext" => :purple,
+        "T_self" => :yellow,
         "payoff" => :orange,
         "action mean" => :blue4,
         "a mean" => :red4,
         "p mean" => :green4,
-        "T mean" => :purple4,
+        "T_ext mean" => :purple4,
+        "T_self mean" => :yellow4,
         "payoff mean" => :orange4
     )
 
@@ -112,7 +119,8 @@ function plot_simulation_data_Plots(all_simulation_means::Tuple{DataFrame, Int64
         Plots.plot!(p, sim_data.generation, sim_data.action_mean, label="", color=colors["action"], linewidth=1, alpha=0.6)
         Plots.plot!(p, sim_data.generation, sim_data.a_mean, label="", color=colors["a"], linewidth=1, alpha=0.6)
         Plots.plot!(p, sim_data.generation, sim_data.p_mean, label="", color=colors["p"], linewidth=1, alpha=0.6)
-        Plots.plot!(p, sim_data.generation, sim_data.T_mean, label="", color=colors["T"], linewidth=1, alpha=0.6)
+        Plots.plot!(p, sim_data.generation, sim_data.T_ext_mean, label="", color=colors["T_ext"], linewidth=1, alpha=0.6)
+        Plots.plot!(p, sim_data.generation, sim_data.T_self_mean, label="", color=colors["T_self"], linewidth=1, alpha=0.6)
         Plots.plot!(p, sim_data.generation, sim_data.payoff_mean, label="", color=colors["payoff"], linewidth=1, alpha=0.6)
     end
 
@@ -120,7 +128,8 @@ function plot_simulation_data_Plots(all_simulation_means::Tuple{DataFrame, Int64
     Plots.plot!(p, statistics.generation, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), label="action mean", color=colors["action mean"])
     Plots.plot!(p, statistics.generation, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), label="a mean", color=colors["a mean"])
     Plots.plot!(p, statistics.generation, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), label="p mean", color=colors["p mean"])
-    Plots.plot!(p, statistics.generation, statistics.T_mean_mean, ribbon=(statistics.T_mean_std, statistics.T_mean_std), label="T mean", color=colors["T mean"])
+    Plots.plot!(p, statistics.generation, statistics.T_ext_mean_mean, ribbon=(statistics.T_ext_mean_std, statistics.T_ext_mean_std), label="T_ext mean", color=colors["T_ext mean"])
+    Plots.plot!(p, statistics.generation, statistics.T_self_mean_mean, ribbon=(statistics.T_self_mean_std, statistics.T_self_mean_std), label="T_self mean", color=colors["T_self mean"])
     Plots.plot!(p, statistics.generation, statistics.payoff_mean_mean, ribbon=(statistics.payoff_mean_std, statistics.payoff_mean_std), label="payoff mean", color=colors["payoff mean"])
 
     # Display the plot
