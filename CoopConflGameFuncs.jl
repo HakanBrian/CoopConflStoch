@@ -17,7 +17,7 @@ function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64
     pop.action[offspring_index] = pop.action[parent_index]
     pop.norm[offspring_index] = pop.norm[parent_index]
     pop.ext_pun[offspring_index] = pop.ext_pun[parent_index]
-    pop.int_pun[offspring_index] = pop.int_pun[parent_index]
+    pop.int_pun[:, offspring_index] = pop.int_pun[:, parent_index]
 
     # Set initial values for offspring
     pop.payoff[offspring_index] = 0.0f0
