@@ -150,12 +150,14 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
         "action" => :blue,
         "a" => :red,
         "p" => :green,
-        "T" => :purple,
+        "T_ext" => :purple,
+        "T_self" => :yellow,
         "payoff" => :orange,
         "action_stdev" => "rgba(0,0,255,0.2)",
         "a_stdev" => "rgba(255,0,0,0.2)",
         "p_stdev" => "rgba(0,255,0,0.2)",
-        "T_stdev" => "rgba(128,0,128,0.2)",
+        "T_ext_stdev" => "rgba(128,0,128,0.2)",
+        "T_self_stdev" => "rgba(255,255,0,0.2)",
         "payoff_stdev" => "rgba(255,165,0,0.2)",
     )
 
@@ -169,7 +171,9 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
                                                  name="", opacity=0.6, showlegend=false, hoverinfo="none"))
         add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.p_mean, mode="lines", line_color=colors["p"],
                                                  name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-        add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.T_mean, mode="lines", line_color=colors["T"],
+        add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.T_ext_mean, mode="lines", line_color=colors["T_ext"],
+                                                 name="", opacity=0.6, showlegend=false, hoverinfo="none"))
+        add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.T_self_mean, mode="lines", line_color=colors["T_self"],
                                                  name="", opacity=0.6, showlegend=false, hoverinfo="none"))
         add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.payoff_mean, mode="lines", line_color=colors["payoff"],
                                                  name="", opacity=0.6, showlegend=false, hoverinfo="none"))
@@ -179,11 +183,12 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
     statistics[!, :action_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
     statistics[!, :a_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>a Mean: " .* string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
     statistics[!, :p_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>p Mean: " .* string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
-    statistics[!, :T_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>T Mean: " .* string.(statistics.T_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_mean_std)
+    statistics[!, :T_ext_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>T_ext Mean: " .* string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_ext_mean_std)
+    statistics[!, :T_self_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>T_self Mean: " .* string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_self_mean_std)
     statistics[!, :payoff_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
 
     # Plot replicate means with ribbons for standard deviation
-    for trait in ["action", "a", "p", "T", "payoff"]
+    for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
         add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"],
                                             mode="lines", line_color=colors[trait], name=trait * " Mean",
                                             hovertext=statistics[!, trait * "_mean_hover"],
@@ -216,7 +221,7 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
 
     # Prepare table data
     table_data = []
-    for trait in ["action_mean", "a_mean", "p_mean", "T_mean", "payoff_mean"]
+    for trait in ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
         start_values = statistics[1, [trait * "_mean"]][1]
         end_values = statistics[end, [trait * "_mean"]][1]
         push!(table_data, (trait, start_values, end_values))
