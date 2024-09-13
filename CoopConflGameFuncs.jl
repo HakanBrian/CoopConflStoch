@@ -406,8 +406,13 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
 
         # Uncomment to mutate `int_pun` as well
         # if rand() <= mutation_rate
-        #     int_pun_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun[i]), upper=upper_bound)
-        #     pop.int_pun[i] += rand(int_pun_dist)
+        #     int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun[1, i]), upper=upper_bound)
+        #     pop.int_pun[1, i] += rand(int_pun_ext_dist)
+        # end
+        #
+        # if rand() <= mutation_rate
+        #     int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun[2, i]), upper=upper_bound)
+        #     pop.int_pun[2, i] += rand(int_pun_self_dist)
         # end
     end
 
