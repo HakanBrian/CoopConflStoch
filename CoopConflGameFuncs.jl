@@ -305,10 +305,23 @@ function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}
 end
 
 function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, pop::Population) where N
+    action_variance = 0.0
+    use_distribution = action_variance != 0
+
+    if use_distribution
+        lower_bound, upper_bound = truncation_bounds(action_variance, 0.99)
+    end
+
     for (j, actions, group_indices) in zip(1:pop.parameters.population_size, final_actions, groups)
         # Update the action for each individual in the group
         for (i, idx) in enumerate(group_indices)
-            pop.action[idx] = actions[i]
+            final_action = actions[i]
+            if use_distribution
+                final_actions_dist = truncated(Normal(0, action_variance), lower=max(lower_bound, -final_action), upper=upper_bound)
+                pop.action[idx] = final_action + rand(final_actions_dist)
+            else
+                pop.action[idx] = final_action
+            end
         end
 
         # Calculate and update payoffs for the group
