@@ -167,10 +167,10 @@ end
 
 function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
     # Extract the action of the focal individual
-    action_i = pop.action[group_indices[1]]
+    action_i = @view pop.action[group_indices[1]]
 
     # Collect actions from the other individuals in the group
-    actions_j = pop.action[group_indices[2:end]]
+    actions_j = @view pop.action[group_indices[2:end]]
 
     # Compute the payoff for the focal individual
     payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
@@ -209,7 +209,13 @@ end
 function behav_eq(action0s::Matrix{Float32}, T_ext::Matrix{Float32}, T_self::Matrix{Float32}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, synergy::Float64, tmax::Float64, num_groups::Int64, group_size::Int64)
     u0 = SVector{group_size, Float32}(action0s[:, 1])
     tspan = Float32[0.0f0, tmax]
-    p = SVector{5 + 2*group_size, Float32}(vcat(group_norm_pools[:, 1][1], mean(group_norm_pools[:, 1][2:end]), mean(group_norm_pools[:, 1]), mean(group_pun_pools[:, 1]), synergy, T_ext[:, 1], T_self[:, 1]))
+    p = SVector{5 + 2*group_size, Float32}(vcat(group_norm_pools[:, 1][1],
+                                           mean(group_norm_pools[:, 1][2:end]),
+                                           mean(group_norm_pools[:, 1]),
+                                           mean(group_pun_pools[:, 1]),
+                                           synergy,
+                                           T_ext[:, 1],
+                                           T_self[:, 1]))
 
     # Create an initial problem with the first set of parameters as a template
     prob = ODEProblem{false}(behav_ODE_static, u0, tspan, p)
@@ -217,7 +223,13 @@ function behav_eq(action0s::Matrix{Float32}, T_ext::Matrix{Float32}, T_self::Mat
     # Function to remake the problem for each group
     prob_func = (prob, i, repeat) -> remake(prob,
                                             u0 = SVector{group_size, Float32}(action0s[:, i]),
-                                            p = SVector{5 + 2*group_size, Float32}(vcat(group_norm_pools[:, i][1], mean(group_norm_pools[:, i][2:end]), mean(group_norm_pools[:, i]), mean(group_pun_pools[:, i]), synergy, T_ext[:, i], T_self[:, i])))
+                                            p = SVector{5 + 2*group_size, Float32}(vcat(group_norm_pools[:, i][1],
+                                                                                   mean(group_norm_pools[:, i][2:end]),
+                                                                                   mean(group_norm_pools[:, i]),
+                                                                                   mean(group_pun_pools[:, i]),
+                                                                                   synergy,
+                                                                                   T_ext[:, i],
+                                                                                   T_self[:, i])))
 
     # Create an ensemble problem, configured for GPU execution
     ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
