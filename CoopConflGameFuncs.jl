@@ -17,7 +17,8 @@ function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64
     pop.action[offspring_index] = pop.action[parent_index]
     pop.norm[offspring_index] = pop.norm[parent_index]
     pop.ext_pun[offspring_index] = pop.ext_pun[parent_index]
-    pop.int_pun[:, offspring_index] = pop.int_pun[:, parent_index]
+    pop.int_pun_ext[offspring_index] = pop.int_pun_ext[parent_index]
+    pop.int_pun_self[offspring_index] = pop.int_pun_self[parent_index]
 
     # Set initial values for offspring
     pop.payoff[offspring_index] = 0.0f0
@@ -54,7 +55,8 @@ function population_construction(parameters::SimulationParameters)
     actions = Vector{Float32}(undef, pop_size)
     norms = Vector{Float32}(undef, pop_size)
     ext_puns = Vector{Float32}(undef, pop_size)
-    int_puns = zeros(Float32, 2, pop_size)
+    int_puns_ext = Vector{Float32}(undef, pop_size)
+    int_puns_self = Vector{Float32}(undef, pop_size)
     payoffs = Vector{Float32}(undef, pop_size)
     interactions = Vector{Int64}(undef, pop_size)
 
@@ -74,14 +76,14 @@ function population_construction(parameters::SimulationParameters)
             actions[i] = action0 + rand(action0_dist)
             norms[i] = norm0 + rand(norm0_dist)
             ext_puns[i] = ext_pun0 + rand(ext_pun0_dist)
-            int_puns[1, i] = int_pun_ext0 + rand(int_pun_ext0_dist)
-            int_puns[2, i] = int_pun_self0 + rand(int_pun_self0_dist)
+            int_puns_ext[i] = int_pun_ext0 + rand(int_pun_ext0_dist)
+            int_puns_self[i] = int_pun_self0 + rand(int_pun_self0_dist)
         else
             actions[i] = action0
             norms[i] = norm0
             ext_puns[i] = ext_pun0
-            int_puns[1, i] = int_pun_ext0
-            int_puns[2, i] = int_pun_self0
+            int_puns_ext[i] = int_pun_ext0
+            int_puns_self[i] = int_pun_self0
         end
         payoffs[i] = 0.0f0
         interactions[i] = 0
@@ -92,7 +94,8 @@ function population_construction(parameters::SimulationParameters)
         actions,
         norms,
         ext_puns,
-        int_puns,
+        int_puns_ext,
+        int_puns_self,
         payoffs,
         interactions
     )
@@ -117,8 +120,8 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
     outputs.action[output_rows] = pop.action
     outputs.a[output_rows] = pop.norm
     outputs.p[output_rows] = pop.ext_pun
-    outputs.T_ext[output_rows] = pop.int_pun[1, :]
-    outputs.T_self[output_rows] = pop.int_pun[2, :]
+    outputs.T_ext[output_rows] = pop.int_pun_ext
+    outputs.T_self[output_rows] = pop.int_pun_self
     outputs.payoff[output_rows] = pop.payoff
 
     nothing
@@ -166,8 +169,8 @@ function objective_derivative(action_i::Real, actions_j::AbstractVector{<:Real},
 end
 
 function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
-    # Extract the action of the focal individual
-    action_i = @view pop.action[group_indices[1]]
+    # Extract the action of the focal individual as a real number (not a view)
+    action_i = pop.action[group_indices[1]]
 
     # Collect actions from the other individuals in the group
     actions_j = @view pop.action[group_indices[2:end]]
@@ -259,7 +262,9 @@ end
 function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
-    groups = Vector{Vector{Int64}}(undef, population_size)
+    
+    # Create a matrix with `population_size` rows and `group_size` columns
+    groups = Matrix{Int64}(undef, population_size, group_size)
 
     # Iterate over each individual index and form a group
     for i in 1:population_size
@@ -284,39 +289,44 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
             final_group = vcat(focal_individual_index, random_individuals)
         end
 
-        groups[i] = final_group
+        # Assign the final group to the matrix row
+        groups[i, :] = final_group
     end
 
     return groups
 end
 
-function collect_initial_conditions_and_parameters(groups::Vector{Vector{Int64}}, pop::Population)
+function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::Population)
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
 
+    # Preallocate arrays for the output
     action0s = zeros(Float32, group_size, num_groups)
-
     group_norm_pools = zeros(Float32, group_size, num_groups)
     group_pun_pools = zeros(Float32, group_size, num_groups)
-
     int_pun_ext = zeros(Float32, group_size, num_groups)
     int_pun_self = zeros(Float32, group_size, num_groups)
 
-    for (i, group) in enumerate(groups)
+    # Loop over each group
+    for i in 1:num_groups
+        # Create a view into the i-th row of the groups matrix
+        group = @view groups[i, :]
+
+        # Loop over each group member
         for j in 1:group_size
             member_index = group[j]
             action0s[j, i] = pop.action[member_index]
             group_norm_pools[j, i] = pop.norm[member_index]
             group_pun_pools[j, i] = pop.ext_pun[member_index]
-            int_pun_ext[j, i] = pop.int_pun[1, member_index]
-            int_pun_self[j, i] = pop.int_pun[2, member_index]
+            int_pun_ext[j, i] = pop.int_pun_ext[member_index]
+            int_pun_self[j, i] = pop.int_pun_self[member_index]
         end
     end
 
     return action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Vector{Vector{Int64}}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, pop::Population) where N
+function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, pop::Population) where N
     action_variance = 0.0
     use_distribution = action_variance != 0
 
@@ -324,10 +334,17 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}},
         lower_bound, upper_bound = truncation_bounds(action_variance, 0.99)
     end
 
-    for (j, actions, group_indices) in zip(1:pop.parameters.population_size, final_actions, groups)
+    population_size = pop.parameters.population_size
+
+    for j in 1:population_size
+        actions = final_actions[j]
+        group_indices = Vector(@view groups[j, :])
+
         # Update the action for each individual in the group
-        for (i, idx) in enumerate(group_indices)
+        for i in 1:length(group_indices)
+            idx = group_indices[i]
             final_action = actions[i]
+
             if use_distribution
                 final_actions_dist = truncated(Normal(0, action_variance), lower=max(lower_bound, -final_action), upper=upper_bound)
                 pop.action[idx] = final_action + rand(final_actions_dist)
@@ -337,7 +354,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}},
         end
 
         # Calculate and update payoffs for the group
-        total_payoff!(group_indices, mean(group_norm_pools[:, j]), mean(group_pun_pools[:, j]), pop)
+        total_payoff!(group_indices, mean(@view group_norm_pools[:, j]), mean(@view group_pun_pools[:, j]), pop)
     end
 
     nothing
@@ -431,13 +448,13 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
 
         # Uncomment to mutate `int_pun` as well
         # if rand() <= mutation_rate
-        #     int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun[1, i]), upper=upper_bound)
-        #     pop.int_pun[1, i] += rand(int_pun_ext_dist)
+        #     int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
+        #     pop.int_pun_ext[i] += rand(int_pun_ext_dist)
         # end
         #
         # if rand() <= mutation_rate
-        #     int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun[2, i]), upper=upper_bound)
-        #     pop.int_pun[2, i] += rand(int_pun_self_dist)
+        #     int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
+        #     pop.int_pun_self[i] += rand(int_pun_self_dist)
         # end
     end
 

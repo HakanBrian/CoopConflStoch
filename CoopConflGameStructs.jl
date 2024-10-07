@@ -102,7 +102,8 @@ mutable struct Population
     action::Vector{Float32}
     norm::Vector{Float32}
     ext_pun::Vector{Float32}
-    int_pun::Matrix{Float32}
+    int_pun_ext::Vector{Float32}
+    int_pun_self::Vector{Float32}
     payoff::Vector{Float32}
     interactions::Vector{Int64}
 end
@@ -113,7 +114,8 @@ function Base.copy(pop::Population)
         copy(getfield(pop, :action)),
         copy(getfield(pop, :norm)),
         copy(getfield(pop, :ext_pun)),
-        copy(getfield(pop, :int_pun)),
+        copy(getfield(pop, :int_pun_ext)),
+        copy(getfield(pop, :int_pun_self)),
         copy(getfield(pop, :payoff)),
         copy(getfield(pop, :interactions)),
     )
@@ -124,7 +126,8 @@ function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :action), getfield(new_population, :action))
     copy!(getfield(old_population, :norm), getfield(new_population, :norm))
     copy!(getfield(old_population, :ext_pun), getfield(new_population, :ext_pun))
-    copy!(getfield(old_population, :int_pun), getfield(new_population, :int_pun))
+    copy!(getfield(old_population, :int_pun_ext), getfield(new_population, :int_pun_ext))
+    copy!(getfield(old_population, :int_pun_self), getfield(new_population, :int_pun_self))
     copy!(getfield(old_population, :payoff), getfield(new_population, :payoff))
     copy!(getfield(old_population, :interactions), getfield(new_population, :interactions))
 
