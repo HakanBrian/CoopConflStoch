@@ -26,8 +26,8 @@ population = population_construction(params)
 groups = shuffle_and_group(params.population_size, params.group_size, params.relatedness)
 
 # Calculate behave eq
-action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools = collect_initial_conditions_and_parameters(groups, population)
-@time final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_pools, group_pun_pools, params.synergy, params.tmax, params.population_size, params.group_size)
+action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means = collect_initial_conditions_and_parameters(groups, population)
+@time final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means, params)
 
 # Calculate payoff
 update_actions_and_payoffs!(final_actions, groups, group_norm_pools, group_pun_pools, population)
