@@ -327,7 +327,7 @@ function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::P
 end
 
 function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_pools::Matrix{Float32}, group_pun_pools::Matrix{Float32}, pop::Population) where N
-    action_variance = 0.0
+    action_variance = 0.0  # Placer holder; for now
     use_distribution = action_variance != 0
 
     if use_distribution
@@ -341,8 +341,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}},
         group_indices = Vector(@view groups[j, :])
 
         # Update the action for each individual in the group
-        for i in 1:length(group_indices)
-            idx = group_indices[i]
+        for (i, idx) in enumerate(group_indices)
             final_action = actions[i]
 
             if use_distribution
