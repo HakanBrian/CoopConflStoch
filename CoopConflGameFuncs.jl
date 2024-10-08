@@ -1,18 +1,17 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays, ForwardDiff, DiffEqGPU, DifferentialEquations, CUDA
-
-
 ####################################
 # Game Functions
 ####################################
 
 include("CoopConflGameStructs.jl")
 
+@everywhere using StatsBase, Random, Distributions, DataFrames, StaticArrays, ForwardDiff, DiffEqGPU, DifferentialEquations, CUDA
+
 
 ###############################
 # Population Simulation Function
 ###############################
 
-function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64)
+@everywhere function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64)
     # Copy traits from parent to offspring
     pop.action[offspring_index] = pop.action[parent_index]
     pop.norm[offspring_index] = pop.norm[parent_index]
@@ -25,7 +24,7 @@ function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64
     pop.interactions[offspring_index] = 0
 end
 
-function truncation_bounds(variance::Float64, retain_proportion::Float64)
+@everywhere function truncation_bounds(variance::Float64, retain_proportion::Float64)
     # Calculate tail probability alpha
     alpha = 1 - retain_proportion
 
@@ -39,7 +38,7 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     return SA[lower_bound, upper_bound]
 end
 
-function population_construction(parameters::SimulationParameters)
+@everywhere function population_construction(parameters::SimulationParameters)
     trait_variance = parameters.trait_variance
     use_distribution = trait_variance != 0
 
@@ -101,7 +100,7 @@ function population_construction(parameters::SimulationParameters)
     )
 end
 
-function output!(outputs::DataFrame, t::Int64, pop::Population)
+@everywhere function output!(outputs::DataFrame, t::Int64, pop::Population)
     N = pop.parameters.population_size
 
     # Determine the base row for the current generation
@@ -132,7 +131,7 @@ end
 # Fitness Function
 ##################
 
-function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Real)
+@everywhere function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Real)
     sqrt_action_i = sqrt(action_i)
     sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
@@ -140,35 +139,35 @@ function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Rea
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
-function cost(action_i::Real)
+@everywhere function cost(action_i::Real)
     return action_i^2
 end
 
-function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::Real)
+@everywhere function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::Real)
     return punishment_pool * (action_i - norm_pool)^2
 end
 
-function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
+@everywhere function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
     return T_ext * (action_i - norm_pool_mini)^2
 end
 
-function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
+@everywhere function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
     return T_self * (action_i - norm_i)^2
 end
 
-function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
+@everywhere function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
     return benefit(action_i, actions_j, synergy) - cost(action_i) - external_punishment(action_i, norm_pool, punishment_pool)
 end
 
-function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
+@everywhere function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function objective_derivative(action_i::T, actions_j::AbstractVector{T}, norm_i::T, norm_mini::T, norm_pool::T, punishment_pool::T, T_ext::T, T_self::T, synergy::T) where T
+@everywhere function objective_derivative(action_i::T, actions_j::AbstractVector{T}, norm_i::T, norm_mini::T, norm_pool::T, punishment_pool::T, T_ext::T, T_self::T, synergy::T) where T
     return ForwardDiff.derivative(x -> objective(x, actions_j, norm_i, norm_mini, norm_pool, punishment_pool, T_ext, T_self, synergy), action_i)
 end
 
-function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
+@everywhere function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
     # Extract the action of the focal individual as a real number (not a view)
     action_i = pop.action[group_indices[1]]
 
@@ -186,11 +185,11 @@ function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_
     nothing
 end
 
-function fitness(pop::Population, idx::Int64)
+@everywhere function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
 end
 
-function fitness(pop::Population, idx::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
+@everywhere function fitness(pop::Population, idx::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
     base_fitness = fitness(pop, idx)
     return fitness_scaling_factor_a * exp(base_fitness * fitness_scaling_factor_b)
 end
@@ -200,16 +199,16 @@ end
 # Behavioral Equilibrium Function
 ##################
 
-function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
+@everywhere function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
     return SVector{N-1}(ntuple(i -> i < idx ? actions[i] : actions[i + 1], N - 1))
 end
 
-function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
+@everywhere function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
     du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3], p[4], p[5 + i], p[5 + i + N], p[5]), N)
     return SVector{N}(du)
 end
 
-function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Matrix{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
+@everywhere function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Matrix{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
     synergy = parameters.synergy
     tmax = parameters.tmax
     num_groups = parameters.population_size
@@ -262,7 +261,7 @@ end
 # Social Interactions Function
 ##################
 
-function probabilistic_round(x::Float64)::Int64
+@everywhere function probabilistic_round(x::Float64)::Int64
     lower = floor(Int64, x)
     upper = ceil(Int64, x)
     probability_up = x - lower  # Probability of rounding up
@@ -270,7 +269,7 @@ function probabilistic_round(x::Float64)::Int64
     return rand() < probability_up ? upper : lower
 end
 
-function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
+@everywhere function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
     
@@ -307,7 +306,7 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
     return groups
 end
 
-function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::Population)
+@everywhere function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::Population)
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
 
@@ -354,7 +353,7 @@ function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::P
     return action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Matrix{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
+@everywhere function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Matrix{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
     action_variance = 0.0  # Placeholder for now
     use_distribution = action_variance != 0
 
@@ -387,7 +386,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}},
     nothing
 end
 
-function social_interactions!(pop::Population)
+@everywhere function social_interactions!(pop::Population)
     # Shuffle and pair individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
@@ -406,7 +405,7 @@ end
 # Reproduction Function
 ##################
 
-function reproduce!(pop::Population)
+@everywhere function reproduce!(pop::Population)
     # Calculate fitness for all individuals in the population
     fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), 1:pop.parameters.population_size)
     # Create a list of indices corresponding to individuals
@@ -427,7 +426,7 @@ function reproduce!(pop::Population)
 end
 
 #= Maximal fitness reproduction
-function reproduce!(pop::Population)
+@everywhere function reproduce!(pop::Population)
     # Calculate fitness for all individuals in the population
     fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), 1:pop.parameters.population_size)
 
@@ -448,7 +447,7 @@ end
 # Mutation Function 
 ##################
 
-function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
+@everywhere function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_variance = pop.parameters.mutation_variance
 
     # Return immediately if no mutation is needed
@@ -473,23 +472,24 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             pop.ext_pun[i] += rand(ext_pun_dist)
         end
 
-        # Uncomment to mutate `int_pun` as well
-        # if rand() <= mutation_rate
-        #     int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
-        #     pop.int_pun_ext[i] += rand(int_pun_ext_dist)
-        # end
-        #
-        # if rand() <= mutation_rate
-        #     int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
-        #     pop.int_pun_self[i] += rand(int_pun_self_dist)
-        # end
+        # Mutate `int_pun_ext` trait
+        if rand() <= mutation_rate
+            int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
+            pop.int_pun_ext[i] += rand(int_pun_ext_dist)
+        end
+        
+        # Mutate `int_pun_self` trait
+        if rand() <= mutation_rate
+            int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
+            pop.int_pun_self[i] += rand(int_pun_self_dist)
+        end
     end
 
     nothing
 end
 
 #= Mutation units
-function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
+@everywhere function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_unit = pop.parameters.mutation_variance
 
     # Only mutate if necessary
@@ -514,11 +514,17 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             pop.ext_pun[i] = max(0, pop.ext_pun[i] + mutation_amount)
         end
 
-        # Uncomment to mutate `int_pun` as well
-        # if rand() <= mutation_rate
-        #     mutation_amount = rand(mutation_direction) * mutation_unit
-        #     pop.int_pun[i] = max(0, pop.int_pun[i] + mutation_amount)
-        # end
+        # Mutate `int_pun_ext` trait
+        if rand() <= mutation_rate
+            mutation_amount = rand(mutation_direction) * mutation_unit
+            pop.int_pun_ext[i] = max(0, pop.int_pun_ext[i] + mutation_amount)
+        end
+
+        # Mutate `int_pun_self` trait
+        if rand() <= mutation_rate
+            mutation_amount = rand(mutation_direction) * mutation_unit
+            pop.int_pun_self[i] = max(0, pop.int_pun_self[i] + mutation_amount)
+        end
     end
 
     nothing
@@ -530,13 +536,13 @@ end
 # Simulation Function #
 #######################
 
-function simulation(pop::Population)
+@everywhere function simulation(pop::Population)
 
     ############
     # Sim init #
     ############
 
-    output_length = floor(Int64, pop.parameters.gmax/pop.parameters.output_save_tick) * pop.parameters.population_size
+    output_length = floor(Int64, pop.parameters.gmax / pop.parameters.output_save_tick) * pop.parameters.population_size
     outputs = DataFrame(
         generation = Vector{Int64}(undef, output_length),
         individual = Vector{Int64}(undef, output_length),

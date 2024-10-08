@@ -1,15 +1,17 @@
+using Distributed
+
 ##################
 # Simulation Parameters
 ##################
 
-mutable struct SimulationParameters
-    #game params
+@everywhere mutable struct SimulationParameters
+    # Game params
     action0::Float32
     norm0::Float32
     ext_pun0::Float32
     int_pun_ext0::Float32
     int_pun_self0::Float32
-    #popgen params
+    # Population-genetic params
     gmax::Int64  # maximum number of generations
     tmax::Float64  # maximum length of timespan for ODE
     population_size::Int64
@@ -21,34 +23,33 @@ mutable struct SimulationParameters
     mutation_rate::Float64
     mutation_variance::Float64
     trait_variance::Float64
-    #file/simulation params
+    # File/simulation params
     output_save_tick::Int64  # when to save output
-
-    # Constructor with default values
-    function SimulationParameters(;
-        action0::Float32=0.5f0,
-        norm0::Float32=0.5f0,
-        ext_pun0::Float32=0.5f0,
-        int_pun_ext0::Float32=0.0f0,
-        int_pun_self0::Float32=0.0f0,
-        gmax::Int64=100000,
-        tmax::Float64=5.0,
-        population_size::Int64=50,
-        group_size::Int64=10,
-        synergy::Float64=0.0,
-        relatedness::Float64=0.5,
-        fitness_scaling_factor_a::Float64=0.004,
-        fitness_scaling_factor_b::Float64=10.0,
-        mutation_rate::Float64=0.05,
-        mutation_variance::Float64=0.005,
-        trait_variance::Float64=0.0,
-        output_save_tick::Int64=10
-    )
-        new(action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0, gmax, tmax, population_size, group_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
-    end
 end
 
-function Base.copy(parameters::SimulationParameters)
+@everywhere function SimulationParameters(;
+    action0::Float32=0.5f0,
+    norm0::Float32=0.5f0,
+    ext_pun0::Float32=0.5f0,
+    int_pun_ext0::Float32=0.0f0,
+    int_pun_self0::Float32=0.0f0,
+    gmax::Int64=100000,
+    tmax::Float64=5.0,
+    population_size::Int64=50,
+    group_size::Int64=10,
+    synergy::Float64=0.0,
+    relatedness::Float64=0.5,
+    fitness_scaling_factor_a::Float64=0.004,
+    fitness_scaling_factor_b::Float64=10.0,
+    mutation_rate::Float64=0.05,
+    mutation_variance::Float64=0.005,
+    trait_variance::Float64=0.0,
+    output_save_tick::Int64=10
+)
+    return SimulationParameters(action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0, gmax, tmax, population_size, group_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
+end
+
+@everywhere function Base.copy(parameters::SimulationParameters)
     return SimulationParameters(
         action0=getfield(parameters, :action0),
         norm0=getfield(parameters, :norm0),
@@ -70,7 +71,7 @@ function Base.copy(parameters::SimulationParameters)
     )
 end
 
-function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
+@everywhere function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
     setfield!(old_params, :action0, getfield(new_params, :action0))
     setfield!(old_params, :norm0, getfield(new_params, :norm0))
     setfield!(old_params, :ext_pun0, getfield(new_params, :ext_pun0))
@@ -97,7 +98,7 @@ end
 # Population
 ##################
 
-mutable struct Population
+@everywhere mutable struct Population
     parameters::SimulationParameters
     action::Vector{Float32}
     norm::Vector{Float32}
@@ -108,7 +109,7 @@ mutable struct Population
     interactions::Vector{Int64}
 end
 
-function Base.copy(pop::Population)
+@everywhere function Base.copy(pop::Population)
     return Population(
         copy(getfield(pop, :parameters)),
         copy(getfield(pop, :action)),
@@ -121,7 +122,7 @@ function Base.copy(pop::Population)
     )
 end
 
-function Base.copy!(old_population::Population, new_population::Population)
+@everywhere function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
     copy!(getfield(old_population, :action), getfield(new_population, :action))
     copy!(getfield(old_population, :norm), getfield(new_population, :norm))
