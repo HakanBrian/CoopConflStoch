@@ -1,10 +1,8 @@
-using Distributed
-
 ##################
 # Simulation Parameters
 ##################
 
-@everywhere mutable struct SimulationParameters
+mutable struct SimulationParameters
     # Game params
     action0::Float32
     norm0::Float32
@@ -27,7 +25,7 @@ using Distributed
     output_save_tick::Int64  # when to save output
 end
 
-@everywhere function SimulationParameters(;
+function SimulationParameters(;
     action0::Float32=0.5f0,
     norm0::Float32=0.5f0,
     ext_pun0::Float32=0.5f0,
@@ -49,7 +47,7 @@ end
     return SimulationParameters(action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0, gmax, tmax, population_size, group_size, synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b, mutation_rate, mutation_variance, trait_variance, output_save_tick)
 end
 
-@everywhere function Base.copy(parameters::SimulationParameters)
+function Base.copy(parameters::SimulationParameters)
     return SimulationParameters(
         action0=getfield(parameters, :action0),
         norm0=getfield(parameters, :norm0),
@@ -71,7 +69,7 @@ end
     )
 end
 
-@everywhere function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
+function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
     setfield!(old_params, :action0, getfield(new_params, :action0))
     setfield!(old_params, :norm0, getfield(new_params, :norm0))
     setfield!(old_params, :ext_pun0, getfield(new_params, :ext_pun0))
@@ -98,7 +96,7 @@ end
 # Population
 ##################
 
-@everywhere mutable struct Population
+mutable struct Population
     parameters::SimulationParameters
     action::Vector{Float32}
     norm::Vector{Float32}
@@ -109,7 +107,7 @@ end
     interactions::Vector{Int64}
 end
 
-@everywhere function Base.copy(pop::Population)
+function Base.copy(pop::Population)
     return Population(
         copy(getfield(pop, :parameters)),
         copy(getfield(pop, :action)),
@@ -122,7 +120,7 @@ end
     )
 end
 
-@everywhere function Base.copy!(old_population::Population, new_population::Population)
+function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
     copy!(getfield(old_population, :action), getfield(new_population, :action))
     copy!(getfield(old_population, :norm), getfield(new_population, :norm))

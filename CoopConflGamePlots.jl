@@ -1,11 +1,12 @@
+using Distributed, Plots, PlotlyJS
+
+
 ##################
 # Game Functions
 ##################
 
-include("CoopConflGameStructs.jl")
-include("CoopConflGameFuncs.jl")
-
-using Plots, PlotlyJS
+@everywhere include("CoopConflGameStructs.jl")
+@everywhere include("CoopConflGameFuncs.jl")
 
 
 ##################
@@ -18,9 +19,9 @@ addprocs(max(0, length(CUDA.devices()) - length(workers())))  # Only add new wor
 # Function to set the GPU device for each worker
 @everywhere function set_device!(device_id)
     CUDA.device!(device_id)
+    println("Assigned to GPU $device_id")
 end
 
-# Function to run a single replicate of the simulation on a specific GPU
 @everywhere function run_simulation_on_gpu(parameters::SimulationParameters, replicate_id::Int64, device_id::Int)
     # Set the GPU for this worker
     set_device!(device_id)
@@ -34,12 +35,12 @@ end
     # Group by generation and compute mean for each generation
     my_simulation_gdf = groupby(my_simulation, :generation)
     my_simulation_mean = combine(my_simulation_gdf,
-                                :action => mean,
-                                :a => mean,
-                                :p => mean,
-                                :T_ext => mean,
-                                :T_self => mean,
-                                :payoff => mean)
+                                 :action => mean,
+                                 :a => mean,
+                                 :p => mean,
+                                 :T_ext => mean,
+                                 :T_self => mean,
+                                 :payoff => mean)
 
     # Add a column for replicate identifier
     rows_to_insert = nrow(my_simulation_mean)
@@ -49,40 +50,19 @@ end
 end
 
 function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)
-    # Container to hold mean data of each simulation
-    output_length = floor(Int64, parameters.gmax / parameters.output_save_tick) * num_replicates
-    all_simulation_means = DataFrame(
-        replicate = Vector{Int64}(undef, output_length),
-        generation = Vector{Int64}(undef, output_length),
-        action_mean = Vector{Float64}(undef, output_length),
-        a_mean = Vector{Float64}(undef, output_length),
-        p_mean = Vector{Float64}(undef, output_length),
-        T_ext_mean = Vector{Float64}(undef, output_length),
-        T_self_mean = Vector{Float64}(undef, output_length),
-        payoff_mean = Vector{Float64}(undef, output_length)
-    )
+    # Assign GPU IDs to each replicate based on available GPUs
+    gpu_ids = collect(0:length(CUDA.devices()) - 1)
 
-    # Index to keep track of where to insert rows
-    row_index = 1
-
-    # Assign GPU IDs to each replicate (cycling through available GPUs)
-    gpu_ids = collect(0:length(workers()) - 1)
-
-    # Run simulations in parallel across multiple GPUs
-    @distributed for i in 1:num_replicates
+    # Use pmap to parallelize the simulation across available GPUs and collect the results
+    results = pmap(1:num_replicates) do i
         # Determine which GPU to assign (cycle through available GPUs)
         gpu_id = gpu_ids[(i - 1) % length(gpu_ids) + 1]
-
-        # Run the simulation on the specific GPU
-        my_simulation_mean = run_simulation_on_gpu(parameters, i, gpu_id)
-
-        # Ensure synchronization before data collection
-        synchronize()
-
-        # Insert rows into preallocated DataFrame
-        all_simulation_means[row_index:row_index + rows_to_insert - 1, :] .= my_simulation_mean
-        row_index += rows_to_insert
+        # Run the simulation on the specific GPU and return the result
+        run_simulation_on_gpu(parameters, i, gpu_id)
     end
+
+    # Concatenate all the simulation means returned by each worker
+    all_simulation_means = vcat(results...)
 
     return all_simulation_means, num_replicates
 end

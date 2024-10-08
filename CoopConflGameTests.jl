@@ -1,10 +1,11 @@
+using BenchmarkTools
+
+
 ##################
 # Game Functions
 ##################
 
 include("CoopConflGameFuncs.jl")
-
-using BenchmarkTools
 
 
 ##################

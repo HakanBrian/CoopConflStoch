@@ -1,17 +1,18 @@
+using StatsBase, Random, Distributions, DataFrames, StaticArrays, ForwardDiff, DiffEqGPU, DifferentialEquations, CUDA
+
+
 ####################################
 # Game Functions
 ####################################
 
 include("CoopConflGameStructs.jl")
 
-@everywhere using StatsBase, Random, Distributions, DataFrames, StaticArrays, ForwardDiff, DiffEqGPU, DifferentialEquations, CUDA
-
 
 ###############################
 # Population Simulation Function
 ###############################
 
-@everywhere function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64)
+function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64)
     # Copy traits from parent to offspring
     pop.action[offspring_index] = pop.action[parent_index]
     pop.norm[offspring_index] = pop.norm[parent_index]
@@ -24,7 +25,7 @@ include("CoopConflGameStructs.jl")
     pop.interactions[offspring_index] = 0
 end
 
-@everywhere function truncation_bounds(variance::Float64, retain_proportion::Float64)
+function truncation_bounds(variance::Float64, retain_proportion::Float64)
     # Calculate tail probability alpha
     alpha = 1 - retain_proportion
 
@@ -38,7 +39,7 @@ end
     return SA[lower_bound, upper_bound]
 end
 
-@everywhere function population_construction(parameters::SimulationParameters)
+function population_construction(parameters::SimulationParameters)
     trait_variance = parameters.trait_variance
     use_distribution = trait_variance != 0
 
@@ -100,7 +101,7 @@ end
     )
 end
 
-@everywhere function output!(outputs::DataFrame, t::Int64, pop::Population)
+function output!(outputs::DataFrame, t::Int64, pop::Population)
     N = pop.parameters.population_size
 
     # Determine the base row for the current generation
@@ -131,7 +132,7 @@ end
 # Fitness Function
 ##################
 
-@everywhere function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Real)
+function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Real)
     sqrt_action_i = sqrt(action_i)
     sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
@@ -139,35 +140,35 @@ end
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
-@everywhere function cost(action_i::Real)
+function cost(action_i::Real)
     return action_i^2
 end
 
-@everywhere function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::Real)
+function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::Real)
     return punishment_pool * (action_i - norm_pool)^2
 end
 
-@everywhere function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
+function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
     return T_ext * (action_i - norm_pool_mini)^2
 end
 
-@everywhere function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
+function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
     return T_self * (action_i - norm_i)^2
 end
 
-@everywhere function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
+function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
     return benefit(action_i, actions_j, synergy) - cost(action_i) - external_punishment(action_i, norm_pool, punishment_pool)
 end
 
-@everywhere function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
+function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-@everywhere function objective_derivative(action_i::T, actions_j::AbstractVector{T}, norm_i::T, norm_mini::T, norm_pool::T, punishment_pool::T, T_ext::T, T_self::T, synergy::T) where T
+function objective_derivative(action_i::T, actions_j::AbstractVector{T}, norm_i::T, norm_mini::T, norm_pool::T, punishment_pool::T, T_ext::T, T_self::T, synergy::T) where T
     return ForwardDiff.derivative(x -> objective(x, actions_j, norm_i, norm_mini, norm_pool, punishment_pool, T_ext, T_self, synergy), action_i)
 end
 
-@everywhere function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
+function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
     # Extract the action of the focal individual as a real number (not a view)
     action_i = pop.action[group_indices[1]]
 
@@ -185,11 +186,11 @@ end
     nothing
 end
 
-@everywhere function fitness(pop::Population, idx::Int64)
+function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
 end
 
-@everywhere function fitness(pop::Population, idx::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
+function fitness(pop::Population, idx::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
     base_fitness = fitness(pop, idx)
     return fitness_scaling_factor_a * exp(base_fitness * fitness_scaling_factor_b)
 end
@@ -199,16 +200,16 @@ end
 # Behavioral Equilibrium Function
 ##################
 
-@everywhere function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
+function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
     return SVector{N-1}(ntuple(i -> i < idx ? actions[i] : actions[i + 1], N - 1))
 end
 
-@everywhere function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
+function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
     du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3], p[4], p[5 + i], p[5 + i + N], p[5]), N)
     return SVector{N}(du)
 end
 
-@everywhere function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Matrix{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
+function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Matrix{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
     synergy = parameters.synergy
     tmax = parameters.tmax
     num_groups = parameters.population_size
@@ -261,7 +262,7 @@ end
 # Social Interactions Function
 ##################
 
-@everywhere function probabilistic_round(x::Float64)::Int64
+function probabilistic_round(x::Float64)::Int64
     lower = floor(Int64, x)
     upper = ceil(Int64, x)
     probability_up = x - lower  # Probability of rounding up
@@ -269,7 +270,7 @@ end
     return rand() < probability_up ? upper : lower
 end
 
-@everywhere function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
+function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
     
@@ -306,7 +307,7 @@ end
     return groups
 end
 
-@everywhere function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::Population)
+function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::Population)
     num_groups = pop.parameters.population_size
     group_size = pop.parameters.group_size
 
@@ -353,7 +354,7 @@ end
     return action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means
 end
 
-@everywhere function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Matrix{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
+function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Matrix{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
     action_variance = 0.0  # Placeholder for now
     use_distribution = action_variance != 0
 
@@ -386,7 +387,7 @@ end
     nothing
 end
 
-@everywhere function social_interactions!(pop::Population)
+function social_interactions!(pop::Population)
     # Shuffle and pair individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
@@ -405,7 +406,7 @@ end
 # Reproduction Function
 ##################
 
-@everywhere function reproduce!(pop::Population)
+function reproduce!(pop::Population)
     # Calculate fitness for all individuals in the population
     fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), 1:pop.parameters.population_size)
     # Create a list of indices corresponding to individuals
@@ -426,7 +427,7 @@ end
 end
 
 #= Maximal fitness reproduction
-@everywhere function reproduce!(pop::Population)
+function reproduce!(pop::Population)
     # Calculate fitness for all individuals in the population
     fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), 1:pop.parameters.population_size)
 
@@ -447,7 +448,7 @@ end
 # Mutation Function 
 ##################
 
-@everywhere function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
+function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_variance = pop.parameters.mutation_variance
 
     # Return immediately if no mutation is needed
@@ -489,7 +490,7 @@ end
 end
 
 #= Mutation units
-@everywhere function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
+function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     mutation_unit = pop.parameters.mutation_variance
 
     # Only mutate if necessary
@@ -536,7 +537,7 @@ end
 # Simulation Function #
 #######################
 
-@everywhere function simulation(pop::Population)
+function simulation(pop::Population)
 
     ############
     # Sim init #
