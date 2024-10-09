@@ -1,28 +1,24 @@
-using Distributed, Plots, PlotlyJS
+using Plots, PlotlyJS
 
 
 ##################
 # Game Functions
 ##################
 
-@everywhere include("CoopConflGameStructs.jl")
-@everywhere include("CoopConflGameFuncs.jl")
+include("CoopConflGameFuncs.jl")
 
 
 ##################
 # Plot Simulation Function
 ##################
 
-# Dynamically add worker processes based on the number of available GPUs
-addprocs(max(0, length(CUDA.devices()) - length(workers())))  # Only add new workers if needed
-
 # Function to set the GPU device for each worker
-@everywhere function set_device!(device_id)
+function set_device!(device_id)
     CUDA.device!(device_id)
     println("Assigned to GPU $device_id")
 end
 
-@everywhere function run_simulation_on_gpu(parameters::SimulationParameters, replicate_id::Int64, device_id::Int)
+function run_simulation_on_gpu(parameters::SimulationParameters, replicate_id::Int64, device_id::Int)
     # Set the GPU for this worker
     set_device!(device_id)
 
