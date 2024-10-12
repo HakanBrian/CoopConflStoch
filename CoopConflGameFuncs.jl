@@ -337,7 +337,7 @@ function social_interactions!(pop::Population)
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Calculate equilibrium actions for all pairs
-    Threads.@threads for i in axes(groups, 1)
+    for i in axes(groups, 1)
         group = groups[i, :]
         behavioral_equilibrium!(group, pop)
         total_payoff!(group, mean(pop.norm[group]), mean(pop.ext_pun[group]), pop)
