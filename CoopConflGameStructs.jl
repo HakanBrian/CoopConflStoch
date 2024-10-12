@@ -11,8 +11,9 @@ mutable struct SimulationParameters
     int_pun_self0::Float32
     # Population-genetic params
     generations::Int64
+    exploration_rate::Float64  # for behav eq
     tolerance::Float64  # for behav eq
-    max_iterations::Int64  # for behav eq
+    max_time_steps::Int64  # for behav eq
     population_size::Int64
     group_size::Int64
     synergy::Float64
@@ -32,9 +33,10 @@ function SimulationParameters(;
     ext_pun0::Float32=0.5f0,
     int_pun_ext0::Float32=0.0f0,
     int_pun_self0::Float32=0.0f0,
-    generations::Int64=10000,
-    tolerance::Float64=0.001,
-    max_iterations::Int64=100,
+    generations::Int64=100000,
+    exploration_rate::Float64=0.1,
+    tolerance::Float64=0.0001,
+    max_time_steps::Int64=10000,
     population_size::Int64=50,
     group_size::Int64=10,
     synergy::Float64=0.0,
@@ -52,8 +54,9 @@ function SimulationParameters(;
                                 int_pun_ext0,
                                 int_pun_self0,
                                 generations,
+                                exploration_rate,
                                 tolerance,
-                                max_iterations,
+                                max_time_steps,
                                 population_size,
                                 group_size,
                                 synergy,
@@ -74,8 +77,9 @@ function Base.copy(parameters::SimulationParameters)
         int_pun_ext0=getfield(parameters, :int_pun_ext0),
         int_pun_self0=getfield(parameters, :int_pun_self0),
         generations=getfield(parameters, :generations),
+        exploration_rate=getfield(parameters, :exploration_rate),
         tolerance=getfield(parameters, :tolerance),
-        max_iterations=getfield(parameters, :max_iterations),
+        max_time_steps=getfield(parameters, :max_time_steps),
         population_size=getfield(parameters, :population_size),
         group_size=getfield(parameters, :group_size),
         synergy=getfield(parameters, :synergy),
@@ -96,8 +100,9 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
     setfield!(old_params, :int_pun_ext0, getfield(new_params, :int_pun_ext0))
     setfield!(old_params, :int_pun_self0, getfield(new_params, :int_pun_self0))
     setfield!(old_params, :generations, getfield(new_params, :generations))
+    setfield!(old_params, :exploration_rate, getfield(new_params, :exploration_rate))
     setfield!(old_params, :tolerance, getfield(new_params, :tolerance))
-    setfield!(old_params, :max_iterations, getfield(new_params, :max_iterations))
+    setfield!(old_params, :max_time_steps, getfield(new_params, :max_time_steps))
     setfield!(old_params, :population_size, getfield(new_params, :population_size))
     setfield!(old_params, :group_size, getfield(new_params, :group_size))
     setfield!(old_params, :synergy, getfield(new_params, :synergy))

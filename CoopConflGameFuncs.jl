@@ -164,15 +164,12 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
-    # Focal individuals position
-    idx = group_indices[1]
-
+function total_payoff!(idx::Int64, group_actions::Vector{Float32}, group_norm::Float32, group_pun::Float32, pop::Population)
     # Extract the action of the focal individual as a real number (not a view)
-    action_i = pop.action[idx]
+    action_i = group_actions[1]
 
     # Collect actions from the other individuals in the group
-    actions_j = @view pop.action[group_indices[2:end]]
+    actions_j = @view group_actions[2:end]
 
     # Compute the payoff for the focal individual
     payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
@@ -198,8 +195,9 @@ end
 # Behavioral Equilibrium Function
 ##################
 
-function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
+function random_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
+    exploration_rate=pop.parameters.exploration_rate
 
     # Get the group members' actions
     current_action = current_best_actions[focal_idx]
@@ -231,48 +229,45 @@ function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_ac
                                int_pun_self,
                                synergy)
 
-    # Try small adjustments to the action and see if payoff improves
-    delta_action = 0.001
+    # Exploration: Add randomness to encourage exploring new strategies
+    exploration = exploration_rate * (2rand() - 1)
     best_action = current_action
-    max_payoff = current_payoff
+    new_action = current_action + exploration
 
-    for adjustment in [-delta_action, delta_action]
-        new_action = current_action + adjustment
-        new_payoff = objective(new_action, group_actions,
-                               norm_i,
-                               norm_others_mean,
-                               norm_total_mean,
-                               pun_mean,
-                               int_pun_ext,
-                               int_pun_self,
-                               synergy)
-        if new_payoff > max_payoff
-            max_payoff = new_payoff
-            best_action = new_action
-        end
+    # Compute payoff with the new action
+    new_payoff = objective(new_action, group_actions,
+                            norm_i,
+                            norm_others_mean,
+                            norm_total_mean,
+                            pun_mean,
+                            int_pun_ext,
+                            int_pun_self,
+                            synergy)
+
+    # Update the action if the new payoff is better
+    if new_payoff > current_payoff
+        best_action = new_action
     end
 
     return best_action
 end
 
-function behavioral_equilibrium!(indices::Vector{Int64}, pop::Population)
+function behavioral_equilibrium(indices::Vector{Int64}, pop::Population)
     tolerance = pop.parameters.tolerance
-    max_iterations = pop.parameters.max_iterations
+    max_time_steps = pop.parameters.max_time_steps
 
     # Copy of current actions
-    current_best_actions = pop.action[indices]
+    current_best_actions = copy(pop.action[indices])
 
-    # Variables for tracking convergence and iteration count
     action_change = tolerance + 1  # Initialize greater than tolerance to enter loop
-    iteration = 0
+    time_step = 0
 
-    while action_change > tolerance && iteration < max_iterations
-        action_change = 0.0
-        iteration += 1
+    while action_change > tolerance && time_step < max_time_steps
+        time_step += 1
+        action_change = 0.0  # Reset action_change for each iteration
 
-        # Update the action of each individual based on their best response
         for i in eachindex(indices)
-            best_action = best_response(i, indices, current_best_actions, pop)
+            best_action = random_response(i, indices, current_best_actions, pop)
             action_change = max(action_change, abs(best_action - current_best_actions[i]))
             current_best_actions[i] = best_action
         end
@@ -280,6 +275,8 @@ function behavioral_equilibrium!(indices::Vector{Int64}, pop::Population)
 
     # Update the focal individual with the best action found
     pop.action[indices[1]] = current_best_actions[1]
+
+    return current_best_actions
 end
 
 
@@ -339,8 +336,8 @@ function social_interactions!(pop::Population)
     # Calculate equilibrium actions for all pairs
     for i in axes(groups, 1)
         group = groups[i, :]
-        behavioral_equilibrium!(group, pop)
-        total_payoff!(group, mean(pop.norm[group]), mean(pop.ext_pun[group]), pop)
+        best_actions = behavioral_equilibrium(group, pop)
+        total_payoff!(group[1], best_actions, mean(@view pop.norm[group]), mean(@view pop.ext_pun[group]), pop)
     end
 
     nothing
