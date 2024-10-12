@@ -26,15 +26,15 @@ population = population_construction(params)
 groups = shuffle_and_group(params.population_size, params.group_size, params.relatedness)
 
 # Calculate behav eq
-@time best_actions = behavioral_equilibrium(groups[1, :], population)
+@time best_actions = behavioral_equilibrium!(groups[1, :], population)
 println(population.action)
 
 # Check payoff
-total_payoff!(groups[1, 1], best_actions, mean(@view population.norm[groups[1, :]]), mean(@view population.ext_pun[groups[1, :]]), population)
+total_payoff!(groups[1, :], population)
 println(population.payoff)
 
 # Calculate fitness
-fitness(population, 1)
+fitness(population, groups[1, 1])
 
 @time social_interactions!(population)
 println(population)

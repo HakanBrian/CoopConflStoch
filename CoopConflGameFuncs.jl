@@ -164,19 +164,24 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function total_payoff!(idx::Int64, group_actions::Vector{Float32}, group_norm::Float32, group_pun::Float32, pop::Population)
+function total_payoff!(group::Vector{Int64}, pop::Population)
+    group_norm = mean(@view pop.norm[group])
+    group_pun = mean(@view pop.ext_pun[group])
+
+    focal_idx = group[1] 
+
     # Extract the action of the focal individual as a real number (not a view)
-    action_i = group_actions[1]
+    action_i = pop.action[focal_idx]
 
     # Collect actions from the other individuals in the group
-    actions_j = @view group_actions[2:end]
+    actions_j = @view pop.action[group[2:end]]
 
     # Compute the payoff for the focal individual
     payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
 
     # Update the individual's payoff and interactions
-    pop.payoff[idx] = (payoff_foc + pop.interactions[idx] * pop.payoff[idx]) / (pop.interactions[idx] + 1)
-    pop.interactions[idx] += 1
+    pop.payoff[focal_idx] = (payoff_foc + pop.interactions[focal_idx] * pop.payoff[focal_idx]) / (pop.interactions[focal_idx] + 1)
+    pop.interactions[focal_idx] += 1
 
     nothing
 end
@@ -195,22 +200,22 @@ end
 # Behavioral Equilibrium Function
 ##################
 
-function random_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
+function random_response(focal_idx::Int64, indices::Vector{Int64}, current_actions::AbstractVector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
     exploration_rate = pop.parameters.exploration_rate
 
     # Get the group members' actions
-    current_action = current_best_actions[focal_idx]
-    group_actions = copy(current_best_actions)
+    current_action = current_actions[focal_idx]
+    group_actions = copy(current_actions)
     deleteat!(group_actions, focal_idx)
 
     # Get the internal norms
-    int_pun_ext = pop.int_pun_ext[focal_idx]
-    int_pun_self = pop.int_pun_self[focal_idx]
+    int_pun_ext = pop.int_pun_ext[indices[focal_idx]]
+    int_pun_self = pop.int_pun_self[indices[focal_idx]]
 
     # Compute norm_means
+    norm_i = pop.norm[indices[focal_idx]]  # The i individual's norm
     norms = @view pop.norm[indices]
-    norm_i = norms[focal_idx]  # The i individual's norm
     norm_total = sum(norms)
     norm_total_mean = norm_total / length(norms)  # Mean of all norms in the group
     norm_others_mean = (norm_total - norm_i) / (length(norms) - 1)  # The -i individuals' mean norm
@@ -251,31 +256,45 @@ function random_response(focal_idx::Int64, indices::Vector{Int64}, current_best_
     return best_action
 end
 
-function behavioral_equilibrium(indices::Vector{Int64}, pop::Population)
+function behavioral_equilibrium!(indices::Vector{Int64}, pop::Population)
     tolerance = pop.parameters.tolerance
+    group_tolerance = 0.001
+
     max_time_steps = pop.parameters.max_time_steps
-
-    # Copy of current actions
-    current_best_actions = copy(pop.action[indices])
-
-    action_change = tolerance + 1  # Initialize greater than tolerance to enter loop
     time_step = 0
 
-    while action_change > tolerance && time_step < max_time_steps
+    current_actions = @view pop.action[indices]
+
+    while time_step < max_time_steps
         time_step += 1
         action_change = 0.0  # Reset action_change for each iteration
 
+        # Track the sum of squared differences from the group's mean action
+        group_mean = mean(current_actions)
+        group_stability = 0.0
+
         for i in eachindex(indices)
-            best_action = random_response(i, indices, current_best_actions, pop)
-            action_change = max(action_change, abs(best_action - current_best_actions[i]))
-            current_best_actions[i] = best_action
+            best_action = random_response(i, indices, current_actions, pop)
+            action_change = max(action_change, abs(best_action - current_actions[i]))
+
+            # Calculate group stability: sum of squared differences from the group's mean action
+            group_stability += (best_action - group_mean)^2
+
+            # Update action in the population
+            pop.action[indices[i]] = best_action
+        end
+
+        # Normalize group stability by the group size
+        group_stability /= pop.parameters.group_size
+
+        # Check if the action change and group stability are both below their respective thresholds
+        if action_change < tolerance && group_stability < group_tolerance
+            pop.action[indices] .= mean(pop.action[indices])
+            break
         end
     end
 
-    # Update the focal individual with the best action found
-    pop.action[indices[1]] = current_best_actions[1]
-
-    return current_best_actions
+    nothing
 end
 
 
@@ -335,10 +354,13 @@ function social_interactions!(pop::Population)
     # Calculate equilibrium actions for all pairs
     for i in axes(groups, 1)
         group = groups[i, :]
-        best_actions = behavioral_equilibrium(group, pop)
-        total_payoff!(group[1], best_actions, mean(@view pop.norm[group]), mean(@view pop.ext_pun[group]), pop)
+        behavioral_equilibrium!(group, pop)
     end
 
+    for i in axes(groups, 1)
+        group = groups[i, :]
+        total_payoff!(group, pop)
+    end
     nothing
 end
 

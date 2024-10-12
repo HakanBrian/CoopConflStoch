@@ -36,7 +36,7 @@ function SimulationParameters(;
     generations::Int64=100000,
     exploration_rate::Float64=0.1,
     tolerance::Float64=0.0001,
-    max_time_steps::Int64=10000,
+    max_time_steps::Int64=100,
     population_size::Int64=50,
     group_size::Int64=10,
     synergy::Float64=0.0,
