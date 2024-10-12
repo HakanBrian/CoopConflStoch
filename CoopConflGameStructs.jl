@@ -31,7 +31,7 @@ function SimulationParameters(;
     ext_pun0::Float32=0.5f0,
     int_pun_ext0::Float32=0.0f0,
     int_pun_self0::Float32=0.0f0,
-    gmax::Int64=100000,
+    gmax::Int64=10000,
     tmax::Float64=5.0,
     population_size::Int64=50,
     group_size::Int64=10,

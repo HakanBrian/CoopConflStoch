@@ -169,8 +169,11 @@ function objective_derivative(action_i::T, actions_j::AbstractVector{T}, norm_i:
 end
 
 function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
+    # Focal individuals position
+    idx = group_indices[1]
+
     # Extract the action of the focal individual as a real number (not a view)
-    action_i = pop.action[group_indices[1]]
+    action_i = pop.action[idx]
 
     # Collect actions from the other individuals in the group
     actions_j = @view pop.action[group_indices[2:end]]
@@ -179,7 +182,6 @@ function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_
     payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
 
     # Update the individual's payoff and interactions
-    idx = group_indices[1]
     pop.payoff[idx] = (payoff_foc + pop.interactions[idx] * pop.payoff[idx]) / (pop.interactions[idx] + 1)
     pop.interactions[idx] += 1
 
@@ -391,7 +393,7 @@ function social_interactions!(pop::Population)
     # Shuffle and pair individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
-    # Calculate final actions for all pairs
+    # Calculate equilibrium actions for all pairs
     action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means = collect_initial_conditions_and_parameters(groups, pop)
     final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means, pop.parameters)
 
