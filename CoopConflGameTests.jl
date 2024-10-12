@@ -20,17 +20,13 @@ population = population_construction(params);
 # BehavEq & Payoff & Fitness & Social Interactions
 ##################
 
-params = SimulationParameters(action0=0.1f0, norm0=1.0f0, ext_pun0=1.0f0, int_pun_ext0=0.0f0, int_pun_self0=0.0f0, population_size=10, group_size=2, relatedness=1.0)
+params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, int_pun_ext0=0.0f0, int_pun_self0=0.0f0, population_size=10, group_size=2, relatedness=1.0)
 population = population_construction(params)
 
 groups = shuffle_and_group(params.population_size, params.group_size, params.relatedness)
 
-# Calculate behave eq
-action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means = collect_initial_conditions_and_parameters(groups, population)
-@time final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means, params)
-
-# Calculate payoff
-update_actions_and_payoffs!(final_actions, groups, group_norm_pools, group_pun_pools, population)
+# Calculate behav eq
+behavioral_equilibrium!(group[1, :], pop)
 println(population.payoff)
 
 # Calculate fitness
