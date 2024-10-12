@@ -1,4 +1,4 @@
-using Plots, PlotlyJS
+using Distributed, Plots, PlotlyJS
 
 
 ##################
@@ -12,17 +12,8 @@ include("CoopConflGameFuncs.jl")
 # Plot Simulation Function
 ##################
 
-# Function to set the GPU device for each worker
-function set_device!(device_id)
-    CUDA.device!(device_id)
-    println("Assigned to GPU $device_id")
-end
-
-function run_simulation_on_gpu(parameters::SimulationParameters, replicate_id::Int64, device_id::Int)
-    # Set the GPU for this worker
-    set_device!(device_id)
-
-    println("Running simulation replicate $replicate_id on GPU $device_id")
+function run_simulation(parameters::SimulationParameters, replicate_id::Int64)
+    println("Running simulation replicate $replicate_id")
 
     # Run the simulation
     my_population = population_construction(parameters)
@@ -46,15 +37,9 @@ function run_simulation_on_gpu(parameters::SimulationParameters, replicate_id::I
 end
 
 function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)
-    # Assign GPU IDs to each replicate based on available GPUs
-    gpu_ids = collect(0:length(CUDA.devices()) - 1)
-
-    # Use pmap to parallelize the simulation across available GPUs and collect the results
+    # Use pmap to parallelize the simulation
     results = pmap(1:num_replicates) do i
-        # Determine which GPU to assign (cycle through available GPUs)
-        gpu_id = gpu_ids[(i - 1) % length(gpu_ids) + 1]
-        # Run the simulation on the specific GPU and return the result
-        run_simulation_on_gpu(parameters, i, gpu_id)
+        run_simulation(parameters, i)
     end
 
     # Concatenate all the simulation means returned by each worker

@@ -1,4 +1,4 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays, CUDA
+using StatsBase, Random, Distributions, DataFrames, StaticArrays
 
 
 ####################################
@@ -197,7 +197,7 @@ end
 
 function random_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
-    exploration_rate=pop.parameters.exploration_rate
+    exploration_rate = pop.parameters.exploration_rate
 
     # Get the group members' actions
     current_action = current_best_actions[focal_idx]
@@ -211,10 +211,9 @@ function random_response(focal_idx::Int64, indices::Vector{Int64}, current_best_
     # Compute norm_means
     norms = @view pop.norm[indices]
     norm_i = norms[focal_idx]  # The i individual's norm
-    norm_total_mean = mean(norms)  # Mean of all norms in the group
-    other_norms = copy(norms)
-    deleteat!(other_norms, focal_idx)
-    norm_others_mean = mean(other_norms)  # Mean of norms from -i individuals
+    norm_total = sum(norms)
+    norm_total_mean = norm_total / length(norms)  # Mean of all norms in the group
+    norm_others_mean = (norm_total - norm_i) / (length(norms) - 1)  # The -i individuals' mean norm
 
     # Compute the mean of external punishments
     pun_mean = mean(@view pop.ext_pun[indices])
