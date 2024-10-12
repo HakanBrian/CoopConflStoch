@@ -252,8 +252,8 @@ function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_ac
 end
 
 function behavioral_equilibrium!(indices::Vector{Int64}, pop::Population)
-    tolerance = 1e-4
-    max_iterations = 1000
+    tolerance = pop.parameters.tolerance
+    max_iterations = pop.parameters.max_iterations
 
     # Copy of current actions
     current_best_actions = pop.action[indices]
@@ -484,7 +484,7 @@ function simulation(pop::Population)
     # Sim init #
     ############
 
-    output_length = floor(Int64, pop.parameters.gmax / pop.parameters.output_save_tick) * pop.parameters.population_size
+    output_length = floor(Int64, pop.parameters.generations / pop.parameters.output_save_tick) * pop.parameters.population_size
     outputs = DataFrame(
         generation = Vector{Int64}(undef, output_length),
         individual = Vector{Int64}(undef, output_length),
@@ -502,7 +502,7 @@ function simulation(pop::Population)
     # Sim Loop #
     ############
 
-    for t in 1:pop.parameters.gmax
+    for t in 1:pop.parameters.generations
         # Execute social interactions and calculate payoffs
         social_interactions!(pop)
 

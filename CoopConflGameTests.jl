@@ -43,7 +43,7 @@ println(population)
 # IMPORTANT: To use this test payoffs need to be copied into the next generation !!!
 
 # Create sample population
-param = SimulationParameters(action0=0.5f0, norm0=0.5f0, ext_pun0=0.0f0, gmax=10, population_size=1000, mutation_rate=0.0)
+param = SimulationParameters(action0=0.5f0, norm0=0.5f0, ext_pun0=0.0f0, generations=10, population_size=1000, mutation_rate=0.0)
 population = population_construction(param)
 population.payoff[1:4] .= [1.0f0, 2.0f0, 3.0f0, 4.0f0]
 
