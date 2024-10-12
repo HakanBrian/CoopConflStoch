@@ -1,4 +1,4 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays, ForwardDiff, DiffEqGPU, DifferentialEquations, CUDA
+using StatsBase, Random, Distributions, DataFrames, StaticArrays, CUDA
 
 
 ####################################
@@ -164,10 +164,6 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function objective_derivative(action_i::T, actions_j::AbstractVector{T}, norm_i::T, norm_mini::T, norm_pool::T, punishment_pool::T, T_ext::T, T_self::T, synergy::T) where T
-    return ForwardDiff.derivative(x -> objective(x, actions_j, norm_i, norm_mini, norm_pool, punishment_pool, T_ext, T_self, synergy), action_i)
-end
-
 function total_payoff!(group_indices::Vector{Int64}, group_norm::Float32, group_pun::Float32, pop::Population)
     # Focal individuals position
     idx = group_indices[1]
@@ -201,63 +197,6 @@ end
 ##################
 # Behavioral Equilibrium Function
 ##################
-
-function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
-    return SVector{N-1}(ntuple(i -> i < idx ? actions[i] : actions[i + 1], N - 1))
-end
-
-function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
-    du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3], p[4], p[5 + i], p[5 + i + N], p[5]), N)
-    return SVector{N}(du)
-end
-
-function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Matrix{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
-    synergy = parameters.synergy
-    tmax = parameters.tmax
-    num_groups = parameters.population_size
-    group_size = parameters.group_size
-
-    parameter_size = 5 + 2 * group_size
-
-    # Create initial conditions for the first group
-    u0 = SVector{group_size, Float32}(action0s[:, 1]...)  # Unpack the array into an SVector
-    tspan = Float32[0.0f0, tmax]
-    p = SVector{parameter_size, Float32}(
-        group_norm_means[1, 1],      # Focal individual norm
-        group_norm_means[2, 1],      # Other individuals' mean norm
-        group_norm_means[3, 1],      # Group mean norm
-        group_pun_means[1],          # Group punishment mean
-        synergy,                     # Synergy parameter
-        int_pun_ext[:, 1]...,        # External punishment vector unpacked
-        int_pun_self[:, 1]...        # Internal punishment vector unpacked
-    )
-
-    # Create an initial ODE problem as a template
-    prob = ODEProblem(behav_ODE_static, u0, tspan, p)
-
-    # Function to remake the problem for each group
-    prob_func = (prob, i, repeat) -> remake(prob,
-                                            u0 = SVector{group_size, Float32}(action0s[:, i]...),
-                                            p = SVector{parameter_size, Float32}(
-                                                group_norm_means[1, i],
-                                                group_norm_means[2, i],
-                                                group_norm_means[3, i],
-                                                group_pun_means[i],
-                                                synergy,
-                                                int_pun_ext[:, i]...,
-                                                int_pun_self[:, i]...))
-
-    # Create an ensemble problem
-    ensemble_prob = EnsembleProblem(prob, prob_func = prob_func, safetycopy = false)
-
-    # Solve the ensemble problem using a GPU kernel
-    sim = solve(ensemble_prob, EnsembleGPUKernel(CUDA.CUDABackend()), trajectories=num_groups, save_start=false, save_on=false)
-
-    # Extract final action values for all groups
-    final_actions = [sol[end] for sol in sim]
-
-    return final_actions
-end
 
 function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
@@ -387,100 +326,6 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
     end
 
     return groups
-end
-
-function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::Population)
-    num_groups = pop.parameters.population_size
-    group_size = pop.parameters.group_size
-
-    # Preallocate arrays for the output
-    action0s = zeros(Float32, group_size, num_groups)
-    int_pun_ext = zeros(Float32, group_size, num_groups)
-    int_pun_self = zeros(Float32, group_size, num_groups)
-
-    # Array for group norms: (focal_norm, others_mean_norm, group_mean_norm)
-    group_norm_means = zeros(Float32, 3, num_groups)
-
-    # Array for group punishment means
-    group_pun_means = zeros(Float32, num_groups)
-
-    # Preallocate temporary storage for group norms and punishment pools outside the loop
-    group_norms = zeros(Float32, group_size)
-    pun_pools = zeros(Float32, group_size)
-
-    # Loop over each group and collect data and compute norms and punishments simultaneously
-    for i in 1:num_groups
-        # Create a view into the i-th row of the groups matrix
-        group = @view groups[i, :]
-
-        # Loop over each group member and collect data
-        for j in 1:group_size
-            member_index = group[j]
-            action0s[j, i] = pop.action[member_index]  # Collect actions
-            group_norms[j] = pop.norm[member_index]  # Collect norms
-            pun_pools[j] = pop.ext_pun[member_index]  # Collect punishment
-            int_pun_ext[j, i] = pop.int_pun_ext[member_index]  # Collect external internal punishment
-            int_pun_self[j, i] = pop.int_pun_self[member_index]  # Collect self internal punsihment
-        end
-
-        # Compute focal norm, others' mean norm, and group mean norm
-        focal_norm = group_norms[1]
-        others_mean_norm = mean(group_norms[2:end])
-        group_mean_norm = mean(group_norms)
-        group_norm_means[:, i] = [focal_norm, others_mean_norm, group_mean_norm]
-
-        # Compute group mean punishment
-        group_pun_means[i] = mean(pun_pools)
-    end
-
-    return action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means
-end
-
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Matrix{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
-    action_variance = 0.0  # Placeholder for now
-    use_distribution = action_variance != 0
-
-    if use_distribution
-        lower_bound, upper_bound = truncation_bounds(action_variance, 0.99)
-    end
-
-    population_size = pop.parameters.population_size
-
-    for j in 1:population_size
-        actions = final_actions[j]
-        group_indices = Vector(@view groups[j, :])  # Get group members' indices
-
-        # Update the action for each individual in the group
-        for (i, idx) in enumerate(group_indices)
-            final_action = actions[i]
-
-            if use_distribution
-                final_actions_dist = truncated(Normal(0, action_variance), lower=max(lower_bound, -final_action), upper=upper_bound)
-                pop.action[idx] = final_action + rand(final_actions_dist)
-            else
-                pop.action[idx] = final_action
-            end
-        end
-
-        # Update payoffs
-        total_payoff!(group_indices, group_norm_means[3, j], group_pun_pools[j], pop)
-    end
-
-    nothing
-end
-
-function social_interactions!(pop::Population)
-    # Shuffle and pair individuals
-    groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
-
-    # Calculate equilibrium actions for all pairs
-    action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means = collect_initial_conditions_and_parameters(groups, pop)
-    final_actions = behav_eq(action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means, pop.parameters)
-
-    # Update actions and payoffs for all pairs based on final actions
-    update_actions_and_payoffs!(final_actions, groups, group_norm_means, group_pun_means, pop)
-
-    nothing
 end
 
 function social_interactions!(pop::Population)
