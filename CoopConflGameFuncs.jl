@@ -259,6 +259,86 @@ function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_p
     return final_actions
 end
 
+function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
+    synergy = pop.parameters.synergy
+
+    # Get the group members' actions and other relevant data
+    current_action = current_best_actions[focal_idx]
+    group_actions = vcat(current_best_actions[1:focal_idx-1], current_best_actions[focal_idx+1:end])
+    int_pun_ext = pop.int_pun_ext[focal_idx]
+    int_pun_self = pop.int_pun_self[focal_idx]
+
+    # Compute norm_means
+    norm_mean = [
+        pop.norm[focal_idx],                                                              # The i individual's norm
+        mean(vcat(pop.norm[indices[1:focal_idx-1]], pop.norm[indices[focal_idx+1:end]])), # Mean of norms from -i individuals
+        mean(pop.norm[indices])                                                           # Mean of all norms in the group
+    ]
+
+    # Compute the mean of external punishments
+    pun_mean = mean(pop.ext_pun[indices])
+
+    # Calculate current payoff for the individual
+    current_payoff = objective(current_action, group_actions,
+                               norm_mean[1],
+                               norm_mean[2],
+                               norm_mean[3],
+                               pun_mean,
+                               int_pun_ext,
+                               int_pun_self,
+                               synergy)
+
+    # Try small adjustments to the action and see if payoff improves
+    delta_action = 0.001
+    best_action = current_action
+    max_payoff = current_payoff
+
+    for adjustment in [-delta_action, delta_action]
+        new_action = current_action + adjustment
+        new_payoff = objective(new_action, group_actions,
+                               norm_mean[1],
+                               norm_mean[2],
+                               norm_mean[3],
+                               pun_mean,
+                               int_pun_ext,
+                               int_pun_self,
+                               synergy)
+        if new_payoff > max_payoff
+            max_payoff = new_payoff
+            best_action = new_action
+        end
+    end
+
+    return best_action
+end
+
+function behavioral_equilibrium!(indices::Vector{Int64}, pop::Population)
+    tolerance = 1e-4
+    max_iterations = 1000
+
+    # Copy of current actions
+    current_best_actions = pop.action[indices]
+
+    # Variables for tracking convergence and iteration count
+    action_change = tolerance + 1  # Initialize greater than tolerance to enter loop
+    iteration = 0
+
+    while action_change > tolerance && iteration < max_iterations
+        action_change = 0.0
+        iteration += 1
+
+        # Update the action of each individual based on their best response
+        for i in eachindex(indices)
+            best_action = best_response(i, indices, current_best_actions, pop)
+            action_change = max(action_change, abs(best_action - current_best_actions[i]))
+            current_best_actions[i] = best_action
+        end
+    end
+
+    # Update the focal individual with the best action found
+    pop.action[indices[1]] = current_best_actions[1]
+end
+
 
 ##################
 # Social Interactions Function
@@ -399,6 +479,20 @@ function social_interactions!(pop::Population)
 
     # Update actions and payoffs for all pairs based on final actions
     update_actions_and_payoffs!(final_actions, groups, group_norm_means, group_pun_means, pop)
+
+    nothing
+end
+
+function social_interactions!(pop::Population)
+    # Shuffle and pair individuals
+    groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
+
+    # Calculate equilibrium actions for all pairs
+    for i in axes(groups, 1)
+        group = groups[i, :]
+        behavioral_equilibrium!(group, pop)
+        total_payoff!(group, mean(pop.norm[group]), mean(pop.ext_pun[group]), pop)
+    end
 
     nothing
 end
