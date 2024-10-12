@@ -201,27 +201,31 @@ end
 function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_actions::Vector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
 
-    # Get the group members' actions and other relevant data
+    # Get the group members' actions
     current_action = current_best_actions[focal_idx]
-    group_actions = vcat(current_best_actions[1:focal_idx-1], current_best_actions[focal_idx+1:end])
+    group_actions = copy(current_best_actions)
+    deleteat!(group_actions, focal_idx)
+
+    # Get the internal norms
     int_pun_ext = pop.int_pun_ext[focal_idx]
     int_pun_self = pop.int_pun_self[focal_idx]
 
     # Compute norm_means
-    norm_mean = [
-        pop.norm[focal_idx],                                                              # The i individual's norm
-        mean(vcat(pop.norm[indices[1:focal_idx-1]], pop.norm[indices[focal_idx+1:end]])), # Mean of norms from -i individuals
-        mean(pop.norm[indices])                                                           # Mean of all norms in the group
-    ]
+    norms = @view pop.norm[indices]
+    norm_i = norms[focal_idx]  # The i individual's norm
+    norm_total_mean = mean(norms)  # Mean of all norms in the group
+    other_norms = copy(norms)
+    deleteat!(other_norms, focal_idx)
+    norm_others_mean = mean(other_norms)  # Mean of norms from -i individuals
 
     # Compute the mean of external punishments
-    pun_mean = mean(pop.ext_pun[indices])
+    pun_mean = mean(@view pop.ext_pun[indices])
 
     # Calculate current payoff for the individual
     current_payoff = objective(current_action, group_actions,
-                               norm_mean[1],
-                               norm_mean[2],
-                               norm_mean[3],
+                               norm_i,
+                               norm_others_mean,
+                               norm_total_mean,
                                pun_mean,
                                int_pun_ext,
                                int_pun_self,
@@ -235,9 +239,9 @@ function best_response(focal_idx::Int64, indices::Vector{Int64}, current_best_ac
     for adjustment in [-delta_action, delta_action]
         new_action = current_action + adjustment
         new_payoff = objective(new_action, group_actions,
-                               norm_mean[1],
-                               norm_mean[2],
-                               norm_mean[3],
+                               norm_i,
+                               norm_others_mean,
+                               norm_total_mean,
                                pun_mean,
                                int_pun_ext,
                                int_pun_self,
@@ -333,7 +337,7 @@ function social_interactions!(pop::Population)
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Calculate equilibrium actions for all pairs
-    for i in axes(groups, 1)
+    Threads.@threads for i in axes(groups, 1)
         group = groups[i, :]
         behavioral_equilibrium!(group, pop)
         total_payoff!(group, mean(pop.norm[group]), mean(pop.ext_pun[group]), pop)
