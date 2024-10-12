@@ -11,7 +11,7 @@ mutable struct SimulationParameters
     int_pun_self0::Float32
     # Population-genetic params
     generations::Int64
-    tolerance::Int64  # for behav eq
+    tolerance::Float64  # for behav eq
     max_iterations::Int64  # for behav eq
     population_size::Int64
     group_size::Int64
