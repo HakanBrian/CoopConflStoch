@@ -207,25 +207,23 @@ function remove_element(actions::SVector{N, T}, idx::Int64) where {N, T}
 end
 
 function behav_ODE_static(u::SVector{N, T}, p::SVector, t) where {N, T}
-    du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), p[1], p[2], p[3], p[4], p[5 + i], p[5 + i + N], p[5]), N)
+    du = ntuple(i -> objective_derivative(u[i], remove_element(u, i), 0.0f0, 0.0f0, p[1], p[2], p[3 + i], p[3 + i + N], p[3]), N)
     return SVector{N}(du)
 end
 
-function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Matrix{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
+function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_pun_self::Matrix{Float32}, group_norm_means::Vector{Float32}, group_pun_means::Vector{Float32}, parameters::SimulationParameters)
     synergy = parameters.synergy
     tmax = parameters.tmax
     num_groups = parameters.population_size
     group_size = parameters.group_size
 
-    parameter_size = 5 + 2 * group_size
+    parameter_size = 3 + 2 * group_size
 
     # Create initial conditions for the first group
     u0 = SVector{group_size, Float32}(action0s[:, 1]...)  # Unpack the array into an SVector
     tspan = Float32[0.0f0, tmax]
     p = SVector{parameter_size, Float32}(
-        group_norm_means[1, 1],      # Focal individual norm
-        group_norm_means[2, 1],      # Other individuals' mean norm
-        group_norm_means[3, 1],      # Group mean norm
+        group_norm_means[1],         # Group norm mean
         group_pun_means[1],          # Group punishment mean
         synergy,                     # Synergy parameter
         int_pun_ext[:, 1]...,        # External punishment vector unpacked
@@ -239,9 +237,7 @@ function behav_eq(action0s::Matrix{Float32}, int_pun_ext::Matrix{Float32}, int_p
     prob_func = (prob, i, repeat) -> remake(prob,
                                             u0 = SVector{group_size, Float32}(action0s[:, i]...),
                                             p = SVector{parameter_size, Float32}(
-                                                group_norm_means[1, i],
-                                                group_norm_means[2, i],
-                                                group_norm_means[3, i],
+                                                group_norm_means[i],
                                                 group_pun_means[i],
                                                 synergy,
                                                 int_pun_ext[:, i]...,
@@ -318,8 +314,8 @@ function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::P
     int_pun_ext = zeros(Float32, group_size, num_groups)
     int_pun_self = zeros(Float32, group_size, num_groups)
 
-    # Array for group norms: (focal_norm, others_mean_norm, group_mean_norm)
-    group_norm_means = zeros(Float32, 3, num_groups)
+    # Array for group norms
+    group_norm_means = zeros(Float32, num_groups)
 
     # Array for group punishment means
     group_pun_means = zeros(Float32, num_groups)
@@ -343,11 +339,8 @@ function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::P
             int_pun_self[j, i] = pop.int_pun_self[member_index]  # Collect self internal punsihment
         end
 
-        # Compute focal norm, others' mean norm, and group mean norm
-        focal_norm = group_norms[1]
-        others_mean_norm = mean(group_norms[2:end])
-        group_mean_norm = mean(group_norms)
-        group_norm_means[:, i] = [focal_norm, others_mean_norm, group_mean_norm]
+        # Compute group mean norm
+        group_norm_means[i] = mean(group_norms)
 
         # Compute group mean punishment
         group_pun_means[i] = mean(pun_pools)
@@ -356,7 +349,7 @@ function collect_initial_conditions_and_parameters(groups::Matrix{Int64}, pop::P
     return action0s, int_pun_ext, int_pun_self, group_norm_means, group_pun_means
 end
 
-function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Matrix{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
+function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}}, groups::Matrix{Int64}, group_norm_means::Vector{Float32}, group_pun_pools::Vector{Float32}, pop::Population) where N
     action_variance = 0.0  # Placeholder for now
     use_distribution = action_variance != 0
 
@@ -383,7 +376,7 @@ function update_actions_and_payoffs!(final_actions::Vector{SVector{N, Float32}},
         end
 
         # Update payoffs
-        total_payoff!(group_indices, group_norm_means[3, j], group_pun_pools[j], pop)
+        total_payoff!(group_indices, group_norm_means[j], group_pun_pools[j], pop)
     end
 
     nothing
@@ -474,7 +467,7 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             ext_pun_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.ext_pun[i]), upper=upper_bound)
             pop.ext_pun[i] += rand(ext_pun_dist)
         end
-
+        #=
         # Mutate `int_pun_ext` trait
         if rand() <= mutation_rate
             int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
@@ -486,6 +479,7 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
             pop.int_pun_self[i] += rand(int_pun_self_dist)
         end
+        =#
     end
 
     nothing
