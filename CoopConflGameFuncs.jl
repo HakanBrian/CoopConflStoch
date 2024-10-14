@@ -163,12 +163,12 @@ end
 function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
-
+#=
 function total_payoff!(temp_actions::Vector{Float32}, group::Vector{Int64}, pop::Population)
     group_norm = mean(@view pop.norm[group])
     group_pun = mean(@view pop.ext_pun[group])
 
-    focal_idx = group[1] 
+    focal_idx = group[1]
 
     # Extract the action of the focal individual as a real number (not a view)
     action_i = temp_actions[1]
@@ -182,6 +182,29 @@ function total_payoff!(temp_actions::Vector{Float32}, group::Vector{Int64}, pop:
     # Update the individual's payoff and interactions
     pop.payoff[focal_idx] = (payoff_foc + pop.interactions[focal_idx] * pop.payoff[focal_idx]) / (pop.interactions[focal_idx] + 1)
     pop.interactions[focal_idx] += 1
+
+    nothing
+end
+=#
+function total_payoff!(group_indices::Vector{Int64}, pop::Population)
+    group_norm = mean(@view pop.norm[group_indices])
+    group_pun = mean(@view pop.ext_pun[group_indices])
+
+    # Focal individuals position
+    idx = group_indices[1]
+
+    # Extract the action of the focal individual as a real number (not a view)
+    action_i = pop.action[idx]
+
+    # Collect actions from the other individuals in the group
+    actions_j = @view pop.action[group_indices[2:end]]
+
+    # Compute the payoff for the focal individual
+    payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
+
+    # Update the individual's payoff and interactions
+    pop.payoff[idx] = (payoff_foc + pop.interactions[idx] * pop.payoff[idx]) / (pop.interactions[idx] + 1)
+    pop.interactions[idx] += 1
 
     nothing
 end
@@ -257,6 +280,67 @@ function random_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::A
     return best_action
 end
 
+function best_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::AbstractVector{Float32}, pop::Population)
+    synergy = pop.parameters.synergy
+    exploration_rate = pop.parameters.exploration_rate
+    group_size = pop.parameters.group_size
+
+    # Get the group members' actions
+    current_action = temp_actions[focal_idx]
+    group_actions = copy(temp_actions)
+    deleteat!(group_actions, focal_idx)
+
+    # Get the internal norms
+    #int_pun_ext = pop.int_pun_ext[group[focal_idx]]
+    #int_pun_self = pop.int_pun_self[group[focal_idx]]
+    int_pun_ext = 0.0f0
+    int_pun_self = 0.0f0
+
+    # Compute norm_means
+    norm_i = pop.norm[group[focal_idx]]  # The i individual's norm
+    norms = @view pop.norm[group]
+    norm_total = sum(norms)
+    norm_total_mean = norm_total / group_size  # Mean of all norms in the group
+    norm_others_mean = (norm_total - norm_i) / (group_size - 1)  # The -i individuals' mean norm
+
+    # Compute the mean of external punishments
+    pun_mean = mean(@view pop.ext_pun[group])
+
+    # Calculate current payoff for the individual
+    current_payoff = objective(current_action, group_actions,
+                               norm_i,
+                               norm_others_mean,
+                               norm_total_mean,
+                               pun_mean,
+                               int_pun_ext,
+                               int_pun_self,
+                               synergy)
+
+    # Try small adjustments to the action and see if payoff improves
+    delta_action = 0.01
+    best_action = current_action
+    max_payoff = current_payoff
+
+    for adjustment in [-delta_action, delta_action]
+        new_action = current_action + adjustment
+        new_payoff = objective(new_action, group_actions,
+                                norm_i,
+                                norm_others_mean,
+                                norm_total_mean,
+                                pun_mean,
+                                int_pun_ext,
+                                int_pun_self,
+                                synergy)
+
+        if new_payoff > max_payoff
+            max_payoff = new_payoff
+            best_action = new_action
+        end
+    end
+
+    return best_action
+end
+
 function behavioral_equilibrium(group::Vector{Int64}, pop::Population)
     tolerance = pop.parameters.tolerance
     group_tolerance = 0.001
@@ -275,7 +359,8 @@ function behavioral_equilibrium(group::Vector{Int64}, pop::Population)
         group_stability = 0.0
 
         for i in eachindex(group)
-            best_action = random_response(i, group, temp_actions, pop)
+            #best_action = random_response(i, group, temp_actions, pop)
+            best_action = best_response(i, group, temp_actions, pop)
             action_change = max(action_change, abs(best_action - temp_actions[i]))
             temp_actions[i] = best_action
 
@@ -355,11 +440,15 @@ function social_interactions!(pop::Population)
     for i in axes(groups, 1)
         group = groups[i, :]
         temp_actions = behavioral_equilibrium(group, pop)
-        total_payoff!(temp_actions, group, pop)
         final_actions[i] = temp_actions[1]
     end
 
     pop.action = final_actions
+
+    for i in 1:pop.parameters.population_size
+        group = groups[i, :]
+        total_payoff!(group, pop)
+    end
 
     nothing
 end
@@ -435,7 +524,7 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             ext_pun_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.ext_pun[i]), upper=upper_bound)
             pop.ext_pun[i] += rand(ext_pun_dist)
         end
-
+        #=
         # Mutate `int_pun_ext` trait
         if rand() <= mutation_rate
             int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
@@ -447,6 +536,7 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
             pop.int_pun_self[i] += rand(int_pun_self_dist)
         end
+        =#
     end
 
     nothing
