@@ -202,7 +202,6 @@ end
 
 function best_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::AbstractVector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
-    exploration_rate = pop.parameters.exploration_rate
     group_size = pop.parameters.group_size
 
     # Get the group members' actions
@@ -262,8 +261,8 @@ function best_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::Abs
 end
 
 function behavioral_equilibrium(group::Vector{Int64}, pop::Population)
-    tolerance = pop.parameters.tolerance
-    group_tolerance = 0.001
+    tolerance = pop.parameters.indiv_tolerance
+    group_tolerance = pop.parameters.group_tolerance
 
     max_time_steps = pop.parameters.max_time_steps
     time_step = 0
@@ -316,7 +315,7 @@ end
 function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
-    
+
     # Create a matrix with `population_size` rows and `group_size` columns
     groups = Matrix{Int64}(undef, population_size, group_size)
 
@@ -447,7 +446,7 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
             int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
             pop.int_pun_ext[i] += rand(int_pun_ext_dist)
         end
-        
+
         # Mutate `int_pun_self` trait
         if rand() <= mutation_rate
             int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
