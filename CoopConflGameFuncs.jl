@@ -345,11 +345,11 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
         candidates = filter(x -> x != focal_individual_index, individuals_indices)
 
         # Calculate the number of related individuals using probabilistic rounding
-        num_related = max(probabilistic_round(relatedness * group_size), 1)
-        num_random = group_size - num_related
+        num_related = probabilistic_round(relatedness * (group_size - 1))
+        num_random = group_size - num_related - 1
 
-        groups[i, :] = fill(focal_individual_index, group_size)
-        groups[i, num_related+1:end] = sample(candidates, num_random, replace=false)
+        groups[i, :] .= focal_individual_index
+        groups[i, end-num_random+1:end] = sample(candidates, num_random, replace=false)
     end
 
     return groups
@@ -359,7 +359,7 @@ function social_interactions!(pop::Population)
     # Shuffle and group individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
-    final_actions = zeros(Float32, pop.parameters.population_size)
+    final_actions = Vector{Float32}(undef, pop.parameters.population_size)
 
     # Calculate equilibrium actions then payoffs for all groups
     for i in axes(groups, 1)
