@@ -23,6 +23,11 @@ mutable struct SimulationParameters
     mutation_rate::Float64
     mutation_variance::Float64
     trait_variance::Float64
+    # Mutation toggles
+    norm_mutation_enabled::Bool
+    ext_pun_mutation_enabled::Bool
+    int_pun_ext_mutation_enabled::Bool
+    int_pun_self_mutation_enabled::Bool
     # File/simulation params
     output_save_tick::Int64  # when to save output
 end
@@ -46,6 +51,10 @@ function SimulationParameters(;
     mutation_rate::Float64=0.05,
     mutation_variance::Float64=0.005,
     trait_variance::Float64=0.0,
+    norm_mutation_enabled::Bool=true,
+    ext_pun_mutation_enabled::Bool=true,
+    int_pun_ext_mutation_enabled::Bool=false,
+    int_pun_self_mutation_enabled::Bool=false,
     output_save_tick::Int64=10
 )
     return SimulationParameters(action0,
@@ -66,6 +75,10 @@ function SimulationParameters(;
                                 mutation_rate,
                                 mutation_variance,
                                 trait_variance,
+                                norm_mutation_enabled,
+                                ext_pun_mutation_enabled,
+                                int_pun_ext_mutation_enabled,
+                                int_pun_self_mutation_enabled,
                                 output_save_tick)
 end
 
@@ -89,6 +102,10 @@ function Base.copy(parameters::SimulationParameters)
         mutation_rate=getfield(parameters, :mutation_rate),
         mutation_variance=getfield(parameters, :mutation_variance),
         trait_variance=getfield(parameters, :trait_variance),
+        norm_mutation_enabled=getfield(parameters, :norm_mutation_enabled),
+        ext_pun_mutation_enabled=getfield(parameters, :ext_pun_mutation_enabled),
+        int_pun_ext_mutation_enabled=getfield(parameters, :int_pun_ext_mutation_enabled),
+        int_pun_self_mutation_enabled=getfield(parameters, :int_pun_self_mutation_enabled),
         output_save_tick=getfield(parameters, :output_save_tick)
     )
 end
@@ -112,6 +129,10 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
     setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
     setfield!(old_params, :mutation_variance, getfield(new_params, :mutation_variance))
     setfield!(old_params, :trait_variance, getfield(new_params, :trait_variance))
+    setfield!(old_params, :norm_mutation_enabled, getfield(new_params, :norm_mutation_enabled))
+    setfield!(old_params, :ext_pun_mutation_enabled, getfield(new_params, :ext_pun_mutation_enabled))
+    setfield!(old_params, :int_pun_ext_mutation_enabled, getfield(new_params, :int_pun_ext_mutation_enabled))
+    setfield!(old_params, :int_pun_self_mutation_enabled, getfield(new_params, :int_pun_self_mutation_enabled))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
     nothing

@@ -436,29 +436,28 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     # Define distributions for mutation
     for i in 1:pop.parameters.population_size
         # Mutate `norm` trait
-        if rand() <= mutation_rate
+        if pop.parameters.norm_mutation_enabled && rand() <= mutation_rate
             norm_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.norm[i]), upper=upper_bound)
             pop.norm[i] += rand(norm_dist)
         end
 
         # Mutate `ext_pun` trait
-        if rand() <= mutation_rate
+        if pop.parameters.ext_pun_mutation_enabled && rand() <= mutation_rate
             ext_pun_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.ext_pun[i]), upper=upper_bound)
             pop.ext_pun[i] += rand(ext_pun_dist)
         end
-        #=
+
         # Mutate `int_pun_ext` trait
-        if rand() <= mutation_rate
+        if pop.parameters.int_pun_ext_mutation_enabled && rand() <= mutation_rate
             int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
             pop.int_pun_ext[i] += rand(int_pun_ext_dist)
         end
 
         # Mutate `int_pun_self` trait
-        if rand() <= mutation_rate
+        if pop.parameters.int_pun_self_mutation_enabled && rand() <= mutation_rate
             int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
             pop.int_pun_self[i] += rand(int_pun_self_dist)
         end
-        =#
     end
 
     nothing
@@ -479,25 +478,25 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
     # Iterate over each individual by index
     for i in 1:pop.parameters.population_size
         # Mutate `norm` trait
-        if rand() <= mutation_rate
+        if pop.parameters.norm_mutation_enabled && rand() <= mutation_rate
             mutation_amount = rand(mutation_direction) * mutation_unit
             pop.norm[i] = max(0, pop.norm[i] + mutation_amount)
         end
 
         # Mutate `ext_pun` trait
-        if rand() <= mutation_rate
+        if pop.parameters.ext_pun_mutation_enabled && rand() <= mutation_rate
             mutation_amount = rand(mutation_direction) * mutation_unit
             pop.ext_pun[i] = max(0, pop.ext_pun[i] + mutation_amount)
         end
 
         # Mutate `int_pun_ext` trait
-        if rand() <= mutation_rate
+        if pop.parameters.int_pun_ext_mutation_enabled && rand() <= mutation_rate
             mutation_amount = rand(mutation_direction) * mutation_unit
             pop.int_pun_ext[i] = max(0, pop.int_pun_ext[i] + mutation_amount)
         end
 
         # Mutate `int_pun_self` trait
-        if rand() <= mutation_rate
+        if pop.parameters.int_pun_self_mutation_enabled && rand() <= mutation_rate
             mutation_amount = rand(mutation_direction) * mutation_unit
             pop.int_pun_self[i] = max(0, pop.int_pun_self[i] + mutation_amount)
         end
