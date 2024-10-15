@@ -164,7 +164,7 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function total_payoff!(temp_actions::Vector{Float32}, group::Vector{Int64}, pop::Population)
+function total_payoff!(temp_actions::Vector{Float32}, group::AbstractVector{Int64}, pop::Population)
     group_norm = mean(@view pop.norm[group])
     group_pun = mean(@view pop.ext_pun[group])
 
@@ -200,7 +200,7 @@ end
 # Behavioral Equilibrium Function
 ##################
 
-function best_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::AbstractVector{Float32}, pop::Population)
+function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_actions::AbstractVector{Float32}, pop::Population)
     synergy = pop.parameters.synergy
     group_size = pop.parameters.group_size
 
@@ -235,13 +235,25 @@ function best_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::Abs
 
     # Try small adjustments to the action and see if payoff improves
     delta_action = 0.01
+
+    # Perturb action upwards and downwards
+    action_up = action_i + delta_action
+    action_down = action_i - delta_action
+
+    # Track the best action
     best_action = action_i
-    max_payoff = current_payoff
 
     # Calculate new payoffs with perturbed actions
-    for adjustment in [-delta_action, delta_action]
-        new_action = action_i + adjustment
-        new_payoff = objective(new_action, action_j,
+    new_payoff_up = objective(action_up, action_j,
+                              norm_i,
+                              norm_mini,
+                              norm_pool,
+                              pun_pool,
+                              int_pun_ext,
+                              int_pun_self,
+                              synergy)
+
+    new_payoff_down = objective(action_down, action_j,
                                 norm_i,
                                 norm_mini,
                                 norm_pool,
@@ -250,17 +262,17 @@ function best_response(focal_idx::Int64, group::Vector{Int64}, temp_actions::Abs
                                 int_pun_self,
                                 synergy)
 
-        # Decide which action to keep based on payoff improvement
-        if new_payoff > max_payoff
-            max_payoff = new_payoff
-            best_action = new_action
-        end
+    # Decide which direction to adjust action based on payoff improvement
+    if new_payoff_up > current_payoff
+        best_action = action_up
+    elseif new_payoff_down > current_payoff
+        best_action = action_down
     end
 
     return best_action
 end
 
-function behavioral_equilibrium(group::Vector{Int64}, pop::Population)
+function behavioral_equilibrium(group::AbstractVector{Int64}, pop::Population)
     tolerance = pop.parameters.indiv_tolerance
     group_tolerance = pop.parameters.group_tolerance
 
@@ -327,23 +339,11 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
         candidates = filter(x -> x != focal_individual_index, individuals_indices)
 
         # Calculate the number of related individuals using probabilistic rounding
-        num_related = probabilistic_round(relatedness * group_size)
+        num_related = max(probabilistic_round(relatedness * group_size), 1)
         num_random = group_size - num_related
 
-        if num_related > 0
-            # Sample random individuals from the filtered candidates
-            random_individuals = sample(candidates, num_random, replace=false)
-
-            # Fill the group with related individuals and sampled individuals
-            related_individuals = fill(focal_individual_index, num_related)
-            final_group = vcat(related_individuals, random_individuals)
-        else
-            random_individuals = sample(candidates, group_size - 1, replace=false)
-            final_group = vcat(focal_individual_index, random_individuals)
-        end
-
-        # Assign the final group to the matrix row
-        groups[i, :] = final_group
+        groups[i, :] = fill(focal_individual_index, group_size)
+        groups[i, num_related+1:end] = sample(candidates, num_random, replace=false)
     end
 
     return groups
@@ -357,7 +357,7 @@ function social_interactions!(pop::Population)
 
     # Calculate equilibrium actions then payoffs for all groups
     for i in axes(groups, 1)
-        group = groups[i, :]
+        group = @view groups[i, :]
         temp_actions = behavioral_equilibrium(group, pop)
         total_payoff!(temp_actions, group, pop)
         final_actions[group[1]] = temp_actions[1]

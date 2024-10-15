@@ -29,7 +29,7 @@ groups = shuffle_and_group(params.population_size, params.group_size, params.rel
 @time best_actions = behavioral_equilibrium(groups[1, :], population)
 
 # Check payoff
-total_payoff!(groups[1, :], population)
+total_payoff!(best_actions, groups[1, :], population)
 println(population.payoff)
 
 # Calculate fitness
