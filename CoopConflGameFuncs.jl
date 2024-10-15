@@ -174,7 +174,7 @@ function total_payoff!(group::AbstractVector{Int64}, pop::Population)
     action_i = pop.action[focal_idx]
 
     # Collect actions from the other individuals in the group
-    actions_j = @view pop.action[group[2:end]]
+    actions_j = @view pop.action[@view group[2:end]]
 
     # Compute the payoff for the focal individual
     payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
