@@ -164,17 +164,17 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function total_payoff!(temp_actions::Vector{Float32}, group::AbstractVector{Int64}, pop::Population)
+function total_payoff!(group::AbstractVector{Int64}, pop::Population)
     group_norm = mean(@view pop.norm[group])
     group_pun = mean(@view pop.ext_pun[group])
 
     focal_idx = group[1]
 
     # Extract the action of the focal individual as a real number (not a view)
-    action_i = temp_actions[1]
+    action_i = pop.action[focal_idx]
 
     # Collect actions from the other individuals in the group
-    actions_j = @view temp_actions[2:end]
+    actions_j = @view pop.action[group[2:end]]
 
     # Compute the payoff for the focal individual
     payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
@@ -253,6 +253,13 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_acti
                               int_pun_self,
                               synergy)
 
+    # Decide which direction to adjust action based on payoff improvement
+    if new_payoff_up > current_payoff
+        best_action = action_up
+        return best_action
+    end
+
+    # Calculate new payoffs with perturbed actions
     new_payoff_down = objective(action_down, action_j,
                                 norm_i,
                                 norm_mini,
@@ -263,23 +270,22 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_acti
                                 synergy)
 
     # Decide which direction to adjust action based on payoff improvement
-    if new_payoff_up > current_payoff
-        best_action = action_up
-    elseif new_payoff_down > current_payoff
+    if new_payoff_down > current_payoff
         best_action = action_down
+        return best_action
     end
 
     return best_action
 end
 
-function behavioral_equilibrium(group::AbstractVector{Int64}, pop::Population)
+function behavioral_equilibrium!(group::AbstractVector{Int64}, pop::Population)
     tolerance = pop.parameters.indiv_tolerance
     group_tolerance = pop.parameters.group_tolerance
 
     max_time_steps = pop.parameters.max_time_steps
     time_step = 0
 
-    temp_actions = copy(@view pop.action[group])
+    temp_actions = @view pop.action[group]
 
     while time_step < max_time_steps
         time_step += 1
@@ -308,7 +314,7 @@ function behavioral_equilibrium(group::AbstractVector{Int64}, pop::Population)
         end
     end
 
-    return temp_actions
+    nothing
 end
 
 
@@ -350,7 +356,7 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
 end
 
 function social_interactions!(pop::Population)
-    # Shuffle and pair individuals
+    # Shuffle and group individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     final_actions = zeros(Float32, pop.parameters.population_size)
@@ -358,9 +364,9 @@ function social_interactions!(pop::Population)
     # Calculate equilibrium actions then payoffs for all groups
     for i in axes(groups, 1)
         group = @view groups[i, :]
-        temp_actions = behavioral_equilibrium(group, pop)
-        total_payoff!(temp_actions, group, pop)
-        final_actions[group[1]] = temp_actions[1]
+        behavioral_equilibrium!(group, pop)
+        total_payoff!(group, pop)
+        final_actions[group[1]] = pop.action[group[1]]
     end
 
     # Update the population values with the equilibrium actions
