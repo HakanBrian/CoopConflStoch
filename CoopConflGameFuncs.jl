@@ -164,24 +164,21 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
 end
 
-function total_payoff!(group::AbstractVector{Int64}, pop::Population)
-    group_norm = mean(@view pop.norm[group])
-    group_pun = mean(@view pop.ext_pun[group])
-
-    focal_idx = group[1]
+function total_payoff!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
+    focal_idiv = group[1]
 
     # Extract the action of the focal individual as a real number (not a view)
-    action_i = pop.action[focal_idx]
+    action_i = pop.action[focal_idiv]
 
     # Collect actions from the other individuals in the group
     actions_j = @view pop.action[@view group[2:end]]
 
     # Compute the payoff for the focal individual
-    payoff_foc = payoff(action_i, actions_j, group_norm, group_pun, pop.parameters.synergy)
+    payoff_foc = payoff(action_i, actions_j, norm_pool, pun_pool, pop.parameters.synergy)
 
     # Update the individual's payoff and interactions
-    pop.payoff[focal_idx] = (payoff_foc + pop.interactions[focal_idx] * pop.payoff[focal_idx]) / (pop.interactions[focal_idx] + 1)
-    pop.interactions[focal_idx] += 1
+    pop.payoff[focal_idiv] = (payoff_foc + pop.interactions[focal_idiv] * pop.payoff[focal_idiv]) / (pop.interactions[focal_idiv] + 1)
+    pop.interactions[focal_idiv] += 1
 
     nothing
 end
@@ -200,31 +197,48 @@ end
 # Behavioral Equilibrium Function
 ##################
 
-function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_actions::AbstractVector{Float32}, pop::Population)
+function filter_out_val!(arr::AbstractVector{T}, exclude_val::T, buffer::Vector{T}) where T
+    count = 1
+    for i in eachindex(arr)
+        if arr[i] != exclude_val  # Exclude based on the value
+            buffer[count] = arr[i]
+            count += 1
+        end
+    end
+    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
+end
+
+function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vector{T}) where T
+    count = 1
+    for i in eachindex(arr)
+        if i != exclude_idx  # Exclude based on the index
+            buffer[count] = arr[i]
+            count += 1
+        end
+    end
+    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
+end
+
+function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population)
     synergy = pop.parameters.synergy
     group_size = pop.parameters.group_size
+    focal_indiv = group[focal_idx]
 
     # Get the group members' actions
-    action_i = temp_actions[focal_idx]
-    action_j = copy(temp_actions)
-    deleteat!(action_j, focal_idx)
+    actions = @view pop.action[group]
+    action_i = actions[focal_idx]
+    action_j_filtered_view = filter_out_idx!(actions, focal_idx, action_j_buffer)
 
-    # Get the internal norms
-    int_pun_ext = pop.int_pun_ext[group[focal_idx]]
-    int_pun_self = pop.int_pun_self[group[focal_idx]]
+    # Get the internal punishments
+    int_pun_ext = pop.int_pun_ext[focal_indiv]
+    int_pun_self = pop.int_pun_self[focal_indiv]
 
-    # Compute norm_means
-    norms = @view pop.norm[group]
-    norm_i = norms[focal_idx]  # Norm of i individual
-    norm_sum = sum(norms)
-    norm_mini = (norm_sum - norm_i) / (group_size - 1)  # Mean norm of -i individuals
-    norm_pool = norm_sum / group_size  # Mean of all norms in the group
-
-    # Compute the mean of external punishments
-    pun_pool = mean(@view pop.ext_pun[group])
+    # Compute norm means
+    norm_i = pop.norm[focal_indiv]  # Norm of i individual
+    norm_mini = (norm_pool * group_size - norm_i) / (group_size - 1)  # Mean norm of -i individuals
 
     # Calculate current payoff for the individual
-    current_payoff = objective(action_i, action_j,
+    current_payoff = objective(action_i, action_j_filtered_view,
                                norm_i,
                                norm_mini,
                                norm_pool,
@@ -244,7 +258,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_acti
     best_action = action_i
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_up = objective(action_up, action_j,
+    new_payoff_up = objective(action_up, action_j_filtered_view,
                               norm_i,
                               norm_mini,
                               norm_pool,
@@ -260,7 +274,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_acti
     end
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_down = objective(action_down, action_j,
+    new_payoff_down = objective(action_down, action_j_filtered_view,
                                 norm_i,
                                 norm_mini,
                                 norm_pool,
@@ -278,15 +292,20 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, temp_acti
     return best_action
 end
 
-function behavioral_equilibrium!(group::AbstractVector{Int64}, pop::Population)
+function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
+    # Collect parameters
     tolerance = pop.parameters.indiv_tolerance
     group_tolerance = pop.parameters.group_tolerance
-
     max_time_steps = pop.parameters.max_time_steps
-    time_step = 0
+    group_size = pop.parameters.group_size
 
+    # Create a view for group actions
     temp_actions = @view pop.action[group]
 
+    # Pre-allocate a buffer for action_j
+    action_j_buffer = Vector{Float32}(undef, group_size - 1)
+
+    time_step = 0
     while time_step < max_time_steps
         time_step += 1
         action_change = 0.0  # Reset action_change for each iteration
@@ -297,7 +316,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, pop::Population)
 
         # Calculate the best action (relatively) of each individual in the group
         for i in eachindex(group)
-            best_action = best_response(i, group, temp_actions, pop)
+            best_action = best_response(i, group, action_j_buffer, norm_pool, pun_pool, pop)
             action_change = max(action_change, abs(best_action - temp_actions[i]))
             temp_actions[i] = best_action
 
@@ -306,7 +325,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, pop::Population)
         end
 
         # Normalize group stability by the group size
-        group_stability /= pop.parameters.group_size
+        group_stability /= group_size
 
         # Check if the action change and group stability are both below their respective thresholds
         if action_change < tolerance && group_stability < group_tolerance
@@ -337,22 +356,34 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
     # Create a matrix with `population_size` rows and `group_size` columns
     groups = Matrix{Int64}(undef, population_size, group_size)
 
+    # Pre-allocate a buffer for candidates (one less than population size, since focal individual is excluded)
+    candidates_buffer = Vector{Int64}(undef, population_size - 1)
+
     # Iterate over each individual index and form a group
     for i in 1:population_size
         focal_individual_index = individuals_indices[i]
 
-        # Create a list of potential candidates excluding the focal individual
-        candidates = filter(x -> x != focal_individual_index, individuals_indices)
+        # Filter out the focal individual
+        candidates_filtered_view = filter_out_val!(individuals_indices, focal_individual_index, candidates_buffer)
 
-        # Calculate the number of related individuals using probabilistic rounding
+        # Calculate the number of related and random individuals
         num_related = probabilistic_round(relatedness * (group_size - 1))
         num_random = group_size - num_related - 1
 
+        # Assign the focal individual to the group
         groups[i, :] .= focal_individual_index
-        groups[i, end-num_random+1:end] = sample(candidates, num_random, replace=false)
+        groups[i, end-num_random+1:end] = sample(candidates_filtered_view, num_random, replace=false)
     end
 
     return groups
+end
+
+
+function collect_group(group::AbstractVector{Int64}, pop::Population)
+    norm_pool = sum(@view pop.norm[group]) / pop.parameters.group_size
+    pun_pool = sum(@view pop.ext_pun[group]) / pop.parameters.group_size
+
+    return norm_pool, pun_pool
 end
 
 function social_interactions!(pop::Population)
@@ -361,11 +392,16 @@ function social_interactions!(pop::Population)
 
     final_actions = Vector{Float32}(undef, pop.parameters.population_size)
 
-    # Calculate equilibrium actions then payoffs for all groups
+    # Iterate over each group to find actions and payoffs
     for i in axes(groups, 1)
         group = @view groups[i, :]
-        behavioral_equilibrium!(group, pop)
-        total_payoff!(group, pop)
+        norm_pool, pun_pool = collect_group(group, pop)
+
+        # Calculate equilibrium actions then payoffs for current groups
+        behavioral_equilibrium!(group, norm_pool, pun_pool, pop)
+        total_payoff!(group, norm_pool, pun_pool, pop)
+
+        # Update final actions
         final_actions[group[1]] = pop.action[group[1]]
     end
 
@@ -381,10 +417,11 @@ end
 ##################
 
 function reproduce!(pop::Population)
-    # Calculate fitness for all individuals in the population
-    fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), 1:pop.parameters.population_size)
     # Create a list of indices corresponding to individuals
     indices_list = 1:pop.parameters.population_size
+
+    # Calculate fitness for all individuals in the population
+    fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), indices_list)
 
     # Sample indices with the given fitness weights
     sampled_indices = sample(indices_list, ProbabilityWeights(fitnesses), pop.parameters.population_size, replace=true, ordered=false)
