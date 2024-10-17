@@ -148,8 +148,12 @@ function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::R
     return punishment_pool * (action_i - norm_pool)^2
 end
 
-function internal_punishment(action_i::Real, norm_pool::Real, T_ext::Real)
+function internal_punishment_I(action_i::Real, norm_pool::Real, T_ext::Real)
     return T_ext * (action_i - norm_pool)^2
+end
+
+function internal_punishment_II(action_i::Real, norm_pool::Real, T_ext::Real)
+    return T_ext * log(1 + ((action_i - norm_pool)^2))
 end
 
 function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
@@ -169,7 +173,7 @@ end
 
 function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T_ext::Real, synergy::Real)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
-    i = internal_punishment(action_i, norm_pool, T_ext)
+    i = internal_punishment_I(action_i, norm_pool, T_ext)
     return p - i
 end
 
