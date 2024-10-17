@@ -239,7 +239,7 @@ function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vecto
     return view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
-function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population)
+function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
     synergy = pop.parameters.synergy
     group_size = pop.parameters.group_size
     focal_indiv = group[focal_idx]
@@ -267,18 +267,14 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
                                         int_pun_self,
                                         synergy)
 
+    # Track the best action
+    best_action = action_i
+
     # Calculate current payoff for the individual
     current_payoff = prob_func(action_i)
 
-    # Try small adjustments to the action and see if payoff improves
-    delta_action = 0.01
-
-    # Perturb action upwards and downwards
+    # Perturb action upwards
     action_up = action_i + delta_action
-    action_down = action_i - delta_action
-
-    # Track the best action
-    best_action = action_i
 
     # Calculate new payoffs with perturbed actions
     new_payoff_up = prob_func(action_up)
@@ -288,6 +284,9 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
         best_action = action_up
         return best_action
     end
+
+    # Perturb action downwards
+    action_down = max(action_i - delta_action, 0.0f0)
 
     # Calculate new payoffs with perturbed actions
     new_payoff_down = prob_func(action_down)
@@ -303,7 +302,7 @@ end
 
 function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
     # Collect parameters
-    tolerance = pop.parameters.indiv_tolerance
+    indiv_tolerance = pop.parameters.indiv_tolerance
     group_tolerance = pop.parameters.group_tolerance
     max_time_steps = pop.parameters.max_time_steps
     group_size = pop.parameters.group_size
@@ -314,6 +313,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
     # Pre-allocate a buffer for action_j
     action_j_buffer = Vector{Float32}(undef, group_size - 1)
 
+    delta_action = 1.0f0
     time_step = 0
     while time_step < max_time_steps
         time_step += 1
@@ -325,7 +325,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
 
         # Calculate the best action (relatively) of each individual in the group
         for i in eachindex(group)
-            best_action = best_response(i, group, action_j_buffer, norm_pool, pun_pool, pop)
+            best_action = best_response(i, group, action_j_buffer, norm_pool, pun_pool, pop, delta_action)
             action_change = max(action_change, abs(best_action - temp_actions[i]))
             temp_actions[i] = best_action
 
@@ -336,8 +336,14 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
         # Normalize group stability by the group size
         group_stability /= group_size
 
+        # Dynamically reduce delta_action towards convergence
+        if action_change == 0.0f0 && delta_action > indiv_tolerance
+            delta_action *= 0.5f0
+            continue
+        end
+
         # Check if the action change and group stability are both below their respective thresholds
-        if action_change < tolerance && group_stability < group_tolerance
+        if action_change < indiv_tolerance && group_stability < group_tolerance
             break
         end
     end
