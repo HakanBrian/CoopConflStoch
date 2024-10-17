@@ -148,6 +148,10 @@ function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::R
     return punishment_pool * (action_i - norm_pool)^2
 end
 
+function internal_punishment(action_i::Real, norm_pool::Real, T_ext::Real)
+    return T_ext * (action_i - norm_pool)^2
+end
+
 function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
     return T_ext * (action_i - norm_pool_mini)^2
 end
@@ -157,11 +161,23 @@ function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
 end
 
 function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
-    return benefit(action_i, actions_j, synergy) - cost(action_i) - external_punishment(action_i, norm_pool, punishment_pool)
+    b = benefit(action_i, actions_j, synergy)
+    c = cost(action_i)
+    ep = external_punishment(action_i, norm_pool, punishment_pool)
+    return b - c - ep
+end
+
+function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T_ext::Real, synergy::Real)
+    p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
+    i = internal_punishment(action_i, norm_pool, T_ext)
+    return p - i
 end
 
 function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
-    return payoff(action_i, actions_j, norm_pool, punishment_pool, synergy) - internal_punishment_ext(action_i, norm_mini, T_ext) - internal_punishment_self(action_i, norm_i, T_self)
+    p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
+    ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
+    ips = internal_punishment_self(action_i, norm_i, T_self)
+    return p - ipe - ips
 end
 
 function total_payoff!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
@@ -237,15 +253,18 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
     norm_i = pop.norm[focal_indiv]  # Norm of i individual
     norm_mini = (norm_pool * group_size - norm_i) / (group_size - 1)  # Mean norm of -i individuals
 
+    # Define simplified lambda function to compute payoff
+    prob_func = (action_i) -> objective(action_i, action_j_filtered_view,
+                                        norm_i,
+                                        norm_mini,
+                                        norm_pool,
+                                        pun_pool,
+                                        int_pun_ext,
+                                        int_pun_self,
+                                        synergy)
+
     # Calculate current payoff for the individual
-    current_payoff = objective(action_i, action_j_filtered_view,
-                               norm_i,
-                               norm_mini,
-                               norm_pool,
-                               pun_pool,
-                               int_pun_ext,
-                               int_pun_self,
-                               synergy)
+    current_payoff = prob_func(action_i)
 
     # Try small adjustments to the action and see if payoff improves
     delta_action = 0.01
@@ -258,14 +277,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
     best_action = action_i
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_up = objective(action_up, action_j_filtered_view,
-                              norm_i,
-                              norm_mini,
-                              norm_pool,
-                              pun_pool,
-                              int_pun_ext,
-                              int_pun_self,
-                              synergy)
+    new_payoff_up = prob_func(action_up)
 
     # Decide which direction to adjust action based on payoff improvement
     if new_payoff_up > current_payoff
@@ -274,14 +286,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
     end
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_down = objective(action_down, action_j_filtered_view,
-                                norm_i,
-                                norm_mini,
-                                norm_pool,
-                                pun_pool,
-                                int_pun_ext,
-                                int_pun_self,
-                                synergy)
+    new_payoff_down = prob_func(action_down)
 
     # Decide which direction to adjust action based on payoff improvement
     if new_payoff_down > current_payoff
@@ -372,6 +377,8 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
 
         # Assign the focal individual to the group
         groups[i, :] .= focal_individual_index
+
+        # Assign random individuals to the group
         groups[i, end-num_random+1:end] = sample(candidates_filtered_view, num_random, replace=false)
     end
 
