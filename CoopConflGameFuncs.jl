@@ -184,6 +184,12 @@ function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Re
     return p - ipe - ips
 end
 
+function objective_internal(action_i::Real, norm_i::Real, norm_mini::Real, T_ext::Real, T_self::Real)
+    ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
+    ips = internal_punishment_self(action_i, norm_i, T_self)
+    return ipe - ips
+end
+
 function total_payoff!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
     focal_idiv = group[1]
 
@@ -258,46 +264,50 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
     norm_mini = (norm_pool * group_size - norm_i) / (group_size - 1)  # Mean norm of -i individuals
 
     # Define simplified lambda function to compute payoff
-    prob_func = (action_i) -> objective(action_i, action_j_filtered_view,
-                                        norm_i,
-                                        norm_mini,
-                                        norm_pool,
-                                        pun_pool,
-                                        int_pun_ext,
-                                        int_pun_self,
-                                        synergy)
+    payoff_func = (action_i) -> payoff(action_i, action_j_filtered_view,
+                                       norm_pool,
+                                       pun_pool,
+                                       synergy)
 
-    # Track the best action
-    best_action = action_i
+    # Define simplified lambda function to compute objective
+    objective_func = (action_i, payoff_i) -> payoff_i - objective_internal(action_i,
+                                                                           norm_i,
+                                                                           norm_mini,
+                                                                           int_pun_ext,
+                                                                           int_pun_self)
 
-    # Calculate current payoff for the individual
-    current_payoff = prob_func(action_i)
+    # Track the current action & payoff
+    current_action = action_i
+    current_payoff = payoff_func(current_action)
+
+    # Calculate current objective for the individual
+    current_objective = objective_func(current_action, current_payoff)
 
     # Perturb action upwards
     action_up = action_i + delta_action
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_up = prob_func(action_up)
+    payoff_up = payoff_func(action_up)
+    objective_up = objective_func(action_up, payoff_up)
 
     # Decide which direction to adjust action based on payoff improvement
-    if new_payoff_up > current_payoff
-        best_action = action_up
-        return best_action
+    if objective_up > current_objective
+        return action_up, payoff_up
     end
 
     # Perturb action downwards
     action_down = max(action_i - delta_action, 0.0f0)
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_down = prob_func(action_down)
+    payoff_down = payoff_func(action_down)
+    objective_down = objective_func(action_down, payoff_down)
 
     # Decide which direction to adjust action based on payoff improvement
-    if new_payoff_down > current_payoff
-        best_action = action_down
-        return best_action
+    if objective_down > current_objective
+        return action_down, payoff_down
     end
 
-    return best_action
+    return current_action, current_payoff
 end
 
 function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
@@ -309,6 +319,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
 
     # Create a view for group actions
     temp_actions = @view pop.action[group]
+    temp_payoffs = @view pop.payoff[group]
 
     # Pre-allocate a buffer for action_j
     action_j_buffer = Vector{Float32}(undef, group_size - 1)
@@ -325,9 +336,10 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
 
         # Calculate the best action (relatively) of each individual in the group
         for i in eachindex(group)
-            best_action = best_response(i, group, action_j_buffer, norm_pool, pun_pool, pop, delta_action)
+            best_action, best_payoff = best_response(i, group, action_j_buffer, norm_pool, pun_pool, pop, delta_action)
             action_change = max(action_change, abs(best_action - temp_actions[i]))
             temp_actions[i] = best_action
+            temp_payoffs[i] = best_payoff
 
             # Calculate group stability: sum of squared differences from the group's mean action
             group_stability += (best_action - group_actions_mean)^2
@@ -346,7 +358,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
         end
 
         # Check if the action change and group stability are both below their respective thresholds
-        if action_change < indiv_tolerance && group_stability < group_tolerance
+        if action_change <= indiv_tolerance && group_stability <= group_tolerance
             break
         end
     end
@@ -406,27 +418,39 @@ function collect_group(group::AbstractVector{Int64}, pop::Population)
     return norm_pool, pun_pool
 end
 
+function update_interactions!(focal_idiv::Int64, pop::Population)
+    # Update the individual's interactions
+    pop.interactions[focal_idiv] += 1
+
+    nothing
+end
+
 function social_interactions!(pop::Population)
     # Shuffle and group individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     final_actions = Vector{Float32}(undef, pop.parameters.population_size)
+    final_payoffs = Vector{Float32}(undef, pop.parameters.population_size)
 
     # Iterate over each group to find actions and payoffs
     for i in axes(groups, 1)
         group = @view groups[i, :]
+        focal_indiv = group[1]
         norm_pool, pun_pool = collect_group(group, pop)
 
         # Calculate equilibrium actions then payoffs for current groups
         behavioral_equilibrium!(group, norm_pool, pun_pool, pop)
-        total_payoff!(group, norm_pool, pun_pool, pop)
+        #total_payoff!(group, norm_pool, pun_pool, pop)
+        update_interactions!(focal_indiv, pop)
 
-        # Update final actions
-        final_actions[group[1]] = pop.action[group[1]]
+        # Update final actions & payoffs
+        final_actions[focal_indiv] = pop.action[focal_indiv]
+        final_payoffs[focal_indiv] = pop.payoff[focal_indiv]
     end
 
     # Update the population values with the equilibrium actions
     pop.action = final_actions
+    pop.payoff = final_payoffs
 
     nothing
 end
