@@ -337,7 +337,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
         group_stability /= group_size
 
         # Dynamically reduce delta_action towards convergence
-        if action_change == 0.0f0 && delta_action > indiv_tolerance
+        if action_change == 0.0f0 && delta_action >= indiv_tolerance
             delta_action *= 0.5f0
             continue
         end
