@@ -313,7 +313,7 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
     # Pre-allocate a buffer for action_j
     action_j_buffer = Vector{Float32}(undef, group_size - 1)
 
-    delta_action = 1.0f0
+    delta_action = 0.1f0
     time_step = 0
     while time_step < max_time_steps
         time_step += 1
@@ -339,6 +339,9 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
         # Dynamically reduce delta_action towards convergence
         if action_change == 0.0f0 && delta_action >= indiv_tolerance
             delta_action *= 0.5f0
+            continue
+        elseif action_change != 0.0f0
+            delta_action *= 1.5f0
             continue
         end
 
