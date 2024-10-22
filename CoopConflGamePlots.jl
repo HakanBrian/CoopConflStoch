@@ -1,4 +1,4 @@
-using Distributed, Plots, PlotlyJS
+using Distributed, Plots, PlotlyJS, CSV, FilePathsBase
 
 
 ##################
@@ -232,4 +232,23 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
 
     # Display table
     display(Plot([table_trace], table_layout))
+end
+
+function save_simulation(simulation::DataFrame, filename::String)
+    # Ensure the filename has the .csv extension
+    if !endswith(filename, ".csv")
+        filename *= ".csv"
+    end
+
+    # Convert to an absolute path
+    filepath = abspath(filename)
+
+    # Check if the file already exists, and print a warning if it does
+    if isfile(filepath)
+        println("Warning: File '$filepath' already exists and will be overwritten.")
+    end
+
+    # Save the dataframe, overwriting the file if it exists
+    CSV.write(filepath, simulation)
+    println("File saved as: $filepath")
 end
