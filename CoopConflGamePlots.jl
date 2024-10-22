@@ -52,28 +52,20 @@ function calculate_statistics(all_simulation_means::DataFrame)
     # Group by generation
     grouped = groupby(all_simulation_means, :generation)
 
-    # Calculate mean and variance for each trait across replicates
+    # Calculate mean and standard deviation for each trait across replicates
     stats = combine(grouped,
                     :action_mean => mean => :action_mean_mean,
-                    :action_mean => var => :action_mean_var,
+                    :action_mean => std => :action_mean_std,
                     :a_mean => mean => :a_mean_mean,
-                    :a_mean => var => :a_mean_var,
+                    :a_mean => std => :a_mean_std,
                     :p_mean => mean => :p_mean_mean,
-                    :p_mean => var => :p_mean_var,
+                    :p_mean => std => :p_mean_std,
                     :T_ext_mean => mean => :T_ext_mean_mean,
-                    :T_ext_mean => var => :T_ext_mean_var,
+                    :T_ext_mean => std => :T_ext_mean_std,
                     :T_self_mean => mean => :T_self_mean_mean,
-                    :T_self_mean => var => :T_self_mean_var,
+                    :T_self_mean => std => :T_self_mean_std,
                     :payoff_mean => mean => :payoff_mean_mean,
-                    :payoff_mean => var => :payoff_mean_var)
-
-    # Compute standard deviation
-    stats[:, "action_mean_std"] = sqrt.(stats[:, "action_mean_var"])
-    stats[:, "a_mean_std"] = sqrt.(stats[:, "a_mean_var"])
-    stats[:, "p_mean_std"] = sqrt.(stats[:, "p_mean_var"])
-    stats[:, "T_ext_mean_std"] = sqrt.(stats[:, "T_ext_mean_var"])
-    stats[:, "T_self_mean_std"] = sqrt.(stats[:, "T_self_mean_var"])
-    stats[:, "payoff_mean_std"] = sqrt.(stats[:, "payoff_mean_var"])
+                    :payoff_mean => std => :payoff_mean_std)
 
     return stats
 end
