@@ -45,7 +45,26 @@ function simulation_replicate(parameters::SimulationParameters, num_replicates::
     # Concatenate all the simulation means returned by each worker
     all_simulation_means = vcat(results...)
 
-    return all_simulation_means, num_replicates
+    return all_simulation_means
+end
+
+function simulation_replicate(parameter_sweep::Vector{SimulationParameters}, num_replicates::Int64; num_workers::Int64 = nworkers())
+    # Create a list of tasks (parameter set index, parameter set, replicate) to distribute
+    tasks = [(idx, parameters, i) for (idx, parameters) in enumerate(parameter_sweep) for i in 1:num_replicates]
+
+    # Use pmap to distribute the tasks across the workers asynchronously
+    results = pmap(workers=collect(1:num_workers), tasks) do task
+        param_idx, parameters, replicate = task
+        # Run simulation and store the result with the parameter set index
+        result = run_simulation(parameters, replicate)
+        (param_idx, result)  # Return a tuple with parameter index and the result
+    end
+
+    # Create a DataFrame with parameter index and corresponding results
+    all_simulation_means = DataFrame(vcat(results...), :auto)
+    rename!(all_simulation_means, [:param_id, :simulation_result])  # Rename columns for clarity
+
+    return all_simulation_means
 end
 
 function calculate_statistics(all_simulation_means::DataFrame)
@@ -70,11 +89,17 @@ function calculate_statistics(all_simulation_means::DataFrame)
     return stats
 end
 
-function plot_simulation_data_Plots(all_simulation_means::Tuple{DataFrame, Int64})
-    num_replicates = all_simulation_means[2]
+function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
+    # Filter the data if param_id is provided
+    if param_id !== nothing
+        all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
+    end
+    
+    # Get the number of replicates for the current data
+    num_replicates = maximum(all_simulation_means.replicate)  # Assuming replicate numbers are consistent
 
     # Calculate statistics
-    statistics = calculate_statistics(all_simulation_means[1])
+    statistics = calculate_statistics(all_simulation_means)
 
     # Define color palette for each trait type
     colors = Dict(
@@ -97,7 +122,7 @@ function plot_simulation_data_Plots(all_simulation_means::Tuple{DataFrame, Int64
 
     # Plot each replicate's data with consistent colors and labels
     for i in 1:num_replicates
-        sim_data = filter(row -> row.replicate == i, all_simulation_means[1])
+        sim_data = filter(row -> row.replicate == i, all_simulation_means)
         Plots.plot!(p, sim_data.generation, sim_data.action_mean, label="", color=colors["action"], linewidth=1, alpha=0.6)
         Plots.plot!(p, sim_data.generation, sim_data.a_mean, label="", color=colors["a"], linewidth=1, alpha=0.6)
         Plots.plot!(p, sim_data.generation, sim_data.p_mean, label="", color=colors["p"], linewidth=1, alpha=0.6)
@@ -120,9 +145,71 @@ function plot_simulation_data_Plots(all_simulation_means::Tuple{DataFrame, Int64
     display(p)
 end
 
-function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int64})
-    num_replicates = all_simulation_means[2]
-    statistics = calculate_statistics(all_simulation_means[1])
+function create_trait_table(statistics::DataFrame)
+    # Check if `param_id` exists in the DataFrame
+    table_data = []
+    if :param_id in names(statistics)
+        # Group by `param_id` and extract start and end values for each group
+        grouped_by_param = groupby(statistics, :param_id)
+
+        for group in grouped_by_param
+            param_id_val = group.param_id[1]  # Extract the param_id value
+            for trait in ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
+                start_values = group[1, [trait * "_mean"]][1]  # Start value (first generation)
+                end_values = group[end, [trait * "_mean"]][1]  # End value (last generation)
+                push!(table_data, (param_id_val, trait, start_values, end_values))
+            end
+        end
+
+        # Create a DataFrame for the table with Param_ID
+        table_df = DataFrame(table_data, [:Param_ID, :Trait, :Start_Value, :End_Value])
+
+        # Create table trace
+        table_trace = PlotlyJS.table(
+            header = Dict(:values => ["Param ID", "Trait", "Start Value", "End Value"]),
+            cells = Dict(:values => [table_df.Param_ID, table_df.Trait, table_df.Start_Value, table_df.End_Value])
+        )
+
+    else
+        # If no `param_id`, extract start and end values without grouping
+        for trait in ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
+            start_values = statistics[1, [trait * "_mean"]][1]  # Start value (first generation)
+            end_values = statistics[end, [trait * "_mean"]][1]  # End value (last generation)
+            push!(table_data, (trait, start_values, end_values))
+        end
+
+        # Create a DataFrame for the table without Param_ID
+        table_df = DataFrame(table_data, [:Trait, :Start_Value, :End_Value])
+
+        # Create table trace
+        table_trace = PlotlyJS.table(
+            header = Dict(:values => ["Trait", "Start Value", "End Value"]),
+            cells = Dict(:values => [table_df.Trait, table_df.Start_Value, table_df.End_Value])
+        )
+    end
+
+    # Set table layout
+    table_layout = Layout(
+        title="Beginning and Final Values",
+        margin=Dict(:t => 50, :b => 50),
+        height=300
+    )
+
+    # Display the table
+    display(Plot([table_trace], table_layout))
+end
+
+function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
+    # Filter the data if param_id is provided
+    if param_id !== nothing
+        all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
+    end
+    
+    # Get the number of replicates for the current data
+    num_replicates = maximum(all_simulation_means.replicate)  # Assuming replicate numbers are consistent
+
+    # Calculate statistics
+    statistics = calculate_statistics(all_simulation_means)
 
     p_means = Plot()
     p_replicates = Plot()
@@ -145,7 +232,7 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
 
     # Plot individual replicates
     for i in 1:num_replicates
-        sim_data = filter(row -> row.replicate == i, all_simulation_means[1])
+        sim_data = filter(row -> row.replicate == i, all_simulation_means)
 
         add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.action_mean, mode="lines", line_color=colors["action"],
                                                  name="", opacity=0.6, showlegend=false, hoverinfo="none"))
@@ -201,29 +288,8 @@ function plot_simulation_data_Plotly(all_simulation_means::Tuple{DataFrame, Int6
     display(p_replicates)
     display(p_means)
 
-    # Prepare table data
-    table_data = []
-    for trait in ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
-        start_values = statistics[1, [trait * "_mean"]][1]
-        end_values = statistics[end, [trait * "_mean"]][1]
-        push!(table_data, (trait, start_values, end_values))
-    end
-
-    # Create table
-    table_df = DataFrame(table_data, [:Trait, :Start_Value, :End_Value])
-    table_trace = PlotlyJS.table(
-        header = Dict(:values => ["Trait", "Start Value", "End Value"]),
-        cells = Dict(:values => [table_df.Trait, table_df.Start_Value, table_df.End_Value])
-    )
-
-    table_layout = Layout(
-        title="Beginning and Final Values",
-        margin=Dict(:t => 50, :b => 50),
-        height=300
-    )
-
-    # Display table
-    display(Plot([table_trace], table_layout))
+    # Table generation
+    create_trait_table(statistics)
 end
 
 function save_simulation(simulation::DataFrame, filename::String)
