@@ -252,3 +252,23 @@ function save_simulation(simulation::DataFrame, filename::String)
     CSV.write(filepath, simulation)
     println("File saved as: $filepath")
 end
+
+function read_simulation(filename::String)
+    # Ensure the filename has the .csv extension
+    if !endswith(filename, ".csv")
+        filename *= ".csv"
+    end
+
+    # Convert to an absolute path
+    filepath = abspath(filename)
+
+    # Check if the file exists before attempting to read it
+    if !isfile(filepath)
+        error("File '$filepath' does not exist.")
+    else
+        # Read the CSV file into a DataFrame
+        simulation = CSV.read(filepath, DataFrame)
+        println("File successfully loaded from: $filepath")
+        return simulation
+    end
+end
