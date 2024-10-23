@@ -132,7 +132,7 @@ end
 # Fitness Function
 ##################
 
-function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Real)
+function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
     sqrt_action_i = sqrt(action_i)
     sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
@@ -140,44 +140,44 @@ function benefit(action_i::Real, actions_j::AbstractVector{<:Real}, synergy::Rea
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
-function cost(action_i::Real)
+function cost(action_i::Float32)
     return action_i^2
 end
 
-function external_punishment(action_i::Real, norm_pool::Real, punishment_pool::Real)
+function external_punishment(action_i::Float32, norm_pool::Float32, punishment_pool::Float32)
     return punishment_pool * (action_i - norm_pool)^2
 end
 
-function internal_punishment_I(action_i::Real, norm_pool::Real, T_ext::Real)
+function internal_punishment_I(action_i::Float32, norm_pool::Float32, T_ext::Float32)
     return T_ext * (action_i - norm_pool)^2
 end
 
-function internal_punishment_II(action_i::Real, norm_pool::Real, T_ext::Real)
+function internal_punishment_II(action_i::Float32, norm_pool::Float32, T_ext::Float32)
     return T_ext * log(1 + ((action_i - norm_pool)^2))
 end
 
-function internal_punishment_ext(action_i::Real, norm_pool_mini::Real, T_ext::Real)
+function internal_punishment_ext(action_i::Float32, norm_pool_mini::Float32, T_ext::Float32)
     return T_ext * (action_i - norm_pool_mini)^2
 end
 
-function internal_punishment_self(action_i::Real, norm_i::Real, T_self::Real)
+function internal_punishment_self(action_i::Float32, norm_i::Float32, T_self::Float32)
     return T_self * (action_i - norm_i)^2
 end
 
-function payoff(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, synergy::Real)
+function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, synergy::Float32)
     b = benefit(action_i, actions_j, synergy)
     c = cost(action_i)
     ep = external_punishment(action_i, norm_pool, punishment_pool)
     return b - c - ep
 end
 
-function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_pool::Real, punishment_pool::Real, T_ext::Real, synergy::Real)
+function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, synergy::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
     i = internal_punishment_I(action_i, norm_pool, T_ext)
     return p - i
 end
 
-function objective(action_i::Real, actions_j::AbstractVector{<:Real}, norm_i::Real, norm_mini::Real, norm_pool::Real, punishment_pool::Real, T_ext::Real, T_self::Real, synergy::Real)
+function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32, synergy::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
     ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
     ips = internal_punishment_self(action_i, norm_i, T_self)
@@ -398,7 +398,6 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
     return groups
 end
 
-
 function collect_group(group::AbstractVector{Int64}, pop::Population)
     norm_pool = sum(@view pop.norm[group]) / pop.parameters.group_size
     pun_pool = sum(@view pop.ext_pun[group]) / pop.parameters.group_size
@@ -406,12 +405,7 @@ function collect_group(group::AbstractVector{Int64}, pop::Population)
     return norm_pool, pun_pool
 end
 
-function social_interactions!(pop::Population)
-    # Shuffle and group individuals
-    groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
-
-    final_actions = Vector{Float32}(undef, pop.parameters.population_size)
-
+function find_actions_payoffs!(final_actions::Vector{Float32}, groups::Matrix{Int64}, pop::Population)
     # Iterate over each group to find actions and payoffs
     for i in axes(groups, 1)
         group = @view groups[i, :]
@@ -424,6 +418,15 @@ function social_interactions!(pop::Population)
         # Update final actions
         final_actions[group[1]] = pop.action[group[1]]
     end
+end
+
+function social_interactions!(pop::Population)
+    # Shuffle and group individuals
+    groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
+
+    # Get actions while updating payoff
+    final_actions = Vector{Float32}(undef, pop.parameters.population_size)
+    find_actions_payoffs!(final_actions, groups, pop)
 
     # Update the population values with the equilibrium actions
     pop.action = final_actions

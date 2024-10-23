@@ -16,7 +16,7 @@ mutable struct SimulationParameters
     group_tolerance::Float64  # behav eq params
     population_size::Int64
     group_size::Int64
-    synergy::Float64
+    synergy::Float32
     relatedness::Float64
     fitness_scaling_factor_a::Float64
     fitness_scaling_factor_b::Float64
@@ -44,7 +44,7 @@ function SimulationParameters(;
     group_tolerance::Float64=0.1,
     population_size::Int64=50,
     group_size::Int64=10,
-    synergy::Float64=0.0,
+    synergy::Float32=0.0f0,
     relatedness::Float64=0.5,
     fitness_scaling_factor_a::Float64=0.004,
     fitness_scaling_factor_b::Float64=10.0,
