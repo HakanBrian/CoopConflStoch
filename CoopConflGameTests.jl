@@ -27,7 +27,8 @@ groups = shuffle_and_group(params.population_size, params.group_size, params.rel
 norm_pool, pun_pool = collect_group(groups[1, :], population)
 
 # Calculate behav eq
-@time behavioral_equilibrium!(groups[1, :], norm_pool, pun_pool, population)
+action_buffer = Vector{Float32}(undef, params.group_size - 1)
+@time behavioral_equilibrium!(action_buffer, groups[1, :], norm_pool, pun_pool, population)
 println(population.action)
 
 # Calculate payoff

@@ -239,7 +239,7 @@ function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vecto
     return view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
-function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
+function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
     synergy = pop.parameters.synergy
     group_size = pop.parameters.group_size
     focal_indiv = group[focal_idx]
@@ -247,7 +247,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
     # Get the group members' actions
     actions = @view pop.action[group]
     action_i = actions[focal_idx]
-    action_j_filtered_view = filter_out_idx!(actions, focal_idx, action_j_buffer)
+    action_j_filtered_view = filter_out_idx!(actions, focal_idx, action_buffer)
 
     # Get the internal punishments
     int_pun_ext = pop.int_pun_ext[focal_indiv]
@@ -300,18 +300,13 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_j_
     return best_action
 end
 
-function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
+function behavioral_equilibrium!(action_buffer::Vector{Float32}, group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
     # Collect parameters
-    indiv_tolerance = pop.parameters.indiv_tolerance
-    group_tolerance = pop.parameters.group_tolerance
+    tolerance = pop.parameters.tolerance
     max_time_steps = pop.parameters.max_time_steps
-    group_size = pop.parameters.group_size
 
     # Create a view for group actions
     temp_actions = @view pop.action[group]
-
-    # Pre-allocate a buffer for action_j
-    action_j_buffer = Vector{Float32}(undef, group_size - 1)
 
     delta_action = 0.1f0
     time_step = 0
@@ -319,35 +314,20 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, norm_pool::Float3
         time_step += 1
         action_change = 0.0  # Reset action_change for each iteration
 
-        # Track the sum of squared differences from the group's mean action
-        group_actions_mean = mean(temp_actions)
-        group_stability = 0.0
-
         # Calculate the best action (relatively) of each individual in the group
         for i in eachindex(group)
-            best_action = best_response(i, group, action_j_buffer, norm_pool, pun_pool, pop, delta_action)
+            best_action = best_response(i, group, action_buffer, norm_pool, pun_pool, pop, delta_action)
             action_change = max(action_change, abs(best_action - temp_actions[i]))
             temp_actions[i] = best_action
-
-            # Calculate group stability: sum of squared differences from the group's mean action
-            group_stability += (best_action - group_actions_mean)^2
         end
 
-        # Normalize group stability by the group size
-        group_stability /= group_size
-
-        # Dynamically reduce delta_action towards convergence
-        if action_change == 0.0f0 && delta_action >= indiv_tolerance
-            delta_action *= 0.5f0
-            continue
-        elseif action_change != 0.0f0
-            delta_action *= 1.5f0
-            continue
-        end
-
-        # Check if the action change and group stability are both below their respective thresholds
-        if action_change < indiv_tolerance && group_stability < group_tolerance
+        # Dynamically adjust delta_action
+        if delta_action < tolerance
             break
+        elseif action_change == 0.0f0
+            delta_action *= 0.5f0
+        else
+            delta_action *= 1.5f0
         end
     end
 
@@ -405,14 +385,14 @@ function collect_group(group::AbstractVector{Int64}, pop::Population)
     return norm_pool, pun_pool
 end
 
-function find_actions_payoffs!(final_actions::Vector{Float32}, groups::Matrix{Int64}, pop::Population)
+function find_actions_payoffs!(final_actions::Vector{Float32}, action_buffer::Vector{Float32}, groups::Matrix{Int64}, pop::Population)
     # Iterate over each group to find actions and payoffs
     for i in axes(groups, 1)
         group = @view groups[i, :]
         norm_pool, pun_pool = collect_group(group, pop)
 
         # Calculate equilibrium actions then payoffs for current groups
-        behavioral_equilibrium!(group, norm_pool, pun_pool, pop)
+        behavioral_equilibrium!(action_buffer, group, norm_pool, pun_pool, pop)
         total_payoff!(group, norm_pool, pun_pool, pop)
 
         # Update final actions
@@ -421,12 +401,15 @@ function find_actions_payoffs!(final_actions::Vector{Float32}, groups::Matrix{In
 end
 
 function social_interactions!(pop::Population)
+    # Pre-allocate vectors
+    final_actions = Vector{Float32}(undef, pop.parameters.population_size)
+    action_buffer = Vector{Float32}(undef, pop.parameters.group_size - 1)
+
     # Shuffle and group individuals
     groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Get actions while updating payoff
-    final_actions = Vector{Float32}(undef, pop.parameters.population_size)
-    find_actions_payoffs!(final_actions, groups, pop)
+    find_actions_payoffs!(final_actions, action_buffer, groups, pop)
 
     # Update the population values with the equilibrium actions
     pop.action = final_actions
