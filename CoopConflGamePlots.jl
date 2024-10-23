@@ -53,7 +53,7 @@ function simulation_replicate(parameter_sweep::Vector{SimulationParameters}, num
     # Create a list of tasks (parameter set index, parameter set, replicate) to distribute
     tasks = [(idx, parameters, replicate) for (idx, parameters) in enumerate(parameter_sweep) for replicate in 1:num_replicates]
 
-    # Ensure that `run_simulation` can be serialized and used in parallel
+    # Use pmap to distribute the tasks across the workers
     results = pmap(tasks) do task
         param_idx, parameters, replicate = task
         # Run simulation and store the result with the parameter set index
@@ -159,7 +159,7 @@ end
 function create_trait_table(all_simulation_means::DataFrame)
     table_data = []
 
-    # Group by `param_id` and extract start and end values for each group
+    # Group by param_id and extract start and end values for each group
     grouped_by_param = groupby(all_simulation_means, :param_id)
 
     for group in grouped_by_param
@@ -192,11 +192,11 @@ function create_trait_table(all_simulation_means::DataFrame)
 end
 
 function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
-    # Filter the data
+    # Filter the data if param_id is provided
     if param_id !== nothing
         all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
     end
-    
+
     # Determine the number of params and replicates
     num_params = maximum(all_simulation_means.param_id)  # Assuming param numbers are consistent
     num_replicates = maximum(all_simulation_means.replicate)  # Assuming replicate numbers are consistent
