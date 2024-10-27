@@ -287,14 +287,14 @@ function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::
     display(p_means)
 end
 
-function save_simulation(simulation::DataFrame, filename::String)
-    # Ensure the filename has the .csv extension
-    if !endswith(filename, ".csv")
-        filename *= ".csv"
+function save_simulation(simulation::DataFrame, filepath::String)
+    # Ensure the filepath has the .csv extension
+    if !endswith(filepath, ".csv")
+        filepath *= ".csv"
     end
 
-    # Convert to an absolute path
-    filepath = abspath(filename)
+    # Convert to an absolute path (in case it's not already)
+    filepath = abspath(filepath)
 
     # Check if the file already exists, and print a warning if it does
     if isfile(filepath)
@@ -306,14 +306,14 @@ function save_simulation(simulation::DataFrame, filename::String)
     println("File saved as: $filepath")
 end
 
-function read_simulation(filename::String)
-    # Ensure the filename has the .csv extension
-    if !endswith(filename, ".csv")
-        filename *= ".csv"
+function read_simulation(filepath::String)
+    # Ensure the filepath has the .csv extension
+    if !endswith(filepath, ".csv")
+        filepath *= ".csv"
     end
 
-    # Convert to an absolute path
-    filepath = abspath(filename)
+    # Convert to an absolute path (in case it's not already)
+    filepath = abspath(filepath)
 
     # Check if the file exists before attempting to read it
     if !isfile(filepath)
