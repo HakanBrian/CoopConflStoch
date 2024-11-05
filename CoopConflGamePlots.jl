@@ -96,7 +96,6 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
 
     # Determine the number of params and replicates
     num_params = maximum(all_simulation_means.param_id)  # Assuming replicate param are consistent
-    num_replicates = maximum(all_simulation_means.replicate)  # Assuming replicate numbers are consistent
 
     # Define color palette for each trait type
     colors = Dict(
@@ -115,7 +114,7 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
     )
 
     # Initialize the plot
-    p = Plots.plot()
+    p = Plots.plot(legend=false)
 
     for i in 1:num_params
         # Filter by param_id
@@ -123,17 +122,6 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
 
         # Calculate statistics for the current parameter set
         statistics = calculate_statistics(param_data)
-
-        # Plot each replicate's data with consistent colors and labels
-        for j in 1:num_replicates
-            replicate_data = filter(row -> row.replicate == j, param_data)
-            Plots.plot!(p, replicate_data.generation, replicate_data.action_mean, label="", color=colors["action"], linewidth=1, alpha=0.6)
-            Plots.plot!(p, replicate_data.generation, replicate_data.a_mean, label="", color=colors["a"], linewidth=1, alpha=0.6)
-            Plots.plot!(p, replicate_data.generation, replicate_data.p_mean, label="", color=colors["p"], linewidth=1, alpha=0.6)
-            Plots.plot!(p, replicate_data.generation, replicate_data.T_ext_mean, label="", color=colors["T_ext"], linewidth=1, alpha=0.6)
-            Plots.plot!(p, replicate_data.generation, replicate_data.T_self_mean, label="", color=colors["T_self"], linewidth=1, alpha=0.6)
-            Plots.plot!(p, replicate_data.generation, replicate_data.payoff_mean, label="", color=colors["payoff"], linewidth=1, alpha=0.6)
-        end
 
         # Plot mean and ribbons for each trait with a distinct label for each parameter set
         Plots.plot!(p, statistics.generation, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), 
@@ -153,7 +141,7 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
     # Display the plot
     xlabel!("Generation")
     ylabel!("Traits")
-    display(p)
+    display("image/png", p)
 end
 
 function create_trait_table(all_simulation_means::DataFrame)
@@ -199,10 +187,8 @@ function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::
 
     # Determine the number of params and replicates
     num_params = maximum(all_simulation_means.param_id)  # Assuming param numbers are consistent
-    num_replicates = maximum(all_simulation_means.replicate)  # Assuming replicate numbers are consistent
 
     p_means = Plot()
-    p_replicates = Plot()
 
     # Define color palette for each trait type
     colors = Dict(
@@ -226,24 +212,6 @@ function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::
 
         # Calculate statistics for the current param_id
         statistics = calculate_statistics(param_data)
-
-        # Plot individual replicates for the current param_id
-        for j in 1:num_replicates
-            sim_data = filter(row -> row.replicate == j, param_data)
-
-            add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.action_mean, mode="lines", line_color=colors["action"],
-                                                     name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-            add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.a_mean, mode="lines", line_color=colors["a"],
-                                                     name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-            add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.p_mean, mode="lines", line_color=colors["p"],
-                                                     name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-            add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.T_ext_mean, mode="lines", line_color=colors["T_ext"],
-                                                     name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-            add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.T_self_mean, mode="lines", line_color=colors["T_self"],
-                                                     name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-            add_trace!(p_replicates, PlotlyJS.scatter(x=sim_data.generation, y=sim_data.payoff_mean, mode="lines", line_color=colors["payoff"],
-                                                     name="", opacity=0.6, showlegend=false, hoverinfo="none"))
-        end
 
         # Create formatted hover text for each trait
         statistics[!, :action_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
@@ -272,18 +240,12 @@ function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::
         end
     end
 
-    # Layout for individual replicates
-    relayout!(p_replicates, title="Individual Replicates",
-            xaxis_title="Generation", yaxis_title="Traits",
-            legend=Dict(:orientation => "h", :x => 0, :y => -0.2), hovermode="x unified")
-
     # Layout for replicate means
     relayout!(p_means, title="Mean of Replicates",
             xaxis_title="Generation", yaxis_title="Traits",
             legend=Dict(:orientation => "h", :x => 0, :y => -0.2), hovermode="x unified")
 
     # Display plots
-    display(p_replicates)
     display(p_means)
 end
 
