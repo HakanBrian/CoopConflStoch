@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=3-00:00:00           # Time limit for the job (REQUIRED).
+#SBATCH --time=06:00:00             # Time limit for the job (REQUIRED).
 #SBATCH --job-name=CoopConflGame    # Job name
 #SBATCH --exclusive                 # Allocate all cores in node.
 #SBATCH --partition=normal          # Partition/queue to run the job in. (REQUIRED)
@@ -8,7 +8,6 @@
 #SBATCH -A <your project account>     # Project allocation account name (REQUIRED)
  
 module purge                  # Unload other software modules
-module load Julia             # Load Julia module
 
 # Execute the Julia script
 julia CoopConflGameSLURM.jl
