@@ -20,4 +20,4 @@ parameter_sweep = [
 
 simulation_sweep = simulation_replicate(parameter_sweep, 40);
 
-save_simulation(my_simulation, joinpath(@__DIR__, "simulation_sweep.csv"))
+save_simulation(simulation_sweep, joinpath(@__DIR__, "simulation_sweep.csv"))
