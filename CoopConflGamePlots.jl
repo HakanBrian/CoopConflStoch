@@ -88,6 +88,31 @@ function calculate_statistics(all_simulation_means::DataFrame)
     return stats
 end
 
+function relatedness_sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64})
+    # Determine the number of params
+    num_params = maximum(all_simulation_means.param_id)
+
+    # Initialize an empty DataFrame to store last rows
+    last_rows = DataFrame()
+
+    for i in 1:num_params
+        # Filter rows by `param_id`
+        param_data = filter(row -> row.param_id == i, all_simulation_means)
+
+        # Calculate statistics for the current parameter set
+        statistics = calculate_statistics(param_data)
+
+        # Append the last row of `statistics` to `last_rows`
+        push!(last_rows, statistics[end, :])
+    end
+
+    rename!(last_rows, :generation => :relatedness)
+
+    last_rows.relatedness = r_values
+
+    return last_rows
+end
+
 function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
     # Filter the data if param_id is provided
     if param_id !== nothing
@@ -140,6 +165,49 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
 
     # Display the plot
     xlabel!("Generation")
+    ylabel!("Traits")
+    display("image/png", p)
+end
+
+function plot_final_sweep_Plots(all_simulation_means::DataFrame, r_values::Vector{Float64})
+    # Define color palette for each trait type
+    colors = Dict(
+        "action" => :blue,
+        "a" => :red,
+        "p" => :green,
+        "T_ext" => :purple,
+        "T_self" => :yellow,
+        "payoff" => :orange,
+        "action mean" => :blue4,
+        "a mean" => :red4,
+        "p mean" => :green4,
+        "T_ext mean" => :purple4,
+        "T_self mean" => :yellow4,
+        "payoff mean" => :orange4
+    )
+
+    # Initialize the plot
+    p = Plots.plot(legend=false)
+
+    # Calculate statistics for the current parameter set
+    statistics = relatedness_sweep_statistics(all_simulation_means, r_values)
+
+    # Plot mean and ribbons for each trait with a distinct label for each parameter set
+    Plots.plot!(p, statistics.relatedness, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), 
+                label="action", color=colors["action mean"])
+    Plots.plot!(p, statistics.relatedness, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), 
+                label="a", color=colors["a mean"])
+    Plots.plot!(p, statistics.relatedness, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), 
+                label="p", color=colors["p mean"])
+    Plots.plot!(p, statistics.relatedness, statistics.T_ext_mean_mean, ribbon=(statistics.T_ext_mean_std, statistics.T_ext_mean_std), 
+                label="T_ext", color=colors["T_ext mean"])
+    Plots.plot!(p, statistics.relatedness, statistics.T_self_mean_mean, ribbon=(statistics.T_self_mean_std, statistics.T_self_mean_std), 
+                label="T_self", color=colors["T_self mean"])
+    Plots.plot!(p, statistics.relatedness, statistics.payoff_mean_mean, ribbon=(statistics.payoff_mean_std, statistics.payoff_mean_std), 
+                label="payoff", color=colors["payoff mean"])
+
+    # Display the plot
+    xlabel!("Relatedness")
     ylabel!("Traits")
     display("image/png", p)
 end
