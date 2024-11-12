@@ -51,8 +51,8 @@ function SimulationParameters(;
     trait_variance::Float64=0.0,
     norm_mutation_enabled::Bool=true,
     ext_pun_mutation_enabled::Bool=true,
-    int_pun_ext_mutation_enabled::Bool=false,
-    int_pun_self_mutation_enabled::Bool=false,
+    int_pun_ext_mutation_enabled::Bool=true,
+    int_pun_self_mutation_enabled::Bool=true,
     output_save_tick::Int64=10
 )
     return SimulationParameters(action0,
