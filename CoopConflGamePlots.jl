@@ -196,7 +196,7 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
     display("image/png", p)
 end
 
-function plot_final_sweep_Plots(all_simulation_means::DataFrame, r_values::Vector{Float64})
+function plot_final_sweep_Plots(statistics::DataFrame)
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
@@ -214,10 +214,7 @@ function plot_final_sweep_Plots(all_simulation_means::DataFrame, r_values::Vecto
     )
 
     # Initialize the plot
-    p = Plots.plot(legend=false)
-
-    # Calculate statistics for the current parameter set
-    statistics = relatedness_sweep_statistics(all_simulation_means, r_values)
+    p = Plots.plot(legend=true)
 
     # Plot mean and ribbons for each trait with a distinct label for each parameter set
     Plots.plot!(p, statistics.relatedness, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), 
