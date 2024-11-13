@@ -88,7 +88,7 @@ function calculate_statistics(all_simulation_means::DataFrame)
     return stats
 end
 
-function relatedness_sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64})
+function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64})
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 
@@ -113,7 +113,7 @@ function relatedness_sweep_statistics(all_simulation_means::DataFrame, r_values:
     return last_rows
 end
 
-function relatedness_sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
+function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 

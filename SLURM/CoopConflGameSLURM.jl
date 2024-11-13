@@ -20,8 +20,9 @@ parameter_sweep_r = [
 ]
 
 simulation_sweep_r = simulation_replicate(parameter_sweep_r, 40);
+simulation_sweep_r_stats = sweep_statistics(simulation_sweep_r, r1_values)
 
-save_simulation(simulation_sweep_r, joinpath(@__DIR__, "simulation_sweep_r1.csv"))
+save_simulation(simulation_sweep_r_stats, joinpath(@__DIR__, "simulation_sweep_r1_stats.csv"))
 
 
 r05_values = collect(range(0, 0.5, step=0.05));
@@ -42,5 +43,6 @@ parameter_sweep_rep = [
 ]
 
 simulation_sweep_rep = simulation_replicate(parameter_sweep_rep, 40);
+simulation_sweep_rep_stats = sweep_statistics(simulation_sweep_rep, r05_values, ep05_values)
 
-save_simulation(simulation_sweep_rep, joinpath(@__DIR__, "simulation_sweep_rep1.csv"))
+save_simulation(simulation_sweep_rep_stats, joinpath(@__DIR__, "simulation_sweep_rep1_stats.csv"))
