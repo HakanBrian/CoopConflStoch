@@ -24,8 +24,8 @@ simulation_sweep_r = simulation_replicate(parameter_sweep_r, 40);
 save_simulation(simulation_sweep_r, joinpath(@__DIR__, "simulation_sweep_r1.csv"))
 
 
-r05_values = collect(range(0, 0.5, step=0.01));
-ep05_values = collect(range(0, 0.5, step=0.01));
+r05_values = collect(range(0, 0.5, step=0.05));
+ep05_values = collect(range(0.0f0, 0.5f0, step=0.05f0));
 
 parameter_sweep_rep = [
     SimulationParameters(action0=0.1f0,
