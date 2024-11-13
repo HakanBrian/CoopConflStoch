@@ -236,10 +236,7 @@ function plot_final_sweep_Plots(statistics::DataFrame)
     display("image/png", p)
 end
 
-function plot_final_sweep_Plots(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
-    # Calculate statistics for the current parameter set
-    statistics = relatedness_sweep_statistics(all_simulation_means, r_values, ep_values)
-
+function plot_final_sweep_Plots(statistics::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
     # List of dependent variables to plot as separate heatmaps
     dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
 
