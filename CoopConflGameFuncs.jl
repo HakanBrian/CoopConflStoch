@@ -207,9 +207,14 @@ function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
 end
 
-function fitness(pop::Population, idx::Int64, fitness_scaling_factor_a::Float64, fitness_scaling_factor_b::Float64)
+function fitness_exp(pop::Population, idx::Int64, fitness_scaling_factor_b::Float32)
     base_fitness = fitness(pop, idx)
-    return fitness_scaling_factor_a * exp(base_fitness * fitness_scaling_factor_b)
+    return exp(base_fitness * fitness_scaling_factor_b)
+end
+
+function fitness_pwr(pop::Population, idx::Int64, fitness_scaling_factor_a::Float32)
+    base_fitness = fitness(pop, idx)
+    return (base_fitness + 1)^fitness_scaling_factor_a
 end
 
 
@@ -427,7 +432,7 @@ function reproduce!(pop::Population)
     indices_list = 1:pop.parameters.population_size
 
     # Calculate fitness for all individuals in the population
-    fitnesses = map(i -> fitness(pop, i, pop.parameters.fitness_scaling_factor_a, pop.parameters.fitness_scaling_factor_b), indices_list)
+    fitnesses = map(i -> fitness_pwr(pop, i, pop.parameters.fitness_scaling_factor_a), indices_list)
 
     # Sample indices with the given fitness weights
     sampled_indices = sample(indices_list, ProbabilityWeights(fitnesses), pop.parameters.population_size, replace=true, ordered=false)
