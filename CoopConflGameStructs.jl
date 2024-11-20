@@ -17,8 +17,8 @@ mutable struct SimulationParameters
     group_size::Int64
     synergy::Float32
     relatedness::Float64
-    fitness_scaling_factor_a::Float64
-    fitness_scaling_factor_b::Float64
+    fitness_scaling_factor_a::Float32
+    fitness_scaling_factor_b::Float32
     mutation_rate::Float64
     mutation_variance::Float64
     trait_variance::Float64
@@ -44,8 +44,8 @@ function SimulationParameters(;
     group_size::Int64=10,
     synergy::Float32=0.0f0,
     relatedness::Float64=0.5,
-    fitness_scaling_factor_a::Float64=0.004,
-    fitness_scaling_factor_b::Float64=10.0,
+    fitness_scaling_factor_a::Float32=4.0f0,
+    fitness_scaling_factor_b::Float32=2.0f0,
     mutation_rate::Float64=0.05,
     mutation_variance::Float64=0.005,
     trait_variance::Float64=0.0,
