@@ -289,7 +289,7 @@ function plot_final_sweep_Plots(statistics::DataFrame, r_values::Vector{Float64}
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
 
-        # Convert the DataFrame to a matrix (remove `relatedness` column)
+        # Convert the DataFrame to a matrix (remove `ext_pun` column)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
 
         # Create the interpolator using grid dimensions and matrix
@@ -299,6 +299,7 @@ function plot_final_sweep_Plots(statistics::DataFrame, r_values::Vector{Float64}
         interp_r_fine = range(1, size(heatmap_matrix, 2), length=r_length)
         interp_ep_fine = range(1, size(heatmap_matrix, 1), length=ep_length)
 
+        # Smooth the data based on interpolator
         heatmap_smooth = [interp(i, j) for i in interp_r_fine, j in interp_ep_fine]
 
         # Plot heatmap
