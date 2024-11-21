@@ -1,4 +1,4 @@
-using Distributed, Plots, PlotlyJS, CSV, FilePathsBase
+using Distributed, Interpolations, Plots, PlotlyJS, CSV, FilePathsBase
 
 
 ##################
@@ -277,20 +277,37 @@ function plot_final_sweep_Plots(statistics::DataFrame, r_values::Vector{Float64}
     # List of dependent variables to plot as separate heatmaps
     dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
 
-    # Plot each dependent variable as a heatmap
+    # Define grid fineness
+    r_length = 10*length(r_values)
+    ep_length = 10*length(ep_values)
+
+    # Define a finer grid for smoothing
+    r_fine = range(minimum(r_values), maximum(r_values), length=r_length)  # Fine relatedness grid
+    ep_fine = range(minimum(ep_values), maximum(ep_values), length=ep_length)  # Fine external punishment grid
+
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :relatedness, :ext_pun, var)
-        
+
         # Convert the DataFrame to a matrix (remove `relatedness` column)
-        data_matrix = Matrix(heatmap_data[!, Not(:relatedness)])
-        
+        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:relatedness)])
+
+        # Create the interpolator using grid dimensions and matrix
+        interp = interpolate((1:size(heatmap_matrix, 1), 1:size(heatmap_matrix, 2)), heatmap_matrix, Gridded(Linear()))
+
+        # Evaluate interpolation on the finer grid
+        interp_r_fine = range(1, size(heatmap_matrix, 1), length=r_length)
+        interp_ep_fine = range(1, size(heatmap_matrix, 2), length=ep_length)
+
+        heatmap_smooth = [interp(i, j) for i in interp_r_fine, j in interp_ep_fine]
+
         # Plot heatmap
-        p = Plots.heatmap(data_matrix, color=:viridis, xlabel="Relatedness", ylabel="External Punishment",
-                    title="Heatmap of $var", colorbar_title="Value",
-                    xticks=(1:length(r_values), string.(r_values)),  # Map ticks to relatedness
-                    yticks=(1:length(ep_values), string.(ep_values)))  # Map ticks to ext_pun
-        
+        p = Plots.heatmap(r_fine, ep_fine, heatmap_smooth, color=:viridis, xlabel="Relatedness", ylabel="External Punishment",
+                          title="Heatmap of $var", colorbar_title="Value")
+
+        # Add contour lines
+        contour!(r_fine, ep_fine, heatmap_smooth, levels=10, color=:white, linewidth=0.8)
+
         display(p)
     end
 end
