@@ -455,6 +455,108 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
     end
 end
 
+function plot_sweep_rep_Plotly(statistics::DataFrame)
+    # List of dependent variables to plot as separate heatmaps
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+
+    # Get r_values and ep_values dynamically
+    r_values = sort(unique(statistics.relatedness))
+    ep_values = sort(unique(statistics.ext_pun))
+
+    for var in dependent_vars
+        # Pivot the data for the current dependent variable
+        heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
+
+        # Convert the DataFrame to a matrix (remove `ext_pun` column)
+        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
+
+        # Create a heatmap trace
+        trace = PlotlyJS.heatmap(
+            z=heatmap_matrix,  # Data matrix
+            x=r_values,  # Relatedness (x-axis)
+            y=ep_values,  # External Punishment (y-axis)
+            colorscale="Viridis",
+            colorbar_title="Value"
+        )
+
+        # Add layout
+        layout = Layout(
+            title="Heatmap of $var",
+            xaxis_title="Relatedness",
+            yaxis_title="External Punishment"
+        )
+
+        # Plot
+        display(PlotlyJS.plot([trace], layout))
+    end
+end
+
+function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
+    # List of dependent variables to plot as separate heatmaps
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+
+    # Get r_values and ep_values dynamically
+    r_values = sort(unique(statistics.relatedness))
+    ep_values = sort(unique(statistics.ext_pun))
+
+    # Define grid fineness
+    r_length = 10 * length(r_values)
+    ep_length = 10 * length(ep_values)
+
+    # Define a finer grid for smoothing
+    r_fine = range(minimum(r_values), maximum(r_values), length=r_length)  # Fine relatedness grid
+    ep_fine = range(minimum(ep_values), maximum(ep_values), length=ep_length)  # Fine external punishment grid
+
+    for var in dependent_vars
+        # Pivot the data for the current dependent variable
+        heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
+
+        # Convert the DataFrame to a matrix (remove `ext_pun` column)
+        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
+
+        # Create the interpolator using grid dimensions and matrix
+        interp = interpolate((1:size(heatmap_matrix, 2), 1:size(heatmap_matrix, 1)), heatmap_matrix, Gridded(Linear()))
+
+        # Evaluate interpolation on the finer grid
+        interp_r_fine = range(1, size(heatmap_matrix, 2), length=r_length)
+        interp_ep_fine = range(1, size(heatmap_matrix, 1), length=ep_length)
+
+        # Smooth the data based on interpolator
+        heatmap_smooth = [interp(i, j) for i in interp_r_fine, j in interp_ep_fine]
+
+        # Create heatmap trace
+        heatmap_trace = PlotlyJS.heatmap(
+            z=heatmap_smooth,  # Smoothed data matrix
+            x=r_fine,  # Fine relatedness grid
+            y=ep_fine,  # Fine external punishment grid
+            colorscale="Viridis",
+            colorbar_title="Value"
+        )
+
+        # Create contour trace
+        contour_trace = PlotlyJS.contour(
+            z=heatmap_smooth,  # Smoothed data matrix
+            x=r_fine,  # Fine relatedness grid
+            y=ep_fine,  # Fine external punishment grid
+            colorscale="Viridis",
+            contours_coloring="lines",
+            line_width=0.8,
+            line_color="white",
+            ncontours=10  # Number of contour levels
+        )
+
+        # Add layout
+        layout = Layout(
+            title="Heatmap of $var with Contours",
+            xaxis_title="Relatedness",
+            yaxis_title="External Punishment"
+        )
+
+        # Combine traces and plot
+        display(PlotlyJS.plot([heatmap_trace, contour_trace], layout))
+    end
+end
+
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension
     if !endswith(filepath, ".csv")
