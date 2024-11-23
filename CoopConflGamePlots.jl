@@ -196,7 +196,7 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
     display("image/png", p)
 end
 
-function plot_final_sweep_Plots(statistics::DataFrame)
+function plot_full_sweep_Plots(statistics::DataFrame)
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
@@ -213,10 +213,8 @@ function plot_final_sweep_Plots(statistics::DataFrame)
         "payoff mean" => :orange4
     )
 
-    # Initialize the plot
+    # Plot mean and ribbons for each trait
     p = Plots.plot(legend=true)
-
-    # Plot mean and ribbons for each trait with a distinct label for each parameter set
     Plots.plot!(p, statistics.relatedness, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), 
                 label="action", color=colors["action mean"])
     Plots.plot!(p, statistics.relatedness, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), 
@@ -230,8 +228,13 @@ function plot_final_sweep_Plots(statistics::DataFrame)
     Plots.plot!(p, statistics.relatedness, statistics.payoff_mean_mean, ribbon=(statistics.payoff_mean_std, statistics.payoff_mean_std), 
                 label="payoff", color=colors["payoff mean"])
 
-    p_pun = Plots.plot(legend=true)
+    # Display the plot p
+    xlabel!(p, "Relatedness")
+    ylabel!(p, "Traits")
+    display("image/png", p)
 
+    # Plot mean and ribbons for external punishment and internal punishments trait
+    p_pun = Plots.plot(legend=true)
     Plots.plot!(p_pun, statistics.relatedness, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), 
                 label="p", color=colors["p mean"])
     Plots.plot!(p_pun, statistics.relatedness, statistics.T_ext_mean_mean, ribbon=(statistics.T_ext_mean_std, statistics.T_ext_mean_std), 
@@ -239,33 +242,27 @@ function plot_final_sweep_Plots(statistics::DataFrame)
     Plots.plot!(p_pun, statistics.relatedness, statistics.T_self_mean_mean, ribbon=(statistics.T_self_mean_std, statistics.T_self_mean_std), 
                 label="T_self", color=colors["T_self mean"])
 
-    p_ext_pun = Plots.plot(legend=true)
-
-    Plots.plot!(p_ext_pun, statistics.relatedness, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), 
-                label="p", color=colors["p mean"])
-
-    p_action_norm = Plots.plot(legend=true)
-
-    Plots.plot!(p_action_norm, statistics.relatedness, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), 
-                label="action", color=colors["action mean"])
-    Plots.plot!(p_action_norm, statistics.relatedness, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), 
-                label="a", color=colors["a mean"])
-
-
-    # Display the plot p
-    xlabel!(p, "Relatedness")
-    ylabel!(p, "Traits")
-    display("image/png", p)
-
     # Display the plot p_pun
     xlabel!(p_pun, "Relatedness")
     ylabel!(p_pun, "Traits")
     display("image/png", p_pun)
 
+    # Plot mean and ribbons for external punsihment
+    p_ext_pun = Plots.plot(legend=true)
+    Plots.plot!(p_ext_pun, statistics.relatedness, statistics.p_mean_mean, ribbon=(statistics.p_mean_std, statistics.p_mean_std), 
+                label="p", color=colors["p mean"])
+    
     # Display the plot p_ext_pun
     xlabel!(p_ext_pun, "Relatedness")
     ylabel!(p_ext_pun, "Traits")
     display("image/png", p_ext_pun)
+
+    # Plot mean and ribbons for action and norm
+    p_action_norm = Plots.plot(legend=true)
+    Plots.plot!(p_action_norm, statistics.relatedness, statistics.action_mean_mean, ribbon=(statistics.action_mean_std, statistics.action_mean_std), 
+                label="action", color=colors["action mean"])
+    Plots.plot!(p_action_norm, statistics.relatedness, statistics.a_mean_mean, ribbon=(statistics.a_mean_std, statistics.a_mean_std), 
+                label="a", color=colors["a mean"])
 
     # Display the plot p_action_norm
     xlabel!(p_action_norm, "Relatedness")
