@@ -270,9 +270,13 @@ function plot_full_sweep_Plots(statistics::DataFrame)
     display("image/png", p_action_norm)
 end
 
-function plot_sweep_rep_Plots(statistics::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
+function plot_sweep_rep_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
     dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+
+    # Get r_values and ep_values dynamically
+    r_values = sort(unique(statistics.relatedness))
+    ep_values = sort(unique(statistics.ext_pun))
 
     for var in dependent_vars
         # Pivot the data for the current dependent variable
@@ -285,13 +289,17 @@ function plot_sweep_rep_Plots(statistics::DataFrame, r_values::Vector{Float64}, 
         p = Plots.heatmap(r_values, ep_values, heatmap_matrix, color=:viridis, xlabel="Relatedness", ylabel="External Punishment",
                           title="Heatmap of $var", colorbar_title="Value")
 
-        display(p)
+        display("image/png", p)
     end
 end
 
-function plot_sweep_rep_smooth_Plots(statistics::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
+function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
     dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+
+    # Get r_values and ep_values dynamically
+    r_values = sort(unique(statistics.relatedness))
+    ep_values = sort(unique(statistics.ext_pun))
 
     # Define grid fineness
     r_length = 10*length(r_values)
@@ -325,7 +333,7 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame, r_values::Vector{Flo
         # Add contour lines
         contour!(r_fine, ep_fine, heatmap_smooth, levels=10, color=:white, linewidth=0.8)
 
-        display(p)
+        display("image/png", p)
     end
 end
 
