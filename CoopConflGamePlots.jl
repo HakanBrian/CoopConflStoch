@@ -396,6 +396,65 @@ function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::
     display(p_means)
 end
 
+function plot_full_sweep_Plotly(statistics::DataFrame)
+    # Define color palette for each trait type
+    colors = Dict(
+        "action" => :blue,
+        "a" => :red,
+        "p" => :green,
+        "T_ext" => :purple,
+        "T_self" => :yellow,
+        "payoff" => :orange,
+        "action_stdev" => "rgba(0,0,255,0.2)",
+        "a_stdev" => "rgba(255,0,0,0.2)",
+        "p_stdev" => "rgba(0,255,0,0.2)",
+        "T_ext_stdev" => "rgba(128,0,128,0.2)",
+        "T_self_stdev" => "rgba(255,255,0,0.2)",
+        "payoff_stdev" => "rgba(255,165,0,0.2)",
+    )
+
+    # Create formatted hover text for each trait
+    statistics[!, :action_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
+    statistics[!, :a_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>a Mean: " .* string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
+    statistics[!, :p_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>p Mean: " .* string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
+    statistics[!, :T_ext_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>T_ext Mean: " .* string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_ext_mean_std)
+    statistics[!, :T_self_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>T_self Mean: " .* string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_self_mean_std)
+    statistics[!, :payoff_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
+
+    plot_var_set = [["action", "a", "p", "T_ext", "T_self", "payoff"], ["p", "T_ext", "T_self"], ["p"], ["action", "a"]]
+
+    for plot_var in plot_var_set
+        # Initialize plot
+        p = Plot()
+
+        # Plot replicate means with ribbons for standard deviation
+        for trait in plot_var
+            add_trace!(p, PlotlyJS.scatter(x=statistics.relatedness, y=statistics[!, trait * "_mean_mean"],
+                                            mode="lines", line_color=colors[trait], name=trait,
+                                            hovertext=statistics[!, trait * "_mean_hover"],
+                                            hoverinfo="text"))
+
+            add_trace!(p, PlotlyJS.scatter(x=statistics.relatedness, y=statistics[!, trait * "_mean_mean"] .+ statistics[!, trait * "_mean_std"],
+                                            mode="lines", line_color=colors[trait], name="", fill="tonexty",
+                                            fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
+                                            hoverinfo="none", showlegend=false))
+
+            add_trace!(p, PlotlyJS.scatter(x=statistics.relatedness, y=statistics[!, trait * "_mean_mean"] .- statistics[!, trait * "_mean_std"],
+                                            mode="lines", line_color=colors[trait], name="", fill="tonexty",
+                                            fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
+                                            hoverinfo="none", showlegend=false))
+        end
+
+        # Layout for replicate means
+        relayout!(p, title="Mean of Replicates",
+                xaxis_title="Relatedness", yaxis_title="Traits",
+                legend=Dict(:orientation => "h", :x => 0, :y => -0.2), hovermode="x unified")
+
+        # Display plots
+        display(p)
+    end
+end
+
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension
     if !endswith(filepath, ".csv")
