@@ -177,8 +177,12 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
 
         # Plot mean and ribbons for each trait with a distinct label for each parameter set
         for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
-            Plots.plot!(p, statistics.relatedness, statistics[!, trait * "_mean_mean"], ribbon=(statistics[!, trait * "_mean_std"], statistics[!, trait * "_mean_std"]), 
-                        label=trait * " ($i)", color=colors[trait * " mean"])
+            Plots.plot!(p,
+                        statistics.generation,
+                        statistics[!, trait * "_mean_mean"],
+                        ribbon=(statistics[!, trait * "_mean_std"], statistics[!, trait * "_mean_std"]), 
+                        label=trait * " ($i)",
+                        color=colors[trait * " mean"])
         end
     end
 
@@ -213,8 +217,12 @@ function plot_full_sweep_Plots(statistics::DataFrame)
 
         # Plot mean and ribbons for each trait
         for trait in plot_var
-            Plots.plot!(p, statistics.relatedness, statistics[!, trait * "_mean_mean"], ribbon=(statistics[!, trait * "_mean_std"], statistics[!, trait * "_mean_std"]), 
-                        label=trait, color=colors[trait * " mean"])
+            Plots.plot!(p,
+                        statistics.relatedness,
+                        statistics[!, trait * "_mean_mean"],
+                        ribbon=(statistics[!, trait * "_mean_std"], statistics[!, trait * "_mean_std"]), 
+                        label=trait,
+                        color=colors[trait * " mean"])
         end
 
         # Display the plot
@@ -240,8 +248,12 @@ function plot_sweep_rep_Plots(statistics::DataFrame)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
 
         # Plot heatmap
-        p = Plots.heatmap(r_values, ep_values, heatmap_matrix, color=:viridis, xlabel="Relatedness", ylabel="External Punishment",
-                          title="Heatmap of $var", colorbar_title="Value")
+        p = Plots.heatmap(r_values, ep_values, heatmap_matrix,
+                            color=:viridis,
+                            xlabel="Relatedness",
+                            ylabel="External Punishment",
+                            title="Heatmap of $var",
+                            colorbar_title="Value")
 
         display("image/png", p)
     end
