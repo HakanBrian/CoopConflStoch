@@ -217,18 +217,6 @@ function fitness_pwr(pop::Population, idx::Int64)
     return (base_fitness + 1)^pop.parameters.fitness_scaling_factor_a
 end
 
-function fitness_scale_exp(pop::Population, idx::Int64)
-    base_fitness = fitness(pop, idx)
-    scale_fitness = base_fitness - ((pop.parameters.group_size - 2) * sqrt(pop.action[idx]))
-    return exp(scale_fitness * pop.parameters.fitness_scaling_factor_b)
-end
-
-function fitness_scale_pwr(pop::Population, idx::Int64)
-    base_fitness = fitness(pop, idx)
-    scale_fitness = base_fitness - ((pop.parameters.group_size - 2) * sqrt(pop.action[idx]))
-    return (scale_fitness + 1)^pop.parameters.fitness_scaling_factor_a
-end
-
 
 ##################
 # Behavioral Equilibrium Function
