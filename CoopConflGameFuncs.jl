@@ -207,14 +207,26 @@ function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
 end
 
-function fitness_exp(pop::Population, idx::Int64, fitness_scaling_factor_b::Float32)
-    base_fitness = fitness(pop, idx)
-    return exp(base_fitness * fitness_scaling_factor_b)
+function fitness_exp(pop::Population, idx::Int64)
+    base_fitness = fitness(pop, idx) / (pop.parameters.group_size - 1)
+    return exp(base_fitness * pop.parameters.fitness_scaling_factor_b)
 end
 
-function fitness_pwr(pop::Population, idx::Int64, fitness_scaling_factor_a::Float32)
+function fitness_pwr(pop::Population, idx::Int64)
+    base_fitness = fitness(pop, idx) / (pop.parameters.group_size - 1)
+    return (base_fitness + 1)^pop.parameters.fitness_scaling_factor_a
+end
+
+function fitness_scale_exp(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return (base_fitness + 1)^fitness_scaling_factor_a
+    scale_fitness = base_fitness - ((pop.parameters.group_size - 2) * sqrt(pop.action[idx]))
+    return exp(scale_fitness * pop.parameters.fitness_scaling_factor_b)
+end
+
+function fitness_scale_pwr(pop::Population, idx::Int64)
+    base_fitness = fitness(pop, idx)
+    scale_fitness = base_fitness - ((pop.parameters.group_size - 2) * sqrt(pop.action[idx]))
+    return (scale_fitness + 1)^pop.parameters.fitness_scaling_factor_a
 end
 
 
