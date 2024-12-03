@@ -13,7 +13,7 @@ parameter_sweep_r = [
                          ext_pun0=0.1f0,
                          int_pun_ext0=0.0f0,
                          int_pun_self0=0.0f0,
-                         population_size=50,
+                         population_size=500,
                          group_size=10,
                          relatedness=r_values)
     for r_values in r1_values
@@ -34,7 +34,7 @@ parameter_sweep_rep = [
                          ext_pun0=ep_values,
                          int_pun_ext0=0.0f0,
                          int_pun_self0=0.0f0,
-                         population_size=50,
+                         population_size=500,
                          group_size=10,
                          relatedness=r_values,
                          ext_pun_mutation_enabled=false)
@@ -46,3 +46,25 @@ simulation_sweep_rep = simulation_replicate(parameter_sweep_rep, 40);
 simulation_sweep_rep_stats = sweep_statistics(simulation_sweep_rep, r05_values, ep05_values)
 
 save_simulation(simulation_sweep_rep_stats, joinpath(@__DIR__, "simulation_sweep_rep1_stats.csv"))
+
+
+gs50_values = collect(range(50, 500, step=50));
+ep05_values = collect(range(0.05f0, 0.5f0, step=0.05f0));
+
+parameter_sweep_gsep = [
+    SimulationParameters(action0=0.1f0,
+                         norm0=2.0f0,
+                         ext_pun0=0.1f0,
+                         int_pun_ext0=0.0f0,
+                         int_pun_self0=0.0f0,
+                         population_size=500,
+                         group_size=gs_values,
+                         relatedness=r_values)
+    for gs_values in gs50_values
+    for ep_values in ep05_values
+]
+
+simulation_sweep_gsep = simulation_replicate(parameter_sweep_gsep, 40);
+simulation_sweep_gsep_stats = sweep_statistics(simulation_sweep_gsep, gs50_values, ep05_values)
+
+save_simulation(simulation_sweep_gsep_stats, joinpath(@__DIR__, "simulation_sweep_gsep1_stats.csv"))
