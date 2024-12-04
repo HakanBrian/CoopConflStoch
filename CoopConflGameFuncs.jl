@@ -238,7 +238,7 @@ function filter_out_val!(arr::AbstractVector{T}, exclude_val::T, buffer::Vector{
             count += 1
         end
     end
-    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
+    return @inbounds view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
 function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vector{T}) where T
@@ -362,6 +362,16 @@ function probabilistic_round(x::Float64)::Int64
     return rand() < probability_up ? upper : lower
 end
 
+function in_place_sample!(data::AbstractVector{T}, k::Int) where T
+    n = length(data)
+
+    for i in 1:k
+        j = rand(i:n)  # Random index between i and n (inclusive)
+        data[i], data[j] = data[j], data[i]  # Swap elements
+    end
+    return @inbounds view(data, 1:k)  # Return a view of the first k elements
+end
+
 function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
@@ -387,7 +397,7 @@ function shuffle_and_group(population_size::Int64, group_size::Int64, relatednes
         groups[i, :] .= focal_individual_index
 
         # Assign random individuals to the group
-        groups[i, end-num_random+1:end] = sample(candidates_filtered_view, num_random, replace=false)
+        groups[i, end-num_random+1:end] = in_place_sample!(candidates_filtered_view, num_random)
     end
 
     return groups
