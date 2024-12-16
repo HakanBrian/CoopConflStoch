@@ -140,6 +140,32 @@ function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Floa
     return last_rows
 end
 
+function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64})
+    # Determine the number of params
+    num_params = maximum(all_simulation_means.param_id)
+
+    # Initialize an empty DataFrame to store last rows
+    last_rows = DataFrame()
+
+    for i in 1:num_params
+        # Filter rows by `param_id`
+        param_data = filter(row -> row.param_id == i, all_simulation_means)
+
+        # Calculate statistics for the current parameter set
+        statistics = calculate_statistics(param_data)
+
+        # Append the last row of `statistics` to `last_rows`
+        push!(last_rows, statistics[end, :])
+    end
+
+    rename!(last_rows, :generation => :relatedness)
+    last_rows.relatedness = repeat(r_values, inner = length(gs_values))
+
+    insertcols!(last_rows, 2, :group_size => repeat(gs_values, length(r_values)))
+
+    return last_rows
+end
+
 function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
     # Filter the data if param_id is provided
     if param_id !== nothing
