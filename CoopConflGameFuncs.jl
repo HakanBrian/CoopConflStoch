@@ -432,7 +432,7 @@ function reproduce!(pop::Population)
     indices_list = 1:pop.parameters.population_size
 
     # Calculate fitness for all individuals in the population
-    fitnesses = map(i -> fitness_pwr(pop, i), indices_list)
+    fitnesses = map(i -> fitness_exp(pop, i), indices_list)
 
     # Sample indices with the given fitness weights
     sampled_indices = sample(indices_list, ProbabilityWeights(fitnesses), pop.parameters.population_size, replace=true, ordered=false)
