@@ -249,16 +249,16 @@ function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vecto
             count += 1
         end
     end
-    return @inbounds view(buffer, 1:count-1)  # Return a view of the filtered buffer
+    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
 function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
     synergy = pop.parameters.synergy
     group_size = pop.parameters.group_size
-    focal_indiv = @inbounds group[focal_idx]
+    focal_indiv = group[focal_idx]
 
     # Get the group members' actions
-    actions = @inbounds @view pop.action[group]
+    actions = @view pop.action[group]
     action_i = actions[focal_idx]
     action_j_filtered_view = filter_out_idx!(actions, focal_idx, action_buffer)
 
