@@ -106,6 +106,15 @@ end
 # Fitness
 ##################
 
+function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
+    sqrt_action_i = sqrt_llvm(action_i)
+    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
+    sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
+
+    return sum_sqrt_actions
+end
+
+
 function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
     sqrt_action_i = sqrt_llvm(action_i)
     sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
@@ -113,14 +122,6 @@ function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy:
     sqrt_sum_actions = sqrt_llvm(action_i + sum(actions_j))
 
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
-end
-
-function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
-    sqrt_action_i = sqrt_llvm(action_i)
-    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
-    sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
-
-    return sum_sqrt_actions
 end
 
 function cost(action_i::Float32)
