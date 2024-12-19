@@ -106,16 +106,18 @@ end
 # Fitness
 ##################
 
-function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
+@inline function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
     sqrt_action_i = sqrt_llvm(action_i)
-    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
+    sum_sqrt_actions_j = 0.0f0
+    for action_j in actions_j
+        sum_sqrt_actions_j += sqrt_llvm(action_j)
+    end
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
 
     return sum_sqrt_actions
 end
 
-
-function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
+@inline function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
     sqrt_action_i = sqrt_llvm(action_i)
     sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
@@ -124,64 +126,64 @@ function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy:
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
-function cost(action_i::Float32)
+@inline function cost(action_i::Float32)
     return action_i^2
 end
 
-function external_punishment(action_i::Float32, norm_pool::Float32, punishment_pool::Float32)
+@inline function external_punishment(action_i::Float32, norm_pool::Float32, punishment_pool::Float32)
     return punishment_pool * (action_i - norm_pool)^2
 end
 
-function internal_punishment_I(action_i::Float32, norm_pool::Float32, T_ext::Float32)
+@inline function internal_punishment_I(action_i::Float32, norm_pool::Float32, T_ext::Float32)
     return T_ext * (action_i - norm_pool)^2
 end
 
-function internal_punishment_II(action_i::Float32, norm_pool::Float32, T_ext::Float32)
+@inline function internal_punishment_II(action_i::Float32, norm_pool::Float32, T_ext::Float32)
     return T_ext * log(1 + ((action_i - norm_pool)^2))
 end
 
-function internal_punishment_ext(action_i::Float32, norm_pool_mini::Float32, T_ext::Float32)
+@inline function internal_punishment_ext(action_i::Float32, norm_pool_mini::Float32, T_ext::Float32)
     return T_ext * (action_i - norm_pool_mini)^2
 end
 
-function internal_punishment_self(action_i::Float32, norm_i::Float32, T_self::Float32)
+@inline function internal_punishment_self(action_i::Float32, norm_i::Float32, T_self::Float32)
     return T_self * (action_i - norm_i)^2
 end
 
-function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32)
+@inline function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32)
     b = benefit(action_i, actions_j)
     c = cost(action_i)
     ep = external_punishment(action_i, norm_pool, punishment_pool)
     return b - c - ep
 end
 
-function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32)
+@inline function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool)
     i = internal_punishment_I(action_i, norm_pool, T_ext)
     return p - i
 end
 
-function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32)
+@inline function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool)
     ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
     ips = internal_punishment_self(action_i, norm_i, T_self)
     return p - ipe - ips
 end
 
-function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, synergy::Float32)
+@inline function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, synergy::Float32)
     b = benefit(action_i, actions_j, synergy)
     c = cost(action_i)
     ep = external_punishment(action_i, norm_pool, punishment_pool)
     return b - c - ep
 end
 
-function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, synergy::Float32)
+@inline function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, synergy::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
     i = internal_punishment_I(action_i, norm_pool, T_ext)
     return p - i
 end
 
-function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32, synergy::Float32)
+@inline function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32, synergy::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
     ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
     ips = internal_punishment_self(action_i, norm_i, T_self)
