@@ -1,4 +1,4 @@
-using StatsBase, Random, Distributions, DataFrames, StaticArrays
+using Core.Intrinsics, StatsBase, Random, Distributions, DataFrames, StaticArrays
 
 
 ####################################
@@ -133,10 +133,18 @@ end
 ##################
 
 function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
-    sqrt_action_i = sqrt(action_i)
-    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
+    sqrt_action_i = sqrt_llvm(action_i)
+
+    sum_sqrt_actions_j = 0.0f0
+    sum_actions_j = 0.0f0
+    @inbounds for action in actions_j
+        sum_sqrt_actions_j += sqrt_llvm(action)
+        sum_actions_j += action
+    end
+
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
-    sqrt_sum_actions = sqrt(action_i + sum(actions_j))
+    sqrt_sum_actions = sqrt_llvm(action_i + sum_actions_j)
+
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
