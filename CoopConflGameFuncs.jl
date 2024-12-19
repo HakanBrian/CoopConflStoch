@@ -134,18 +134,19 @@ end
 
 function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
     sqrt_action_i = sqrt_llvm(action_i)
-
-    sum_sqrt_actions_j = 0.0f0
-    sum_actions_j = 0.0f0
-    @inbounds for action in actions_j
-        sum_sqrt_actions_j += sqrt_llvm(action)
-        sum_actions_j += action
-    end
-
+    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
-    sqrt_sum_actions = sqrt_llvm(action_i + sum_actions_j)
+    sqrt_sum_actions = sqrt_llvm(action_i + sum(actions_j))
 
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
+end
+
+function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
+    sqrt_action_i = sqrt_llvm(action_i)
+    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
+    sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
+
+    return sum_sqrt_actions
 end
 
 function cost(action_i::Float32)
@@ -170,6 +171,26 @@ end
 
 function internal_punishment_self(action_i::Float32, norm_i::Float32, T_self::Float32)
     return T_self * (action_i - norm_i)^2
+end
+
+function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32)
+    b = benefit(action_i, actions_j)
+    c = cost(action_i)
+    ep = external_punishment(action_i, norm_pool, punishment_pool)
+    return b - c - ep
+end
+
+function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32)
+    p = payoff(action_i, actions_j, norm_pool, punishment_pool)
+    i = internal_punishment_I(action_i, norm_pool, T_ext)
+    return p - i
+end
+
+function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32)
+    p = payoff(action_i, actions_j, norm_pool, punishment_pool)
+    ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
+    ips = internal_punishment_self(action_i, norm_i, T_self)
+    return p - ipe - ips
 end
 
 function payoff(action_i::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, synergy::Float32)
@@ -202,7 +223,7 @@ function total_payoff!(group::AbstractVector{Int64}, norm_pool::Float32, pun_poo
     actions_j = @view pop.action[@view group[2:end]]
 
     # Compute the payoff for the focal individual
-    payoff_foc = payoff(action_i, actions_j, norm_pool, pun_pool, pop.parameters.synergy)
+    payoff_foc = payoff(action_i, actions_j, norm_pool, pun_pool)
 
     # Update the individual's payoff and interactions
     pop.payoff[focal_idiv] = (payoff_foc + pop.interactions[focal_idiv] * pop.payoff[focal_idiv]) / (pop.interactions[focal_idiv] + 1)
@@ -253,7 +274,6 @@ function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vecto
 end
 
 function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_buffer::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
-    synergy = pop.parameters.synergy
     group_size = pop.parameters.group_size
     focal_indiv = @inbounds group[focal_idx]
 
@@ -277,8 +297,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
                                         norm_pool,
                                         pun_pool,
                                         int_pun_ext,
-                                        int_pun_self,
-                                        synergy)
+                                        int_pun_self)
 
     # Track the best action
     best_action = action_i
