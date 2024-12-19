@@ -184,4 +184,6 @@ struct Exponential
     base::Float64  # The exponent value (e.g., 342 for e^342)
 end
 
-Base.:-(a::Exponential, b::Exponential) = Exponential(a.base - b.base)  # Overload addition to handle relative weighting (subtracting exponents)
+Base.:-(a::Exponential, b::Exponential) = Exponential(
+    clamp(a.base - b.base, -Float64(1.7976931348623157e308), Float64(1.7976931348623157e308))  # Prevent overflow (Subtraction)
+)
