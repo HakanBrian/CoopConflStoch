@@ -211,11 +211,16 @@ function fitness(pop::Population, idx::Int64)
 end
 
 function fitness_exp(pop::Population, idx::Int64)
+    base_fitness = fitness(pop, idx)
+    return 0.004 * exp(base_fitness * 10.0)
+end
+
+function fitness_exp_norm(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx) / (pop.parameters.group_size - 1)
     return exp(base_fitness * pop.parameters.fitness_scaling_factor_b)
 end
 
-function fitness_pwr(pop::Population, idx::Int64)
+function fitness_pwr_norm(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx) / (pop.parameters.group_size - 1)
     return (base_fitness + 1)^pop.parameters.fitness_scaling_factor_a
 end
