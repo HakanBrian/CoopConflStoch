@@ -92,3 +92,15 @@ function collect_group(group::AbstractVector{Int64}, pop::Population)
 
     return norm_pool, pun_pool
 end
+
+
+##################
+# Reproduction
+##################
+
+function normalize_exponentials(values::Vector{Exponential})
+    max_base = maximum(v.base for v in values)
+    shifted = [v.base - max_base for v in values]  # Shift to avoid large exponents
+    probs = exp.(shifted)
+    return probs ./ sum(probs)  # Normalize to probabilities
+end

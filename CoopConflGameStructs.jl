@@ -174,3 +174,14 @@ function Base.copy!(old_population::Population, new_population::Population)
 
     nothing
 end
+
+
+##################
+# Overloaded Exponential
+##################
+
+struct Exponential
+    base::Float64  # The exponent value (e.g., 342 for e^342)
+end
+
+Base.:-(a::Exponential, b::Exponential) = Exponential(a.base - b.base)  # Overload addition to handle relative weighting (subtracting exponents)

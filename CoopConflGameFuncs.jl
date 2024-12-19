@@ -213,7 +213,7 @@ end
 
 function fitness_exp(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return 0.004 * exp(base_fitness * 10.0)
+    return Exponential(base_fitness * 10.0)
 end
 
 function fitness_exp_norm(pop::Population, idx::Int64)
@@ -407,7 +407,8 @@ function reproduce!(pop::Population)
     fitnesses = map(i -> fitness_exp(pop, i), indices_list)
 
     # Sample indices with the given fitness weights
-    sampled_indices = sample(indices_list, ProbabilityWeights(fitnesses), pop.parameters.population_size, replace=true, ordered=false)
+    normalized_probs = normalize_exponentials(fitnesses)
+    sampled_indices = sample(indices_list, Weights(normalized_probs), pop.parameters.population_size, replace=true, ordered=false)
 
     # Sort sampled indices to avoid unnecessary memory shuffling during offspring generation
     sort!(sampled_indices)
