@@ -90,3 +90,33 @@ println(population)
 @time simulation(population);
 # pure runtime
 @profview @time simulation(population);
+
+
+##################
+# Group size
+##################
+
+parameter_10 = SimulationParameters(action0=0.1f0,
+                                       norm0=2.0f0,
+                                       ext_pun0=0.1f0,
+                                       int_pun_ext0=0.0f0,
+                                       int_pun_self0=0.0f0,
+                                       population_size=50,
+                                       group_size=10,
+                                       relatedness=0.5);
+population_10 = population_construction(parameter_10);
+@time simulation_10 = simulation(population_10);
+@profview @time simulation_10 = simulation(population_10);
+
+
+parameter_20 = SimulationParameters(action0=0.1f0,
+                                       norm0=2.0f0,
+                                       ext_pun0=0.1f0,
+                                       int_pun_ext0=0.0f0,
+                                       int_pun_self0=0.0f0,
+                                       population_size=50,
+                                       group_size=20,
+                                       relatedness=0.5);
+population_20 = population_construction(parameter_20);
+@time simulation_20 = simulation(population_20);
+@profview @time simulation_20 = simulation(population_20);
