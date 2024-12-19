@@ -313,18 +313,11 @@ function behavioral_equilibrium!(action_buffer::Vector{Float32}, group::Abstract
     # Create a view for group actions
     temp_actions = @view pop.action[group]
 
+    action_change = 1.0f0
     delta_action = 0.1f0
     time_step = 0
     while time_step < max_time_steps
         time_step += 1
-        action_change = 0.0  # Reset action_change for each iteration
-
-        # Calculate the best action (relatively) of each individual in the group
-        for i in eachindex(group)
-            best_action = best_response(i, group, action_buffer, norm_pool, pun_pool, pop, delta_action)
-            action_change = max(action_change, abs(best_action - temp_actions[i]))
-            temp_actions[i] = best_action
-        end
 
         # Dynamically adjust delta_action
         if delta_action < tolerance
@@ -333,6 +326,15 @@ function behavioral_equilibrium!(action_buffer::Vector{Float32}, group::Abstract
             delta_action *= 0.5f0
         else
             delta_action *= 1.5f0
+        end
+
+        action_change = 0.0f0  # Reset action_change for each iteration
+
+        # Calculate the relatively best action of each individual in the group
+        for i in eachindex(group)
+            best_action = best_response(i, group, action_buffer, norm_pool, pun_pool, pop, delta_action)
+            @inbounds action_change = max(action_change, abs(best_action - temp_actions[i]))
+            temp_actions[i] = best_action
         end
     end
 
