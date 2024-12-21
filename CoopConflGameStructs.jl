@@ -185,5 +185,5 @@ struct Exponential
 end
 
 Base.:-(a::Exponential, b::Exponential) = Exponential(
-    clamp(a.base - b.base, -Float64(1.7976931348623157e308), Float64(1.7976931348623157e308))  # Prevent overflow (Subtraction)
+    clamp(a.base - b.base, -floatmax(Float64), floatmax(Float64))  # Prevent overflow (Subtraction)
 )
