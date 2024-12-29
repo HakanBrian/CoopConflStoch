@@ -1,70 +1,14 @@
-using Distributed
-addprocs(4);
-
 using BenchmarkTools
-@everywhere include("../CoopConflGamePlots.jl")
+@everywhere include("CoopConflGameSLURMHelper.jl")
+addprocs(128);
 
 
-r1_values = collect(range(0, 1.0, step=0.01));
+###############################
+# Run Simulation
+###############################
 
-parameter_sweep_r = [
-    SimulationParameters(action0=0.1f0,
-                         norm0=2.0f0,
-                         ext_pun0=0.1f0,
-                         int_pun_ext0=0.0f0,
-                         int_pun_self0=0.0f0,
-                         population_size=500,
-                         group_size=10,
-                         relatedness=r_values)
-    for r_values in r1_values
-]
+run_sim_r("simulation_sweep_r_stats.csv")
 
-simulation_sweep_r = simulation_replicate(parameter_sweep_r, 40);
-simulation_sweep_r_stats = sweep_statistics(simulation_sweep_r, r1_values)
+run_sim_rep("simulation_sweep_rep_stats.csv")
 
-save_simulation(simulation_sweep_r_stats, joinpath(@__DIR__, "simulation_sweep_r1_stats.csv"))
-
-
-r05_values = collect(range(0, 0.5, step=0.05));
-ep05_values = collect(range(0.0f0, 0.5f0, step=0.05f0));
-
-parameter_sweep_rep = [
-    SimulationParameters(action0=0.1f0,
-                         norm0=2.0f0,
-                         ext_pun0=ep_values,
-                         int_pun_ext0=0.0f0,
-                         int_pun_self0=0.0f0,
-                         population_size=500,
-                         group_size=10,
-                         relatedness=r_values,
-                         ext_pun_mutation_enabled=false)
-    for r_values in r05_values
-    for ep_values in ep05_values
-]
-
-simulation_sweep_rep = simulation_replicate(parameter_sweep_rep, 40);
-simulation_sweep_rep_stats = sweep_statistics(simulation_sweep_rep, r05_values, ep05_values)
-
-save_simulation(simulation_sweep_rep_stats, joinpath(@__DIR__, "simulation_sweep_rep1_stats.csv"))
-
-
-r05_values = collect(range(0, 0.5, step=0.05));
-gs50_values = collect(range(50, 500, step=50));
-
-parameter_sweep_rgs = [
-    SimulationParameters(action0=0.1f0,
-                         norm0=2.0f0,
-                         ext_pun0=0.1f0,
-                         int_pun_ext0=0.0f0,
-                         int_pun_self0=0.0f0,
-                         population_size=500,
-                         group_size=gs_values,
-                         relatedness=r_values)
-    for r_values in r05_values
-    for gs_values in gs50_values
-]
-
-simulation_sweep_rgs = simulation_replicate(parameter_sweep_rgs, 40);
-simulation_sweep_rgs_stats = sweep_statistics(simulation_sweep_rgs, r05_values, gs50_values)
-
-save_simulation(simulation_sweep_rgs_stats, joinpath(@__DIR__, "simulation_sweep_rgs1_stats.csv"))
+run_sim_rgs("simulation_sweep_rgs_stats.csv")
