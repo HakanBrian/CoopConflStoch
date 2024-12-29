@@ -2,7 +2,12 @@ using Distributed, BenchmarkTools
 
 addprocs(128);
 
-@everywhere include("../CoopConflGamePlots.jl")
+
+###############################
+# Game Function
+###############################
+
+@everywhere include("../CoopConflGameFuncs.jl")
 include("CoopConflGameSLURMHelper.jl")
 
 

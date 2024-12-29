@@ -1,170 +1,16 @@
-using Distributed, Interpolations, Plots, PlotlyJS, CSV, FilePathsBase
+using Interpolations, Plots, PlotlyJS
 
 
 ##################
-# Game Functions
+# Helper Functions
 ##################
 
-include("CoopConflGameFuncs.jl")
+include("CoopConflGameHelper.jl")
 
 
 ##################
-# Plot Simulation Function
+# Plot Function
 ##################
-
-function run_simulation(parameters::SimulationParameters, param_id::Int64, replicate_id::Int64)
-    println("Running simulation replicate $replicate_id for param_id $param_id")
-
-    # Run the simulation
-    my_population = population_construction(parameters)
-    my_simulation = simulation(my_population)
-
-    # Group by generation and compute mean for each generation
-    my_simulation_gdf = groupby(my_simulation, :generation)
-    my_simulation_mean = combine(my_simulation_gdf,
-                                 :action => mean,
-                                 :a => mean,
-                                 :p => mean,
-                                 :T_ext => mean,
-                                 :T_self => mean,
-                                 :payoff => mean)
-
-    # Add columns for replicate and param_id
-    rows_to_insert = nrow(my_simulation_mean)
-    insertcols!(my_simulation_mean, 1, :param_id => fill(param_id, rows_to_insert))
-    insertcols!(my_simulation_mean, 2, :replicate => fill(replicate_id, rows_to_insert))
-
-    return my_simulation_mean
-end
-
-function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)
-    # Use pmap to parallelize the simulation
-    results = pmap(1:num_replicates) do i
-        run_simulation(parameters, 1, i)
-    end
-
-    # Concatenate all the simulation means returned by each worker
-    all_simulation_means = vcat(results...)
-
-    return all_simulation_means
-end
-
-function simulation_replicate(parameter_sweep::Vector{SimulationParameters}, num_replicates::Int64)
-    # Create a list of tasks (parameter set index, parameter set, replicate) to distribute
-    tasks = [(idx, parameters, replicate) for (idx, parameters) in enumerate(parameter_sweep) for replicate in 1:num_replicates]
-
-    # Use pmap to distribute the tasks across the workers
-    results = pmap(tasks) do task
-        param_idx, parameters, replicate = task
-        # Run simulation and store the result with the parameter set index
-        run_simulation(parameters, param_idx, replicate)
-    end
-
-    # Concatenate all results into a single DataFrame
-    all_simulation_means = vcat(results...)
-
-    return all_simulation_means
-end
-
-function calculate_statistics(all_simulation_means::DataFrame)
-    # Group by generation
-    grouped = groupby(all_simulation_means, :generation)
-
-    # Calculate mean and standard deviation for each trait across replicates
-    stats = combine(grouped,
-                    :action_mean => mean => :action_mean_mean,
-                    :action_mean => std => :action_mean_std,
-                    :a_mean => mean => :a_mean_mean,
-                    :a_mean => std => :a_mean_std,
-                    :p_mean => mean => :p_mean_mean,
-                    :p_mean => std => :p_mean_std,
-                    :T_ext_mean => mean => :T_ext_mean_mean,
-                    :T_ext_mean => std => :T_ext_mean_std,
-                    :T_self_mean => mean => :T_self_mean_mean,
-                    :T_self_mean => std => :T_self_mean_std,
-                    :payoff_mean => mean => :payoff_mean_mean,
-                    :payoff_mean => std => :payoff_mean_std)
-
-    return stats
-end
-
-function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64})
-    # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
-
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
-
-    for i in 1:num_params
-        # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
-    end
-
-    rename!(last_rows, :generation => :relatedness)
-
-    last_rows.relatedness = r_values
-
-    return last_rows
-end
-
-function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
-    # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
-
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
-
-    for i in 1:num_params
-        # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
-    end
-
-    rename!(last_rows, :generation => :relatedness)
-    last_rows.relatedness = repeat(r_values, inner = length(ep_values))
-
-    insertcols!(last_rows, 2, :ext_pun => repeat(ep_values, length(r_values)))
-    select!(last_rows, Not([:p_mean_mean, :p_mean_std]))
-
-    return last_rows
-end
-
-function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64})
-    # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
-
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
-
-    for i in 1:num_params
-        # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
-    end
-
-    rename!(last_rows, :generation => :relatedness)
-    last_rows.relatedness = repeat(r_values, inner = length(gs_values))
-
-    insertcols!(last_rows, 2, :group_size => repeat(gs_values, length(r_values)))
-
-    return last_rows
-end
 
 function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
     # Filter the data if param_id is provided
@@ -252,7 +98,7 @@ function plot_full_sweep_Plots(statistics::DataFrame)
         end
 
         # Display the plot
-        xlabel!("Generation")
+        xlabel!("Relatedness")
         ylabel!("Value")
         display("image/png", p)
     end
@@ -355,6 +201,11 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
         display("image/png", p)
     end
 end
+
+
+##################
+# Plotly Function
+##################
 
 function create_trait_table(all_simulation_means::DataFrame)
     table_data = []
@@ -655,44 +506,5 @@ function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
 
         # Combine traces and plot
         display(PlotlyJS.plot([heatmap_trace, contour_trace], layout))
-    end
-end
-
-function save_simulation(simulation::DataFrame, filepath::String)
-    # Ensure the filepath has the .csv extension
-    if !endswith(filepath, ".csv")
-        filepath *= ".csv"
-    end
-
-    # Convert to an absolute path (in case it's not already)
-    filepath = abspath(filepath)
-
-    # Check if the file already exists, and print a warning if it does
-    if isfile(filepath)
-        println("Warning: File '$filepath' already exists and will be overwritten.")
-    end
-
-    # Save the dataframe, overwriting the file if it exists
-    CSV.write(filepath, simulation)
-    println("File saved as: $filepath")
-end
-
-function read_simulation(filepath::String)
-    # Ensure the filepath has the .csv extension
-    if !endswith(filepath, ".csv")
-        filepath *= ".csv"
-    end
-
-    # Convert to an absolute path (in case it's not already)
-    filepath = abspath(filepath)
-
-    # Check if the file exists before attempting to read it
-    if !isfile(filepath)
-        error("File '$filepath' does not exist.")
-    else
-        # Read the CSV file into a DataFrame
-        simulation = CSV.read(filepath, DataFrame)
-        println("File successfully loaded from: $filepath")
-        return simulation
     end
 end
