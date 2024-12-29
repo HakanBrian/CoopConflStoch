@@ -1,6 +1,9 @@
-using BenchmarkTools
-@everywhere include("CoopConflGameSLURMHelper.jl")
+using Distributed, BenchmarkTools
+
 addprocs(128);
+
+@everywhere include("../CoopConflGamePlots.jl")
+include("CoopConflGameSLURMHelper.jl")
 
 
 ###############################
