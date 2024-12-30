@@ -1,5 +1,4 @@
-using Distributed, BenchmarkTools
-
+using Distributed
 addprocs(128);
 
 
@@ -7,8 +6,8 @@ addprocs(128);
 # Game Function
 ###############################
 
-@everywhere include("../CoopConflGameFuncs.jl")
-include("CoopConflGameSLURMHelper.jl")
+@everywhere include("../CoopConflGameFuncs.jl");
+include("CoopConflGameSLURMHelper.jl");
 
 
 ###############################
