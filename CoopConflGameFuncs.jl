@@ -215,7 +215,7 @@ end
 
 function fitness_exp(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return 0.004 * exp(base_fitness * 10.0)
+    return exp(base_fitness * 10.0)
 end
 
 function fitness_exp_norm(pop::Population, idx::Int64)
@@ -417,6 +417,29 @@ function reproduce!(pop::Population)
 
     nothing
 end
+
+#=
+function reproduce!(pop::Population)
+    # Create a list of indices corresponding to individuals
+    indices_list = 1:pop.parameters.population_size
+
+    # Calculate fitness for all individuals in the population
+    fitnesses = map(i -> fitness_exp(pop, i), indices_list)
+
+    # Sample indices with the given fitness weights
+    sampled_indices = sample(indices_list, ProbabilityWeights(fitnesses), pop.parameters.population_size, replace=true, ordered=false)
+
+    # Sort sampled indices to avoid unnecessary memory shuffling during offspring generation
+    sort!(sampled_indices)
+
+    # Create new offspring from sampled individuals
+    for i in 1:pop.parameters.population_size
+        offspring!(pop, i, sampled_indices[i])
+    end
+
+    nothing
+end
+=#
 
 #= Maximal fitness reproduction
 function reproduce!(pop::Population)
