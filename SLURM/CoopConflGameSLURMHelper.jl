@@ -28,7 +28,7 @@ function run_sim_rep(base_params::SimulationParameters, filename::String)
     ep_values = collect(range(0.0f0, 0.5f0, step=0.05f0));
 
     parameter_sweep = [
-        update_params(base_params, relatedness=r_value, ext_pun0=ep_value)
+        update_params(base_params, relatedness=r_value, ext_pun0=ep_value, ext_pun_mutation_enabled=false)
         for r_value in r_values
         for ep_value in ep_values
     ]
@@ -52,7 +52,7 @@ function run_sim_rgs(base_params::SimulationParameters, filename::String)
         for gs_value in gs_values
     ]
 
-    simulation_sweep = simulation_replicate(parameter_sweep, 40);
+    simulation_sweep = simulation_replicate(parameter_sweep, 20);
     simulation_sweep_stats = sweep_statistics(simulation_sweep, r_values, gs_values)
 
     save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
