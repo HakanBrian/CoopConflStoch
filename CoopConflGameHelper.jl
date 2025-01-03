@@ -154,7 +154,6 @@ function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Floa
     end
 
     rename!(last_rows, :generation => :relatedness)
-
     last_rows.relatedness = r_values
 
     return last_rows

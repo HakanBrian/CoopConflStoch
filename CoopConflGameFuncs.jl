@@ -215,17 +215,12 @@ end
 
 function fitness_exp(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return Exponential(base_fitness * 10.0)
+    return 0.004 * exp(base_fitness * 10.0)
 end
 
 function fitness_exp_norm(pop::Population, idx::Int64)
-    base_fitness = fitness(pop, idx) / (pop.parameters.group_size - 1)
-    return exp(base_fitness * pop.parameters.fitness_scaling_factor_b)
-end
-
-function fitness_pwr_norm(pop::Population, idx::Int64)
-    base_fitness = fitness(pop, idx) / (pop.parameters.group_size - 1)
-    return (base_fitness + 1)^pop.parameters.fitness_scaling_factor_a
+    base_fitness = fitness(pop, idx)
+    return Exponential(base_fitness * 10.0)
 end
 
 
@@ -406,7 +401,7 @@ function reproduce!(pop::Population)
     indices_list = 1:pop.parameters.population_size
 
     # Calculate fitness for all individuals in the population
-    fitnesses = map(i -> fitness_exp(pop, i), indices_list)
+    fitnesses = map(i -> fitness_exp_norm(pop, i), indices_list)
 
     # Sample indices with the given fitness weights
     normalized_probs = normalize_exponentials(fitnesses)
