@@ -135,7 +135,7 @@ function calculate_statistics(all_simulation_means::DataFrame)
     return stats
 end
 
-function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64})
+function sweep_statistics_r(all_simulation_means::DataFrame, r_values::Vector{Float64})
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 
@@ -159,7 +159,7 @@ function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Floa
     return last_rows
 end
 
-function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
+function sweep_statistics_rep(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 
@@ -186,7 +186,34 @@ function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Floa
     return last_rows
 end
 
-function sweep_statistics(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64})
+function sweep_statistics_rip(all_simulation_means::DataFrame, r_values::Vector{Float64}, ip_values::Vector{Float32})
+    # Determine the number of params
+    num_params = maximum(all_simulation_means.param_id)
+
+    # Initialize an empty DataFrame to store last rows
+    last_rows = DataFrame()
+
+    for i in 1:num_params
+        # Filter rows by `param_id`
+        param_data = filter(row -> row.param_id == i, all_simulation_means)
+
+        # Calculate statistics for the current parameter set
+        statistics = calculate_statistics(param_data)
+
+        # Append the last row of `statistics` to `last_rows`
+        push!(last_rows, statistics[end, :])
+    end
+
+    rename!(last_rows, :generation => :relatedness)
+    last_rows.relatedness = repeat(r_values, inner = length(ip_values))
+
+    insertcols!(last_rows, 2, :int_pun => repeat(ip_values, length(r_values)))
+    select!(last_rows, Not([:T_ext_mean_mean, :T_ext_mean_std, :T_self_mean_mean, :T_self_mean_std]))
+
+    return last_rows
+end
+
+function sweep_statistics_rgs(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64})
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 

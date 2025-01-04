@@ -15,7 +15,7 @@ function run_sim_r(base_params::SimulationParameters, filename::String)
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
-    simulation_sweep_stats = sweep_statistics(simulation_sweep, r_values)
+    simulation_sweep_stats = sweep_statistics_r(simulation_sweep, r_values)
 
     save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
 
@@ -34,7 +34,26 @@ function run_sim_rep(base_params::SimulationParameters, filename::String)
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
-    simulation_sweep_stats = sweep_statistics(simulation_sweep, r_values, ep_values)
+    simulation_sweep_stats = sweep_statistics_rep(simulation_sweep, r_values, ep_values)
+
+    save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
+
+    # Clear memory
+    GC.gc()
+end
+
+function run_sim_rip(base_params::SimulationParameters, filename::String)
+    r_values = collect(range(0, 0.5, step=0.05));
+    ip_values = collect(range(0.0f0, 0.5f0, step=0.05f0));
+
+    parameter_sweep = [
+        update_params(base_params, relatedness=r_value, int_pun_ext0=ip_value, int_pun_self0=ip_value, int_pun_ext_mutation_enabled=false, int_pun_self_mutation_enabled=false)
+        for r_value in r_values
+        for ip_value in ip_values
+    ]
+
+    simulation_sweep = simulation_replicate(parameter_sweep, 40);
+    simulation_sweep_stats = sweep_statistics_rip(simulation_sweep, r_values, ip_values)
 
     save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
 
@@ -53,7 +72,7 @@ function run_sim_rgs(base_params::SimulationParameters, filename::String)
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 20);
-    simulation_sweep_stats = sweep_statistics(simulation_sweep, r_values, gs_values)
+    simulation_sweep_stats = sweep_statistics_rgs(simulation_sweep, r_values, gs_values)
 
     save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
 
