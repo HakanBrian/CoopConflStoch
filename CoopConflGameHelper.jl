@@ -135,7 +135,12 @@ function calculate_statistics(all_simulation_means::DataFrame)
     return stats
 end
 
-function statistics_selection(all_simulation_means::DataFrame, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+function statistics_selection(
+    all_simulation_means::DataFrame,
+    output_save_tick::Int,
+    generations_to_save::Vector{Int64} = Int[],
+    percentages_to_save::Vector{Float64} = Float64[]
+)
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 
@@ -201,8 +206,18 @@ function statistics_selection(all_simulation_means::DataFrame, output_save_tick:
     return selected_data
 end
 
-function sweep_statistics_r(all_simulation_means::DataFrame, r_values::Vector{Float64}, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
-    statistics_r = statistics_selection(all_simulation_means, output_save_tick, generations_to_save, percentages_to_save)
+function sweep_statistics_r(
+    all_simulation_means::DataFrame,
+    r_values::Vector{Float64},
+    output_save_tick::Int,
+    generations_to_save::Vector{Int64} = Int[],
+    percentages_to_save::Vector{Float64} = Float64[]
+)
+    statistics_r = statistics_selection(all_simulation_means,
+                                        output_save_tick,
+                                        generations_to_save,
+                                        percentages_to_save
+    )
 
     # Add relatedness columns to each DataFrame
     for (key, df) in statistics_r
@@ -213,8 +228,19 @@ function sweep_statistics_r(all_simulation_means::DataFrame, r_values::Vector{Fl
     return statistics_r
 end
 
-function sweep_statistics_rep(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32}, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
-    statistics_rep = statistics_selection(all_simulation_means, output_save_tick, generations_to_save, percentages_to_save)
+function sweep_statistics_rep(
+    all_simulation_means::DataFrame,
+    r_values::Vector{Float64},
+    ep_values::Vector{Float32},
+    output_save_tick::Int,
+    generations_to_save::Vector{Int64} = Int[],
+    percentages_to_save::Vector{Float64} = Float64[]
+)
+    statistics_rep = statistics_selection(all_simulation_means,
+                                        output_save_tick,
+                                        generations_to_save,
+                                        percentages_to_save
+    )
 
     # Add relatedness and ext_pun columns to each DataFrame
     for (key, df) in statistics_rep
@@ -228,8 +254,19 @@ function sweep_statistics_rep(all_simulation_means::DataFrame, r_values::Vector{
     return statistics_rep
 end
 
-function sweep_statistics_rip(all_simulation_means::DataFrame, r_values::Vector{Float64}, ip_values::Vector{Float32}, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
-    statistics_rip = statistics_selection(all_simulation_means, output_save_tick, generations_to_save, percentages_to_save)
+function sweep_statistics_rip(
+    all_simulation_means::DataFrame,
+    r_values::Vector{Float64},
+    ip_values::Vector{Float32},
+    output_save_tick::Int,
+    generations_to_save::Vector{Int64} = Int[],
+    percentages_to_save::Vector{Float64} = Float64[]
+)
+    statistics_rip = statistics_selection(all_simulation_means,
+                                        output_save_tick,
+                                        generations_to_save,
+                                        percentages_to_save
+    )
 
     for (key, df) in statistics_rip
         rename!(df, :generation => :relatedness)
@@ -242,8 +279,19 @@ function sweep_statistics_rip(all_simulation_means::DataFrame, r_values::Vector{
     return statistics_rip
 end
 
-function sweep_statistics_rgs(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64}, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
-    statistics_rgs = statistics_selection(all_simulation_means, output_save_tick, generations_to_save, percentages_to_save)
+function sweep_statistics_rgs(
+    all_simulation_means::DataFrame,
+    r_values::Vector{Float64},
+    gs_values::Vector{Int64},
+    output_save_tick::Int,
+    generations_to_save::Vector{Int64} = Int[],
+    percentages_to_save::Vector{Float64} = Float64[]
+)
+    statistics_rgs = statistics_selection(all_simulation_means,
+                                        output_save_tick,
+                                        generations_to_save,
+                                        percentages_to_save
+    )
 
     for (key, df) in statistics_rgs
         rename!(df, :generation => :relatedness)
