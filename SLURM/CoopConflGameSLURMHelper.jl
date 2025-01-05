@@ -19,7 +19,7 @@ function run_sim_r(
         for r_value in r_values
     ]
 
-    simulation_sweep = simulation_replicate(parameter_sweep, 40);
+    simulation_sweep = simulation_replicate(parameter_sweep, 40)
     simulation_sweep_stats = sweep_statistics_r(simulation_sweep,
                                                 r_values, 
                                                 base_params.output_save_tick,
@@ -54,9 +54,10 @@ function run_sim_rep(
         for ep_value in ep_values
     ]
 
-    simulation_sweep = simulation_replicate(parameter_sweep, 40);
+    simulation_sweep = simulation_replicate(parameter_sweep, 40)
     simulation_sweep_stats = sweep_statistics_rep(simulation_sweep,
-                                                    r_values, ep_values,
+                                                    r_values, 
+                                                    ep_values,
                                                     base_params.output_save_tick,
                                                     generations_to_save,
                                                     percentages_to_save
@@ -91,7 +92,7 @@ function run_sim_rip(
         for ip_value in ip_values
     ]
 
-    simulation_sweep = simulation_replicate(parameter_sweep, 40);
+    simulation_sweep = simulation_replicate(parameter_sweep, 40)
     simulation_sweep_stats = sweep_statistics_rip(simulation_sweep,
                                                     r_values,
                                                     ip_values,
@@ -123,7 +124,7 @@ function run_sim_rgs(
         for gs_value in gs_values
     ]
 
-    simulation_sweep = simulation_replicate(parameter_sweep, 20);
+    simulation_sweep = simulation_replicate(parameter_sweep, 20)
     simulation_sweep_stats = sweep_statistics_rgs(simulation_sweep,
                                                     r_values,
                                                     gs_values,
