@@ -27,8 +27,8 @@ base_params = SimulationParameters(action0=0.1f0,
                                     int_pun_self_mutation_enabled=true,
                                     output_save_tick=10)
 
-run_sim_r(base_params, "r1.csv")
+run_sim_r(base_params, "r1", Int[], Float64[])
 
-run_sim_rep(base_params, "rep1.csv")
+run_sim_rep(base_params, "rep1", Int[], Float64[])
 
-run_sim_rgs(base_params, "rgs1.csv")
+run_sim_rgs(base_params, "rgs1", Int[], Float64[])
