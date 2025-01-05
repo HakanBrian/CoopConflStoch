@@ -17,7 +17,9 @@ function run_sim_r(base_params::SimulationParameters, filename::String)
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
     simulation_sweep_stats = sweep_statistics_r(simulation_sweep, r_values)
 
-    save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
+    for (key, df) in simulation_sweep_stats
+        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+    end
 
     # Clear memory
     GC.gc()
@@ -36,7 +38,9 @@ function run_sim_rep(base_params::SimulationParameters, filename::String)
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
     simulation_sweep_stats = sweep_statistics_rep(simulation_sweep, r_values, ep_values)
 
-    save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
+    for (key, df) in simulation_sweep_stats
+        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+    end
 
     # Clear memory
     GC.gc()
@@ -55,7 +59,9 @@ function run_sim_rip(base_params::SimulationParameters, filename::String)
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
     simulation_sweep_stats = sweep_statistics_rip(simulation_sweep, r_values, ip_values)
 
-    save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
+    for (key, df) in simulation_sweep_stats
+        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+    end
 
     # Clear memory
     GC.gc()
@@ -74,7 +80,9 @@ function run_sim_rgs(base_params::SimulationParameters, filename::String)
     simulation_sweep = simulation_replicate(parameter_sweep, 20);
     simulation_sweep_stats = sweep_statistics_rgs(simulation_sweep, r_values, gs_values)
 
-    save_simulation(simulation_sweep_stats, joinpath(@__DIR__, filename))
+    for (key, df) in simulation_sweep_stats
+        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+    end
 
     # Clear memory
     GC.gc()

@@ -135,12 +135,32 @@ function calculate_statistics(all_simulation_means::DataFrame)
     return stats
 end
 
-function sweep_statistics_r(all_simulation_means::DataFrame, r_values::Vector{Float64})
+function statistics_selection(all_simulation_means::DataFrame, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
 
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
+    # Determine total number of generations
+    total_generations = maximum(all_simulation_means.generation)
+
+    # Initialize a dictionary to store DataFrames for each specified generation or percentage
+    selected_data = Dict{String, DataFrame}()
+
+    # Calculate the specific generations based on percentages
+    percent_generations = [(p, round(Int, p * total_generations)) for p in percentages_to_save]
+
+    # Combine specific generations and percentage-based generations
+    generations_to_select = unique(vcat(generations_to_save, map(x -> x[2], percent_generations)))
+
+    # If no specific generations or percentages are given, save the last row
+    if isempty(generations_to_select)
+        generations_to_select = [total_generations]  # Default to the last generation
+        generations_to_save = [total_generations]
+    end
+
+    # Preallocating keys in dictionary
+    for gen in generations_to_select
+        selected_data[string("gen_", gen)] = DataFrame()
+    end
 
     for i in 1:num_params
         # Filter rows by `param_id`
@@ -149,94 +169,92 @@ function sweep_statistics_r(all_simulation_means::DataFrame, r_values::Vector{Fl
         # Calculate statistics for the current parameter set
         statistics = calculate_statistics(param_data)
 
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
+        # Collect rows corresponding to the specified generations
+        for gen in generations_to_select
+            # Retrieve the data associated with this generation
+            gen_data = filter(row -> row.generation == gen, statistics)
+
+            if !isempty(gen_data)
+                # Determine key for dictionary
+                if gen in generations_to_save
+                    key = string("gen_", gen)
+                else
+                    pct_index = findfirst(x -> x[2] == gen, percent_generations)
+                    pct = round(Int, percent_generations[pct_index][1] * 100)
+                    key = string("pct_", pct)
+                end
+
+                # Append data
+                append!(selected_data[key], gen_data)
+            elseif isempty(gen_data)
+                @warn "Generation $gen not found in data"
+            end
+        end
     end
 
-    rename!(last_rows, :generation => :relatedness)
-    last_rows.relatedness = r_values
+    # Remove empty DataFrames from the dictionary
+    for key in keys(selected_data)
+        if isempty(selected_data[key])
+            @warn "Key $key has an empty DataFrame and will be removed"
+            delete!(selected_data, key)
+        end
+    end
 
-    return last_rows
+    return selected_data
 end
 
-function sweep_statistics_rep(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32})
-    # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
+function sweep_statistics_r(all_simulation_means::DataFrame, r_values::Vector{Float64}, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    statistics_r = statistics_selection(all_simulation_means, generations_to_save, percentages_to_save)
 
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
-
-    for i in 1:num_params
-        # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
+    # Add relatedness columns to each DataFrame
+    for (key, df) in statistics_r
+        rename!(df, :generation => :relatedness)
+        df.relatedness = r_values
     end
 
-    rename!(last_rows, :generation => :relatedness)
-    last_rows.relatedness = repeat(r_values, inner = length(ep_values))
-
-    insertcols!(last_rows, 2, :ext_pun => repeat(ep_values, length(r_values)))
-    select!(last_rows, Not([:p_mean_mean, :p_mean_std]))
-
-    return last_rows
+    return statistics_r
 end
 
-function sweep_statistics_rip(all_simulation_means::DataFrame, r_values::Vector{Float64}, ip_values::Vector{Float32})
-    # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
+function sweep_statistics_rep(all_simulation_means::DataFrame, r_values::Vector{Float64}, ep_values::Vector{Float32}, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    statistics_rep = statistics_selection(all_simulation_means, generations_to_save, percentages_to_save)
 
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
+    # Add relatedness and ext_pun columns to each DataFrame
+    for (key, df) in statistics_rep
+        rename!(df, :generation => :relatedness)
+        df.relatedness = repeat(r_values, inner = length(ep_values))
 
-    for i in 1:num_params
-        # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
+        insertcols!(df, 2, :ext_pun => repeat(ep_values, length(r_values)))
+        select!(df, Not([:p_mean_mean, :p_mean_std]))
     end
 
-    rename!(last_rows, :generation => :relatedness)
-    last_rows.relatedness = repeat(r_values, inner = length(ip_values))
-
-    insertcols!(last_rows, 2, :int_pun => repeat(ip_values, length(r_values)))
-    select!(last_rows, Not([:T_ext_mean_mean, :T_ext_mean_std, :T_self_mean_mean, :T_self_mean_std]))
-
-    return last_rows
+    return statistics_rep
 end
 
-function sweep_statistics_rgs(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64})
-    # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
+function sweep_statistics_rip(all_simulation_means::DataFrame, r_values::Vector{Float64}, ip_values::Vector{Float32}, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    statistics_rip = statistics_selection(all_simulation_means, generations_to_save, percentages_to_save)
 
-    # Initialize an empty DataFrame to store last rows
-    last_rows = DataFrame()
+    for (key, df) in statistics_rip
+        rename!(df, :generation => :relatedness)
+        df.relatedness = repeat(r_values, inner = length(ip_values))
 
-    for i in 1:num_params
-        # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Append the last row of `statistics` to `last_rows`
-        push!(last_rows, statistics[end, :])
+        insertcols!(df, 2, :int_pun => repeat(ip_values, length(r_values)))
+        select!(df, Not([:T_ext_mean_mean, :T_ext_mean_std, :T_self_mean_mean, :T_self_mean_std]))
     end
 
-    rename!(last_rows, :generation => :relatedness)
-    last_rows.relatedness = repeat(r_values, inner = length(gs_values))
+    return statistics_rip
+end
 
-    insertcols!(last_rows, 2, :group_size => repeat(gs_values, length(r_values)))
+function sweep_statistics_rgs(all_simulation_means::DataFrame, r_values::Vector{Float64}, gs_values::Vector{Int64}, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    statistics_rgs = statistics_selection(all_simulation_means, generations_to_save, percentages_to_save)
 
-    return last_rows
+    for (key, df) in statistics_rgs
+        rename!(df, :generation => :relatedness)
+        df.relatedness = repeat(r_values, inner = length(gs_values))
+
+        insertcols!(df, 2, :group_size => repeat(gs_values, length(r_values)))
+    end
+
+    return statistics_rgs
 end
 
 
