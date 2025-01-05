@@ -6,7 +6,7 @@ function update_params(base_params::SimulationParameters; kwargs...)
     return SimulationParameters(; merge(Dict(fieldname => getfield(base_params, fieldname) for fieldname in fieldnames(SimulationParameters)), kwargs)...)
 end
 
-function run_sim_r(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+function run_sim_r(base_params::SimulationParameters, filename::String, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
     r_values = collect(range(0, 1.0, step=0.01));
 
     parameter_sweep = [
@@ -15,7 +15,7 @@ function run_sim_r(base_params::SimulationParameters, filename::String, generati
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
-    simulation_sweep_stats = sweep_statistics_r(simulation_sweep, r_values, generations_to_save, percentages_to_save)
+    simulation_sweep_stats = sweep_statistics_r(simulation_sweep, r_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
@@ -25,7 +25,7 @@ function run_sim_r(base_params::SimulationParameters, filename::String, generati
     GC.gc()
 end
 
-function run_sim_rep(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+function run_sim_rep(base_params::SimulationParameters, filename::String, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
     r_values = collect(range(0, 0.5, step=0.05));
     ep_values = collect(range(0.0f0, 0.5f0, step=0.05f0));
 
@@ -36,7 +36,7 @@ function run_sim_rep(base_params::SimulationParameters, filename::String, genera
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
-    simulation_sweep_stats = sweep_statistics_rep(simulation_sweep, r_values, ep_values, generations_to_save, percentages_to_save)
+    simulation_sweep_stats = sweep_statistics_rep(simulation_sweep, r_values, ep_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
@@ -46,7 +46,7 @@ function run_sim_rep(base_params::SimulationParameters, filename::String, genera
     GC.gc()
 end
 
-function run_sim_rip(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+function run_sim_rip(base_params::SimulationParameters, filename::String, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
     r_values = collect(range(0, 0.5, step=0.05));
     ip_values = collect(range(0.0f0, 0.5f0, step=0.05f0));
 
@@ -57,7 +57,7 @@ function run_sim_rip(base_params::SimulationParameters, filename::String, genera
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 40);
-    simulation_sweep_stats = sweep_statistics_rip(simulation_sweep, r_values, ip_values, generations_to_save, percentages_to_save)
+    simulation_sweep_stats = sweep_statistics_rip(simulation_sweep, r_values, ip_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
@@ -67,7 +67,7 @@ function run_sim_rip(base_params::SimulationParameters, filename::String, genera
     GC.gc()
 end
 
-function run_sim_rgs(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+function run_sim_rgs(base_params::SimulationParameters, filename::String, output_save_tick::Int, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
     r_values = collect(range(0, 0.5, step=0.05));
     gs_values = collect(range(50, 500, step=50));
 
@@ -78,7 +78,7 @@ function run_sim_rgs(base_params::SimulationParameters, filename::String, genera
     ]
 
     simulation_sweep = simulation_replicate(parameter_sweep, 20);
-    simulation_sweep_stats = sweep_statistics_rgs(simulation_sweep, r_values, gs_values, generations_to_save, percentages_to_save)
+    simulation_sweep_stats = sweep_statistics_rgs(simulation_sweep, r_values, gs_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
