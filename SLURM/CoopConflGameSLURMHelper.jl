@@ -18,7 +18,7 @@ function run_sim_r(base_params::SimulationParameters, filename::String, output_s
     simulation_sweep_stats = sweep_statistics_r(simulation_sweep, r_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
-        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+        save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
 
     # Clear memory
@@ -39,7 +39,7 @@ function run_sim_rep(base_params::SimulationParameters, filename::String, output
     simulation_sweep_stats = sweep_statistics_rep(simulation_sweep, r_values, ep_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
-        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+        save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
 
     # Clear memory
@@ -60,7 +60,7 @@ function run_sim_rip(base_params::SimulationParameters, filename::String, output
     simulation_sweep_stats = sweep_statistics_rip(simulation_sweep, r_values, ip_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
-        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+        save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
 
     # Clear memory
@@ -81,7 +81,7 @@ function run_sim_rgs(base_params::SimulationParameters, filename::String, output
     simulation_sweep_stats = sweep_statistics_rgs(simulation_sweep, r_values, gs_values, output_save_tick, generations_to_save, percentages_to_save)
 
     for (key, df) in simulation_sweep_stats
-        save_simulation(df, joinpath(@__DIR__, key * "_" * filename))
+        save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
 
     # Clear memory
