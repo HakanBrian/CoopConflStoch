@@ -6,6 +6,8 @@ using BenchmarkTools
 ##################
 
 include("CoopConflGameFuncs.jl")
+include("CoopConflGamePlots.jl")
+include("SLURM/CoopConflGameSLURMHelper.jl")
 
 
 ##################
@@ -41,6 +43,84 @@ fitness(population, groups[1, 1])
 # Run social interactions
 @time social_interactions!(population)
 println(population)
+
+
+##################
+# Behavior of BehavEq
+##################
+
+base_params = SimulationParameters(action0=0.0f0,
+                                    norm0=0.0f0,
+                                    ext_pun0=0.0f0,
+                                    int_pun_ext0=0.0f0,
+                                    int_pun_self0=0.0f0,
+                                    generations=100000,
+                                    population_size=10,
+                                    group_size=10,
+                                    relatedness=0.0,
+                                    ext_pun_mutation_enabled=true,
+                                    int_pun_ext_mutation_enabled=true,
+                                    int_pun_self_mutation_enabled=true,
+                                    output_save_tick=10)
+
+action_values = collect(range(0.0f0, 10.0f0, step=0.01f0));
+norm_values = collect(range(0.0f0, 10.0f0, step=0.01f0));
+ext_pun_values = collect(range(0.0f0, 10.0f0, step=0.01f0));
+int_pun_ext_values = collect(range(0.0f0, 10.0f0, step=0.01f0));
+int_pun_self_values = collect(range(0.0f0, 10.0f0, step=0.01f0));
+
+parameter_sweep_action = [
+    update_params(base_params, action0=action_value)
+    for action_value in action_values
+]
+parameter_sweep_norm = [
+    update_params(base_params, norm0=norm_value)
+    for norm_value in norm_values
+]
+parameter_sweep_ext_pun = [
+    update_params(base_params, ext_pun0=ext_pun_value)
+    for ext_pun_value in ext_pun_values
+]
+parameter_sweep_int_pun_ext = [
+    update_params(base_params, int_pun_ext0=int_pun_ext_value)
+    for int_pun_ext_value in int_pun_ext_values
+]
+parameter_sweep_int_pun_self = [
+    update_params(base_params, int_pun_self0=int_pun_self_value)
+    for int_pun_self_value in int_pun_self_values
+]
+
+function test_behav_eq(param_sweep::Vector{SimulationParameters})
+    actions = Vector{Float32}(undef, length(param_sweep))
+
+    for (i, param) in enumerate(param_sweep)
+        population = population_construction(param)
+        groups = shuffle_and_group(param.population_size, param.group_size, param.relatedness)
+        norm_pool, pun_pool = collect_group(groups[1, :], population)
+        buffer = Vector{Float32}(undef, param.group_size - 1)
+        behavioral_equilibrium!(buffer, groups[1, :], norm_pool, pun_pool, population)
+        actions[i] = mean(population.action)
+    end
+
+    p = Plots.plot(action_values,
+                   actions,    
+                   legend=true,
+                   label="Action",
+                   xlabel="initial",
+                   ylabel="Action",
+                   title="Behavioral Equilibrium",
+                   size=(800, 600)
+    )
+
+    # Display the plot
+    display("image/png", p)
+end
+
+test_behav_eq(parameter_sweep_action)
+test_behav_eq(parameter_sweep_norm)
+test_behav_eq(parameter_sweep_ext_pun)
+test_behav_eq(parameter_sweep_int_pun_ext)
+test_behav_eq(parameter_sweep_int_pun_self)
 
 
 ##################
