@@ -119,7 +119,7 @@ function run_sim_rgs(
     gs_values = collect(range(50, 500, step=50));
 
     parameter_sweep = [
-        update_params(base_params, relatedness=r_value, group_size=gs_value)
+        update_params(base_params, relatedness=r_value, group_size=gs_value, output_save_tick=20)
         for r_value in r_values
         for gs_value in gs_values
     ]
@@ -129,7 +129,8 @@ function run_sim_rgs(
                                                     r_values,
                                                     gs_values,
                                                     base_params.output_save_tick,
-                                                    generations_to_save,percentages_to_save
+                                                    generations_to_save,
+                                                    percentages_to_save
     )
 
     for (key, df) in simulation_sweep_stats

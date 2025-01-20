@@ -106,7 +106,7 @@ end
 
 function plot_sweep_rep_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -133,7 +133,7 @@ end
 
 function plot_sweep_rip_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :ext_pun_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -160,7 +160,7 @@ end
 
 function plot_sweep_rgs_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -187,7 +187,7 @@ end
 
 function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -400,7 +400,7 @@ end
 
 function plot_sweep_rep_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -436,7 +436,7 @@ end
 
 function plot_sweep_rip_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :ext_pun_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -472,7 +472,7 @@ end
 
 function plot_sweep_rgs_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -508,7 +508,7 @@ end
 
 function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean]
+    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
