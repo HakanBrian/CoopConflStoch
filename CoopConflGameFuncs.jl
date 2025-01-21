@@ -250,9 +250,6 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
                                         int_pun_ext,
                                         int_pun_self)
 
-    # Track the best action
-    best_action = action_i
-
     # Calculate current payoff for the individual
     current_payoff = prob_func(action_i)
 
@@ -264,8 +261,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
 
     # Decide which direction to adjust action based on payoff improvement
     if new_payoff_up > current_payoff
-        best_action = action_up
-        return best_action
+        return action_up
     end
 
     # Perturb action downwards
@@ -276,11 +272,10 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
 
     # Decide which direction to adjust action based on payoff improvement
     if new_payoff_down > current_payoff
-        best_action = action_down
-        return best_action
+        return action_down
     end
 
-    return best_action
+    return action_i
 end
 
 function behavioral_equilibrium!(action_buffer::Vector{Float32}, group::AbstractVector{Int64}, norm_pool::Float32, pun_pool::Float32, pop::Population)
