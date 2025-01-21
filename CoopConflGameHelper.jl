@@ -39,6 +39,18 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     return SA[lower_bound, upper_bound]
 end
 
+##################
+# Fitness
+##################
+
+function sum_sqrt_loop(actions_j::AbstractVector{Float32})
+    sum = 0.0f0
+    @inbounds @simd for action_j in actions_j
+        sum += sqrt_llvm(action_j)
+    end
+    return sum
+end
+
 
 ##################
 # Behavioral Equilibrium
@@ -46,24 +58,24 @@ end
 
 function filter_out_val!(arr::AbstractVector{T}, exclude_val::T, buffer::Vector{T}) where T
     count = 1
-    for i in eachindex(arr)
+    @inbounds for i in eachindex(arr)
         if arr[i] != exclude_val  # Exclude based on the value
             buffer[count] = arr[i]
             count += 1
         end
     end
-    return @inbounds view(buffer, 1:count-1)  # Return a view of the filtered buffer
+    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
 function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vector{T}) where T
     count = 1
-    for i in eachindex(arr)
+    @inbounds for i in eachindex(arr)
         if i != exclude_idx  # Exclude based on the index
             buffer[count] = arr[i]
             count += 1
         end
     end
-    return @inbounds view(buffer, 1:count-1)  # Return a view of the filtered buffer
+    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
 

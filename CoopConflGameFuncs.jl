@@ -108,13 +108,9 @@ end
 
 @inline function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
     sqrt_action_i = sqrt_llvm(action_i)
-    sum_sqrt_actions_j = 0.0f0
-    for action_j in actions_j
-        sum_sqrt_actions_j += sqrt_llvm(action_j)
-    end
-    sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
+    sum_sqrt_actions_j = sum_sqrt_loop(actions_j)
 
-    return sum_sqrt_actions
+    return sqrt_action_i + sum_sqrt_actions_j
 end
 
 @inline function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
@@ -234,7 +230,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
 
     # Get the group members' actions
     actions = @inbounds @view pop.action[group]
-    action_i = actions[focal_idx]
+    action_i = @inbounds actions[focal_idx]
     action_j_filtered_view = filter_out_idx!(actions, focal_idx, action_buffer)
 
     # Get the internal punishments
