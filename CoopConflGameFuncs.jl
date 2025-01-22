@@ -24,6 +24,7 @@ function population_construction(parameters::SimulationParameters)
     int_pun_ext0 = parameters.int_pun_ext0
     int_pun_self0 = parameters.int_pun_self0
     pop_size = parameters.population_size
+    group_size = parameters.group_size
 
     # Initialize arrays for attributes
     actions = Vector{Float32}(undef, pop_size)
@@ -33,6 +34,7 @@ function population_construction(parameters::SimulationParameters)
     int_puns_self = Vector{Float32}(undef, pop_size)
     payoffs = Vector{Float32}(undef, pop_size)
     interactions = Vector{Int64}(undef, pop_size)
+    groups = Matrix{Int64}(undef, pop_size, group_size)
 
     # Construct distributions if necessary
     if use_distribution
@@ -71,7 +73,8 @@ function population_construction(parameters::SimulationParameters)
         int_puns_ext,
         int_puns_self,
         payoffs,
-        interactions
+        interactions,
+        groups
     )
 end
 
@@ -306,9 +309,13 @@ function behavioral_equilibrium!(action_buffer::Vector{Float32}, group::Abstract
         # Calculate the relatively best action of each individual in the group
         for i in eachindex(group)
             best_action = best_response(i, group, action_buffer, norm_pool, pun_pool, pop, delta_action)
-            @inbounds action_change = max(action_change, abs(best_action - temp_actions[i]))
+            diff = abs(best_action - temp_actions[i])
+            if diff > action_change
+                action_change = diff
+            end
             temp_actions[i] = best_action
         end
+        
     end
 
     nothing
@@ -319,12 +326,9 @@ end
 # Social Interaction
 ##################
 
-function shuffle_and_group(population_size::Int64, group_size::Int64, relatedness::Float64)
+function shuffle_and_group(groups::Matrix{Int64}, population_size::Int64, group_size::Int64, relatedness::Float64)
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
-
-    # Create a matrix with `population_size` rows and `group_size` columns
-    groups = Matrix{Int64}(undef, population_size, group_size)
 
     # Pre-allocate a buffer for candidates (one less than population size, since focal individual is excluded)
     candidates_buffer = Vector{Int64}(undef, population_size - 1)
@@ -371,7 +375,7 @@ function social_interactions!(pop::Population)
     action_buffer = Vector{Float32}(undef, pop.parameters.group_size - 1)
 
     # Shuffle and group individuals
-    groups = shuffle_and_group(pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
+    groups = shuffle_and_group(pop.groups, pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Get actions while updating payoff
     find_actions_payoffs!(final_actions, action_buffer, groups, pop)

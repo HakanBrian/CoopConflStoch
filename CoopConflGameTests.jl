@@ -25,7 +25,7 @@ population = population_construction(params);
 params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, int_pun_ext0=0.0f0, int_pun_self0=0.0f0, population_size=10, group_size=2, relatedness=1.0)
 population = population_construction(params)
 
-groups = shuffle_and_group(params.population_size, params.group_size, params.relatedness)
+groups = shuffle_and_group(population.groups ,params.population_size, params.group_size, params.relatedness)
 norm_pool, pun_pool = collect_group(groups[1, :], population)
 
 # Calculate behav eq
@@ -95,7 +95,7 @@ function test_behav_eq(param_sweep::Vector{SimulationParameters})
 
     for (i, param) in enumerate(param_sweep)
         population = population_construction(param)
-        groups = shuffle_and_group(param.population_size, param.group_size, param.relatedness)
+        groups = shuffle_and_group(population.groups, param.population_size, param.group_size, param.relatedness)
         norm_pool, pun_pool = collect_group(groups[1, :], population)
         buffer = Vector{Float32}(undef, param.group_size - 1)
         behavioral_equilibrium!(buffer, groups[1, :], norm_pool, pun_pool, population)

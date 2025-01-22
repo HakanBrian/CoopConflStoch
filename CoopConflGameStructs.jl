@@ -147,6 +147,7 @@ mutable struct Population
     int_pun_self::Vector{Float32}
     payoff::Vector{Float32}
     interactions::Vector{Int64}
+    groups::Matrix{Int64}
 end
 
 function Base.copy(pop::Population)
@@ -159,6 +160,7 @@ function Base.copy(pop::Population)
         copy(getfield(pop, :int_pun_self)),
         copy(getfield(pop, :payoff)),
         copy(getfield(pop, :interactions)),
+        copy(getfield(pop, :groups)),
     )
 end
 
@@ -171,6 +173,7 @@ function Base.copy!(old_population::Population, new_population::Population)
     copy!(getfield(old_population, :int_pun_self), getfield(new_population, :int_pun_self))
     copy!(getfield(old_population, :payoff), getfield(new_population, :payoff))
     copy!(getfield(old_population, :interactions), getfield(new_population, :interactions))
+    copy!(getfield(old_population, :groups), getfield(new_population, :groups))
 
     nothing
 end
