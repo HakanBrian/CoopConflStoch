@@ -64,7 +64,7 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
     display("image/png", p)
 end
 
-function plot_full_sweep_Plots(statistics::DataFrame)
+function plot_sweep_r_Plots(statistics::DataFrame)
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
