@@ -27,10 +27,11 @@ population = population_construction(params)
 
 groups = shuffle_and_group(population.groups ,params.population_size, params.group_size, params.relatedness)
 norm_pool, pun_pool = collect_group(groups[1, :], population)
+action_sqrt = sqrt_llvm.(population.action)
 
 # Calculate behav eq
 action_buffer = Vector{Float32}(undef, params.group_size - 1)
-@time behavioral_equilibrium!(action_buffer, groups[1, :], norm_pool, pun_pool, population)
+@time behavioral_equilibrium!(groups[1, :], action_buffer, action_sqrt, norm_pool, pun_pool, population)
 println(population.action)
 
 # Calculate payoff
@@ -97,8 +98,9 @@ function test_behav_eq(param_sweep::Vector{SimulationParameters})
         population = population_construction(param)
         groups = shuffle_and_group(population.groups, param.population_size, param.group_size, param.relatedness)
         norm_pool, pun_pool = collect_group(groups[1, :], population)
+        action_sqrt = sqrt_llvm.(population.action)
         buffer = Vector{Float32}(undef, param.group_size - 1)
-        behavioral_equilibrium!(buffer, groups[1, :], norm_pool, pun_pool, population)
+        behavioral_equilibrium!(groups[1, :], buffer, action_sqrt, norm_pool, pun_pool, population)
         actions[i] = mean(population.action)
     end
 
