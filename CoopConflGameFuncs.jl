@@ -229,10 +229,10 @@ function total_payoff!(group::AbstractVector{Int64}, norm_pool::Float32, pun_poo
     focal_idiv = group[1]
 
     # Extract the action of the focal individual as a real number (not a view)
-    action_i = pop.action[focal_idiv]
+    action_i = @inbounds pop.action[focal_idiv]
 
     # Collect actions from the other individuals in the group
-    actions_j = @view pop.action[@view group[2:end]]
+    actions_j = @inbounds @view pop.action[@view group[2:end]]
 
     # Compute the payoff for the focal individual
     payoff_foc = payoff(action_i, actions_j, norm_pool, pun_pool)
@@ -249,7 +249,7 @@ end
 # Fitness
 ##################
 
-function fitness(pop::Population, idx::Int64)
+@inline function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
 end
 
@@ -268,43 +268,48 @@ end
 # Behavioral Equilibrium
 ##################
 
-function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_sqrt_view::AbstractVector{Float32}, action_sqrt_sum::Float32, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
+@inline function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_sqrt_view::AbstractVector{Float32}, action_sqrt_sum::Float32, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
     group_size = pop.parameters.group_size
     focal_indiv = @inbounds group[focal_idx]
 
-    # Get the group members' actions
+    # Get the actions
     action_i = @inbounds pop.action[focal_indiv]
-    action_i_sqrt = action_sqrt_view[focal_idx]
+    action_i_sqrt = @inbounds action_sqrt_view[focal_idx]
     action_j_filtered_view_sum = action_sqrt_sum - action_i_sqrt
 
     # Get the internal punishments
-    int_pun_ext = pop.int_pun_ext[focal_indiv]
-    int_pun_self = pop.int_pun_self[focal_indiv]
+    int_pun_ext = @inbounds pop.int_pun_ext[focal_indiv]
+    int_pun_self = @inbounds pop.int_pun_self[focal_indiv]
 
     # Compute norm means
     norm_i = pop.norm[focal_indiv]  # Norm of i individual
     norm_mini = (norm_pool * group_size - norm_i) / (group_size - 1)  # Mean norm of -i individuals
 
-    # Define simplified lambda function to compute payoff
-    prob_func = (action_i, action_i_sqrt) -> objective(action_i, 
-                                                       action_i_sqrt,
-                                                       action_j_filtered_view_sum,
-                                                       norm_i,
-                                                       norm_mini,
-                                                       norm_pool,
-                                                       pun_pool,
-                                                       int_pun_ext,
-                                                       int_pun_self)
-
     # Calculate current payoff for the individual
-    current_payoff = prob_func(action_i, action_i_sqrt)
+    current_payoff = objective(action_i, 
+                            action_i_sqrt,
+                            action_j_filtered_view_sum,
+                            norm_i,
+                            norm_mini,
+                            norm_pool,
+                            pun_pool,
+                            int_pun_ext,
+                            int_pun_self)
 
     # Perturb action upwards
     action_up = action_i + delta_action
     action_up_sqrt = sqrt_llvm(action_up)
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_up = prob_func(action_up, action_up_sqrt)
+    new_payoff_up = objective(action_up, 
+                            action_up_sqrt,
+                            action_j_filtered_view_sum,
+                            norm_i,
+                            norm_mini,
+                            norm_pool,
+                            pun_pool,
+                            int_pun_ext,
+                            int_pun_self)
 
     # Decide which direction to adjust action based on payoff improvement
     if new_payoff_up > current_payoff
@@ -316,7 +321,15 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_sq
     action_down_sqrt = sqrt_llvm(action_down)
 
     # Calculate new payoffs with perturbed actions
-    new_payoff_down = prob_func(action_down, action_down_sqrt)
+    new_payoff_down = objective(action_down, 
+                            action_down_sqrt,
+                            action_j_filtered_view_sum,
+                            norm_i,
+                            norm_mini,
+                            norm_pool,
+                            pun_pool,
+                            int_pun_ext,
+                            int_pun_self)
 
     # Decide which direction to adjust action based on payoff improvement
     if new_payoff_down > current_payoff
@@ -332,8 +345,8 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, action_sqrt::Vect
     max_time_steps = pop.parameters.max_time_steps
 
     # Create a view for group actions
-    temp_actions = view(pop.action, group)
-    action_sqrt_view = view(action_sqrt, group)
+    temp_actions = @inbounds view(pop.action, group)
+    action_sqrt_view = @inbounds view(action_sqrt, group)
 
     action_change = 1.0f0
     delta_action = 0.1f0
@@ -407,9 +420,17 @@ function find_actions_payoffs!(final_actions::Vector{Float32}, action_sqrt::Vect
     # Iterate over each group to find actions and payoffs
     for i in axes(groups, 1)
         group = @inbounds @view groups[i, :]
-        norm_pool = sum(@inbounds @view pop.norm[group]) / pop.parameters.group_size
-        pun_pool = sum(@inbounds @view pop.ext_pun[group]) / pop.parameters.group_size
-        action_sqrt_sum = sum(@inbounds @view action_sqrt[group])
+
+        norm_pool = 0.0f0
+        pun_pool = 0.0f0
+        action_sqrt_sum = 0.0f0
+        for (j, member) in enumerate(group)
+            @inbounds norm_pool += pop.norm[member]
+            @inbounds pun_pool += pop.ext_pun[member]
+            @inbounds action_sqrt_sum += action_sqrt[member]
+        end
+        norm_pool /= pop.parameters.group_size
+        pun_pool /= pop.parameters.group_size
 
         # Calculate equilibrium actions then payoffs for current groups
         behavioral_equilibrium!(group, action_sqrt, action_sqrt_sum, norm_pool, pun_pool, pop)

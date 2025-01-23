@@ -107,10 +107,18 @@ end
 ##################
 
 function normalize_exponentials(values::Vector{Exponential})
-    max_base = maximum(v.base for v in values)
-    shifted = [v.base - max_base for v in values]  # Shift to avoid large exponents
-    probs = exp.(shifted)
-    return probs ./ sum(probs)  # Normalize to probabilities
+    max_base = maximum(v -> v.base, values)
+    sum_probs = 0.0
+    probs = similar(values, Float64)  # Pre-allocate for probabilities
+
+    # Compute normalized probabilities
+    for (i, v) in pairs(values)
+        prob = exp(v.base - max_base)
+        probs[i] = prob
+        sum_probs += prob
+    end
+
+    return probs ./ sum_probs
 end
 
 

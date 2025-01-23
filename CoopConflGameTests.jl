@@ -29,10 +29,12 @@ groups = shuffle_and_group(population.groups ,params.population_size, params.gro
 norm_pool = sum(@view population.norm[groups[1, :]]) / params.group_size
 pun_pool = sum(@view population.ext_pun[groups[1, :]]) / params.group_size
 action_sqrt = sqrt_llvm.(population.action)
+action_sqrt_view = view(action_sqrt, groups[1, :])
 action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
 
 # Calculate behav eq
 @time behavioral_equilibrium!(groups[1, :], action_sqrt, action_sqrt_sum, norm_pool, pun_pool, population)
+@code_warntype best_response(1, groups[1, :], action_sqrt_view, action_sqrt_sum, norm_pool, pun_pool, population, 0.1f0)
 println(population.action)
 
 # Calculate payoff
