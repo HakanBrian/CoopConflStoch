@@ -101,13 +101,6 @@ function in_place_sample!(data::AbstractVector{T}, k::Int) where T
     return @inbounds view(data, 1:k)  # Return a view of the first k elements
 end
 
-function collect_group(group::AbstractVector{Int64}, pop::Population)
-    norm_pool = sum(@view pop.norm[group]) / pop.parameters.group_size
-    pun_pool = sum(@view pop.ext_pun[group]) / pop.parameters.group_size
-
-    return norm_pool, pun_pool
-end
-
 
 ##################
 # Reproduction

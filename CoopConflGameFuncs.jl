@@ -154,17 +154,9 @@ end
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
 
-@inline function benefit_sqrt(action_i::Float32, actions_j::AbstractVector{Float32})
-    return action_i + sum(actions_j)
+@inline function benefit_sqrt(action_i::Float32, actions_j::Float32)
+    return action_i + actions_j
 end
-
-@inline function benefit_sqrt(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
-    sum_sqrt_actions = action_i + sum(actions_j)
-    sqrt_sum_actions = sqrt_llvm(action_i + sum(actions_j))
-
-    return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
-end
-
 
 ##################
 # payoff and objective
@@ -192,20 +184,20 @@ end
 end
 
 # Normal Sqrt version =================================
-@inline function payoff(action_i::Float32, action_i_sqrt::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32)
+@inline function payoff(action_i::Float32, action_i_sqrt::Float32, actions_j::Float32, norm_pool::Float32, punishment_pool::Float32)
     b = benefit_sqrt(action_i_sqrt, actions_j)
     c = cost(action_i)
     ep = external_punishment(action_i, norm_pool, punishment_pool)
     return b - c - ep
 end
 
-@inline function objective(action_i::Float32, action_i_sqrt::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32)
+@inline function objective(action_i::Float32, action_i_sqrt::Float32, actions_j::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32)
     p = payoff(action_i, action_i_sqrt, actions_j, norm_pool, punishment_pool)
     i = internal_punishment_I(action_i, norm_pool, T_ext)
     return p - i
 end
 
-@inline function objective(action_i::Float32, action_i_sqrt::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32)
+@inline function objective(action_i::Float32, action_i_sqrt::Float32, actions_j::Float32, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32)
     p = payoff(action_i, action_i_sqrt, actions_j, norm_pool, punishment_pool)
     ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
     ips = internal_punishment_self(action_i, norm_i, T_self)
@@ -228,27 +220,6 @@ end
 
 @inline function objective(action_i::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32, synergy::Float32)
     p = payoff(action_i, actions_j, norm_pool, punishment_pool, synergy)
-    ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
-    ips = internal_punishment_self(action_i, norm_i, T_self)
-    return p - ipe - ips
-end
-
-# Synergy sqrt version =================================
-@inline function payoff(action_i::Float32, action_i_sqrt::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, synergy::Float32)
-    b = benefit_sqrt(action_i_sqrt, actions_j, synergy)
-    c = cost(action_i)
-    ep = external_punishment(action_i, norm_pool, punishment_pool)
-    return b - c - ep
-end
-
-@inline function objective(action_i::Float32, action_i_sqrt::Float32, actions_j::AbstractVector{Float32}, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, synergy::Float32)
-    p = payoff(action_i, action_i_sqrt, actions_j, norm_pool, punishment_pool, synergy)
-    i = internal_punishment_I(action_i, norm_pool, T_ext)
-    return p - i
-end
-
-@inline function objective(action_i::Float32, action_i_sqrt::Float32, actions_j::AbstractVector{Float32}, norm_i::Float32, norm_mini::Float32, norm_pool::Float32, punishment_pool::Float32, T_ext::Float32, T_self::Float32, synergy::Float32)
-    p = payoff(action_i, action_i_sqrt, actions_j, norm_pool, punishment_pool, synergy)
     ipe = internal_punishment_ext(action_i, norm_mini, T_ext)
     ips = internal_punishment_self(action_i, norm_i, T_self)
     return p - ipe - ips
@@ -297,14 +268,14 @@ end
 # Behavioral Equilibrium
 ##################
 
-function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_buffer::Vector{Float32}, action_sqrt_view::AbstractVector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
+function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_sqrt_view::AbstractVector{Float32}, action_sqrt_sum::Float32, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
     group_size = pop.parameters.group_size
     focal_indiv = @inbounds group[focal_idx]
 
     # Get the group members' actions
     action_i = @inbounds pop.action[focal_indiv]
     action_i_sqrt = action_sqrt_view[focal_idx]
-    action_j_filtered_view = filter_out_idx!(action_sqrt_view, focal_idx, action_buffer)
+    action_j_filtered_view_sum = action_sqrt_sum - action_i_sqrt
 
     # Get the internal punishments
     int_pun_ext = pop.int_pun_ext[focal_indiv]
@@ -317,7 +288,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
     # Define simplified lambda function to compute payoff
     prob_func = (action_i, action_i_sqrt) -> objective(action_i, 
                                                        action_i_sqrt,
-                                                       action_j_filtered_view,
+                                                       action_j_filtered_view_sum,
                                                        norm_i,
                                                        norm_mini,
                                                        norm_pool,
@@ -355,7 +326,7 @@ function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_bu
     return action_i, action_i_sqrt
 end
 
-function behavioral_equilibrium!(group::AbstractVector{Int64}, action_buffer::Vector{Float32}, action_sqrt::Vector{Float32}, norm_pool::Float32, pun_pool::Float32, pop::Population)
+function behavioral_equilibrium!(group::AbstractVector{Int64}, action_sqrt::Vector{Float32}, action_sqrt_sum::Float32, norm_pool::Float32, pun_pool::Float32, pop::Population)
     # Collect parameters
     tolerance = pop.parameters.tolerance
     max_time_steps = pop.parameters.max_time_steps
@@ -383,15 +354,17 @@ function behavioral_equilibrium!(group::AbstractVector{Int64}, action_buffer::Ve
 
         # Calculate the relatively best action of each individual in the group
         for i in eachindex(group)
-            best_action, best_action_sqrt = best_response(i, group, action_buffer, action_sqrt_view, norm_pool, pun_pool, pop, delta_action)
+            best_action, best_action_sqrt = best_response(i, group, action_sqrt_view, action_sqrt_sum, norm_pool, pun_pool, pop, delta_action)
             diff = abs(best_action - temp_actions[i])
             if diff > action_change
                 action_change = diff
             end
             temp_actions[i] = best_action
+            action_sqrt_sum -= action_sqrt_view[i]
             action_sqrt_view[i] = best_action_sqrt
+            action_sqrt_sum += best_action_sqrt
         end
-        
+
     end
 
     nothing
@@ -430,14 +403,16 @@ function shuffle_and_group(groups::Matrix{Int64}, population_size::Int64, group_
     return groups
 end
 
-function find_actions_payoffs!(final_actions::Vector{Float32}, action_buffer::Vector{Float32}, action_sqrt::Vector{Float32}, groups::Matrix{Int64}, pop::Population)
+function find_actions_payoffs!(final_actions::Vector{Float32}, action_sqrt::Vector{Float32}, groups::Matrix{Int64}, pop::Population)
     # Iterate over each group to find actions and payoffs
     for i in axes(groups, 1)
-        group = @view groups[i, :]
-        norm_pool, pun_pool = collect_group(group, pop)
+        group = @inbounds @view groups[i, :]
+        norm_pool = sum(@inbounds @view pop.norm[group]) / pop.parameters.group_size
+        pun_pool = sum(@inbounds @view pop.ext_pun[group]) / pop.parameters.group_size
+        action_sqrt_sum = sum(@inbounds @view action_sqrt[group])
 
         # Calculate equilibrium actions then payoffs for current groups
-        behavioral_equilibrium!(group, action_buffer, action_sqrt, norm_pool, pun_pool, pop)
+        behavioral_equilibrium!(group, action_sqrt, action_sqrt_sum, norm_pool, pun_pool, pop)
         total_payoff!(group, norm_pool, pun_pool, pop)
 
         # Update final actions
@@ -448,17 +423,16 @@ end
 function social_interactions!(pop::Population)
     # Pre-allocate vectors
     final_actions = Vector{Float32}(undef, pop.parameters.population_size)
-    action_buffer = Vector{Float32}(undef, pop.parameters.group_size - 1)
-
-    # Pre-allocate vector for square root of actions
     action_sqrt = Vector{Float32}(undef, pop.parameters.population_size)
+
+    # Cache the square root of actions
     action_sqrt = map(action -> sqrt_llvm(action), pop.action)
 
     # Shuffle and group individuals
     groups = shuffle_and_group(pop.groups, pop.parameters.population_size, pop.parameters.group_size, pop.parameters.relatedness)
 
     # Get actions while updating payoff
-    find_actions_payoffs!(final_actions, action_buffer, action_sqrt, groups, pop)
+    find_actions_payoffs!(final_actions, action_sqrt, groups, pop)
 
     # Update the population values with the equilibrium actions
     pop.action = final_actions

@@ -26,12 +26,13 @@ params = SimulationParameters(action0=0.1f0, norm0=2.0f0, ext_pun0=0.1f0, int_pu
 population = population_construction(params)
 
 groups = shuffle_and_group(population.groups ,params.population_size, params.group_size, params.relatedness)
-norm_pool, pun_pool = collect_group(groups[1, :], population)
+norm_pool = sum(@view population.norm[groups[1, :]]) / params.group_size
+pun_pool = sum(@view population.ext_pun[groups[1, :]]) / params.group_size
 action_sqrt = sqrt_llvm.(population.action)
+action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
 
 # Calculate behav eq
-action_buffer = Vector{Float32}(undef, params.group_size - 1)
-@time behavioral_equilibrium!(groups[1, :], action_buffer, action_sqrt, norm_pool, pun_pool, population)
+@time behavioral_equilibrium!(groups[1, :], action_sqrt, action_sqrt_sum, norm_pool, pun_pool, population)
 println(population.action)
 
 # Calculate payoff
