@@ -339,6 +339,64 @@ end
     return action_i, action_i_sqrt
 end
 
+#= Single internal punishment
+@inline function best_response(focal_idx::Int64, group::AbstractVector{Int64}, action_sqrt_view::AbstractVector{Float32}, action_sqrt_sum::Float32, norm_pool::Float32, pun_pool::Float32, pop::Population, delta_action::Float32)
+    focal_indiv = @inbounds group[focal_idx]
+
+    # Get the actions
+    action_i = @inbounds pop.action[focal_indiv]
+    action_i_sqrt = @inbounds action_sqrt_view[focal_idx]
+    action_j_filtered_view_sum = action_sqrt_sum - action_i_sqrt
+
+    # Get the internal punishments
+    int_pun_ext = @inbounds pop.int_pun_ext[focal_indiv]
+
+    # Calculate current payoff for the individual
+    current_payoff = objective(action_i, 
+                            action_i_sqrt,
+                            action_j_filtered_view_sum,
+                            norm_pool,
+                            pun_pool,
+                            int_pun_ext)
+
+    # Perturb action upwards
+    action_up = action_i + delta_action
+    action_up_sqrt = sqrt_llvm(action_up)
+
+    # Calculate new payoffs with perturbed actions
+    new_payoff_up = objective(action_up, 
+                            action_up_sqrt,
+                            action_j_filtered_view_sum,
+                            norm_pool,
+                            pun_pool,
+                            int_pun_ext)
+
+    # Decide which direction to adjust action based on payoff improvement
+    if new_payoff_up > current_payoff
+        return action_up, action_up_sqrt
+    end
+
+    # Perturb action downwards
+    action_down = max(action_i - delta_action, 0.0f0)
+    action_down_sqrt = sqrt_llvm(action_down)
+
+    # Calculate new payoffs with perturbed actions
+    new_payoff_down = objective(action_down, 
+                            action_down_sqrt,
+                            action_j_filtered_view_sum,
+                            norm_pool,
+                            pun_pool,
+                            int_pun_ext)
+
+    # Decide which direction to adjust action based on payoff improvement
+    if new_payoff_down > current_payoff
+        return action_down, action_down_sqrt
+    end
+
+    return action_i, action_i_sqrt
+end
+=#
+
 function behavioral_equilibrium!(group::AbstractVector{Int64}, action_sqrt::Vector{Float32}, action_sqrt_sum::Float32, norm_pool::Float32, pun_pool::Float32, pop::Population)
     # Collect parameters
     tolerance = pop.parameters.tolerance
@@ -488,7 +546,7 @@ function reproduce!(pop::Population)
     nothing
 end
 
-#=
+#= Nonsybolic version
 function reproduce!(pop::Population)
     # Create a list of indices corresponding to individuals
     indices_list = 1:pop.parameters.population_size

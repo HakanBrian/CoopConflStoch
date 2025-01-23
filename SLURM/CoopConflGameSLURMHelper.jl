@@ -119,7 +119,7 @@ function run_sim_rgs(
     gs_values = collect(range(50, 500, step=50));
 
     parameter_sweep = [
-        update_params(base_params, relatedness=r_value, group_size=gs_value, output_save_tick=20)
+        update_params(base_params, relatedness=r_value, group_size=gs_value)
         for r_value in r_values
         for gs_value in gs_values
     ]

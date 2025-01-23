@@ -31,4 +31,6 @@ run_sim_r(base_params, "r1", Int[], Float64[])
 
 run_sim_rep(base_params, "rep1", Int[], Float64[])
 
+run_sim_rip(base_params, "rep1", Int[], Float64[])
+
 run_sim_rgs(base_params, "rgs1", Int[], Float64[])
