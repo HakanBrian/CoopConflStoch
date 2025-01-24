@@ -147,9 +147,9 @@ end
 
 @inline function benefit(action_i::Float32, actions_j::AbstractVector{Float32}, synergy::Float32)
     sqrt_action_i = sqrt_llvm(action_i)
-    sum_sqrt_actions_j = mapreduce(sqrt, +, actions_j)
+    sum_sqrt_actions_j = sum_sqrt_loop(actions_j)
     sum_sqrt_actions = sqrt_action_i + sum_sqrt_actions_j
-    sqrt_sum_actions = sqrt_llvm(action_i + sum(actions_j))
+    sqrt_sum_actions = sqrt_sum_loop(action_i, ctions_j)
 
     return (1 - synergy) * sum_sqrt_actions + synergy * sqrt_sum_actions
 end
@@ -282,7 +282,7 @@ end
     int_pun_self = @inbounds pop.int_pun_self[focal_indiv]
 
     # Compute norm means
-    norm_i = pop.norm[focal_indiv]  # Norm of i individual
+    norm_i = @inbounds pop.norm[focal_indiv]  # Norm of i individual
     norm_mini = (norm_pool * group_size - norm_i) / (group_size - 1)  # Mean norm of -i individuals
 
     # Calculate current payoff for the individual
@@ -482,7 +482,7 @@ function find_actions_payoffs!(final_actions::Vector{Float32}, action_sqrt::Vect
         norm_pool = 0.0f0
         pun_pool = 0.0f0
         action_sqrt_sum = 0.0f0
-        for (j, member) in enumerate(group)
+        for member in group
             @inbounds norm_pool += pop.norm[member]
             @inbounds pun_pool += pop.ext_pun[member]
             @inbounds action_sqrt_sum += action_sqrt[member]
@@ -601,30 +601,31 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2}, Float64})
 
     mutation_rate = pop.parameters.mutation_rate
     lower_bound, upper_bound = truncate_bounds
+    mutation_dist = Normal(0, mutation_variance)
 
     # Define distributions for mutation
     for i in 1:pop.parameters.population_size
         # Mutate `norm` trait
         if pop.parameters.norm_mutation_enabled && rand() <= mutation_rate
-            norm_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.norm[i]), upper=upper_bound)
+            norm_dist = truncated(mutation_dist, lower=max(lower_bound, -pop.norm[i]), upper=upper_bound)
             pop.norm[i] += rand(norm_dist)
         end
 
         # Mutate `ext_pun` trait
         if pop.parameters.ext_pun_mutation_enabled && rand() <= mutation_rate
-            ext_pun_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.ext_pun[i]), upper=upper_bound)
+            ext_pun_dist = truncated(mutation_dist, lower=max(lower_bound, -pop.ext_pun[i]), upper=upper_bound)
             pop.ext_pun[i] += rand(ext_pun_dist)
         end
 
         # Mutate `int_pun_ext` trait
         if pop.parameters.int_pun_ext_mutation_enabled && rand() <= mutation_rate
-            int_pun_ext_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
+            int_pun_ext_dist = truncated(mutation_dist, lower=max(lower_bound, -pop.int_pun_ext[i]), upper=upper_bound)
             pop.int_pun_ext[i] += rand(int_pun_ext_dist)
         end
 
         # Mutate `int_pun_self` trait
         if pop.parameters.int_pun_self_mutation_enabled && rand() <= mutation_rate
-            int_pun_self_dist = truncated(Normal(0, mutation_variance), lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
+            int_pun_self_dist = truncated(mutation_dist, lower=max(lower_bound, -pop.int_pun_self[i]), upper=upper_bound)
             pop.int_pun_self[i] += rand(int_pun_self_dist)
         end
     end
@@ -729,12 +730,12 @@ function run_simulation(parameters::SimulationParameters, param_id::Int64, repli
     println("Running simulation replicate $replicate_id for param_id $param_id")
 
     # Run the simulation
-    my_population = population_construction(parameters)
-    my_simulation = simulation(my_population)
+    population = population_construction(parameters)
+    simulation_replicate = simulation(population)
 
     # Group by generation and compute mean for each generation
-    my_simulation_gdf = groupby(my_simulation, :generation)
-    my_simulation_mean = combine(my_simulation_gdf,
+    simulation_gdf = groupby(simulation_replicate, :generation)
+    simulation_mean = combine(simulation_gdf,
                                  :action => mean,
                                  :a => mean,
                                  :p => mean,
@@ -743,11 +744,11 @@ function run_simulation(parameters::SimulationParameters, param_id::Int64, repli
                                  :payoff => mean)
 
     # Add columns for replicate and param_id
-    rows_to_insert = nrow(my_simulation_mean)
-    insertcols!(my_simulation_mean, 1, :param_id => fill(param_id, rows_to_insert))
-    insertcols!(my_simulation_mean, 2, :replicate => fill(replicate_id, rows_to_insert))
+    rows_to_insert = nrow(simulation_mean)
+    insertcols!(simulation_mean, 1, :param_id => fill(param_id, rows_to_insert))
+    insertcols!(simulation_mean, 2, :replicate => fill(replicate_id, rows_to_insert))
 
-    return my_simulation_mean
+    return simulation_mean
 end
 
 function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)

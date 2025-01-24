@@ -51,6 +51,14 @@ function sum_sqrt_loop(actions_j::AbstractVector{Float32})
     return sum
 end
 
+function sqrt_sum_loop(action_i::Float32, actions_j::AbstractVector{Float32})
+    sum = 0.0f0
+    @inbounds @simd for action_j in actions_j
+        sum += action_j
+    end
+    return sqrt_llvm(action_i + sum)
+end
+
 
 ##################
 # Behavioral Equilibrium
