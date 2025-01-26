@@ -36,7 +36,7 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     lower_bound = -z_alpha_over_2 * √variance
     upper_bound = z_alpha_over_2 * √variance
 
-    return SA[lower_bound, upper_bound]
+    return (lower_bound, upper_bound)
 end
 
 ##################
