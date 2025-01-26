@@ -110,7 +110,7 @@ end
 function in_place_sample!(data::AbstractVector{T}, k::Int) where {T}
     n = length(data)
 
-    for i = 1:k
+    for i in 1:k
         j = rand(i:n)  # Random index between i and n (inclusive)
         data[i], data[j] = data[j], data[i]  # Swap elements
     end
@@ -202,7 +202,7 @@ function statistics_selection(
         selected_data[string("gen_", gen)] = DataFrame()
     end
 
-    for i = 1:num_params
+    for i in 1:num_params
         # Filter rows by `param_id`
         param_data = filter(row -> row.param_id == i, all_simulation_means)
 

@@ -43,7 +43,7 @@ function plot_simulation_data_Plots(
     # Initialize the plot
     p = Plots.plot(legend = false)
 
-    for i = 1:num_params
+    for i in 1:num_params
         # Filter by param_id
         param_data = filter(row -> row.param_id == i, all_simulation_means)
 
@@ -376,7 +376,7 @@ function plot_simulation_data_Plotly(
     )
 
     # Plot each param_id's data
-    for i = 1:num_params
+    for i in 1:num_params
         param_data = filter(row -> row.param_id == i, all_simulation_means)
 
         # Calculate statistics for the current param_id

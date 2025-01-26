@@ -189,8 +189,8 @@ population.payoff[1:4] .= [1.0f0, 2.0f0, 3.0f0, 4.0f0]
 # Bootstrap to increase sample size
 original_size = 4
 new_key = original_size + 1
-for i = 1:original_size
-    for j = 1:249
+for i in 1:original_size
+    for j in 1:249
         population.payoff[new_key] = copy(population.payoff[i])
         new_key += 1
     end

@@ -68,7 +68,7 @@ function population_construction(parameters::SimulationParameters)
     end
 
     # Create individuals
-    for i = 1:pop_size
+    for i in 1:pop_size
         if use_distribution
             actions[i] = action0 + rand(action0_dist)
             norms[i] = norm0 + rand(norm0_dist)
@@ -623,7 +623,7 @@ function shuffle_and_group(
     candidates_buffer = Vector{Int64}(undef, population_size - 1)
 
     # Iterate over each individual index and form a group
-    for i = 1:population_size
+    for i in 1:population_size
         focal_individual_index = individuals_indices[i]
 
         # Filter out the focal individual
@@ -733,7 +733,7 @@ function reproduce!(pop::Population)
     sort!(sampled_indices)
 
     # Create new offspring from sampled individuals
-    for i = 1:pop.parameters.population_size
+    for i in 1:pop.parameters.population_size
         offspring!(pop, i, sampled_indices[i])
     end
 
@@ -804,7 +804,7 @@ function mutate!(pop::Population, truncate_bounds::SArray{Tuple{2},Float64})
     mutation_dist = Normal(0, mutation_variance)
 
     # Define distributions for mutation
-    for i = 1:pop.parameters.population_size
+    for i in 1:pop.parameters.population_size
         # Mutate `norm` trait
         if pop.parameters.norm_mutation_enabled && rand() <= mutation_rate
             norm_dist = truncated(
@@ -923,7 +923,7 @@ function simulation(pop::Population)
     # Sim Loop #
     ############
 
-    for t = 1:pop.parameters.generations
+    for t in 1:pop.parameters.generations
         # Execute social interactions and calculate payoffs
         social_interactions!(pop)
 
@@ -994,7 +994,7 @@ function simulation_replicate(
     # Create a list of tasks (parameter set index, parameter set, replicate) to distribute
     tasks = [
         (idx, parameters, replicate) for (idx, parameters) in enumerate(parameter_sweep) for
-        replicate = 1:num_replicates
+        replicate in 1:num_replicates
     ]
 
     # Use pmap to distribute the tasks across the workers
