@@ -6,8 +6,8 @@ addprocs(128);
 # Game Function
 ###############################
 
-@everywhere include("../CoopConflGameFuncs.jl");
-include("CoopConflGameSLURMHelper.jl");
+@everywhere include("../funcs.jl");
+include("SLURM_helper.jl");
 
 
 ###############################

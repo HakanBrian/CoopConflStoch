@@ -5,9 +5,9 @@ using BenchmarkTools
 # Game Functions
 ##################
 
-include("CoopConflGameFuncs.jl")
-include("CoopConflGamePlots.jl")
-include("SLURM/CoopConflGameSLURMHelper.jl")
+include("funcs.jl")
+include("plots.jl")
+include("SLURM/SLURM_helper.jl")
 
 
 ##################

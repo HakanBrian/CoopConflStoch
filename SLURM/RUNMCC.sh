@@ -12,4 +12,4 @@
 module purge                        # Unload other software modules
 
 # Execute the Julia script
-julia CoopConflGameSLURM.jl
+julia SLURM.jl

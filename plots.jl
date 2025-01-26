@@ -5,7 +5,7 @@ using Interpolations, Plots, PlotlyJS
 # Helper Functions
 ##################
 
-include("CoopConflGameHelper.jl")
+include("helper.jl")
 
 
 ##################

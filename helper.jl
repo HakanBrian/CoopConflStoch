@@ -5,7 +5,7 @@ using CSV, FilePathsBase
 # Helper Functions
 ####################################
 
-include("CoopConflGameStructs.jl")
+include("structs.jl")
 
 
 ###############################

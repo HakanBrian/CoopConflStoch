@@ -6,8 +6,8 @@ using Core.Intrinsics,
 # Helper Functions
 ####################################
 
-include("CoopConflGameStructs.jl")
-include("CoopConflGameHelper.jl")
+include("structs.jl")
+include("helper.jl")
 
 
 ###############################
