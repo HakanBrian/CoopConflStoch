@@ -43,6 +43,7 @@ function plot_simulation_data_Plots(
     # Initialize the plot
     p = Plots.plot(legend = false)
 
+    # Plot mean and ribbons for param_id's data
     for i in 1:num_params
         # Filter by param_id
         param_data = filter(row -> row.param_id == i, all_simulation_means)
@@ -89,6 +90,7 @@ function plot_sweep_r_Plots(statistics::DataFrame)
         "payoff mean" => :orange4,
     )
 
+    # Define dependent variables to plot
     plot_var_set = [
         ["action", "a", "p", "T_ext", "T_self", "payoff"],
         ["p", "T_ext", "T_self"],
@@ -96,6 +98,7 @@ function plot_sweep_r_Plots(statistics::DataFrame)
         ["action", "a"],
     ]
 
+    # Plot each set of dependent variables
     for plot_var in plot_var_set
         # Initialize plot
         p = Plots.plot(legend = true)
@@ -136,6 +139,7 @@ function plot_sweep_rep_Plots(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     ep_values = sort(unique(statistics.ext_pun))
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
@@ -167,6 +171,7 @@ function plot_sweep_rip_Plots(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     ip_values = sort(unique(statistics.int_pun))
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :int_pun, :relatedness, var)
@@ -205,6 +210,7 @@ function plot_sweep_rgs_Plots(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     gs_values = sort(unique(statistics.group_size))
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :group_size, :relatedness, var)
@@ -250,6 +256,7 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
     r_fine = range(minimum(r_values), maximum(r_values), length = r_length)  # Fine relatedness grid
     ep_fine = range(minimum(ep_values), maximum(ep_values), length = ep_length)  # Fine external punishment grid
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
@@ -303,11 +310,13 @@ end
 ##################
 
 function create_trait_table(all_simulation_means::DataFrame)
+    # Initialize table data
     table_data = []
 
     # Group by param_id and extract start and end values for each group
     grouped_by_param = groupby(all_simulation_means, :param_id)
 
+    # Iterate over each group and extract start and end values for each trait
     for group in grouped_by_param
         param_id_val = group.param_id[1]  # Extract the param_id value
         for trait in
@@ -357,6 +366,7 @@ function plot_simulation_data_Plotly(
     # Determine the number of params and replicates
     num_params = maximum(all_simulation_means.param_id)  # Assuming param numbers are consistent
 
+    # Initialize plot
     p_means = Plot()
 
     # Define color palette for each trait type
@@ -410,6 +420,7 @@ function plot_simulation_data_Plotly(
 
         # Plot replicate means with ribbons for standard deviation
         for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
+            # Plot replicate means
             add_trace!(
                 p_means,
                 PlotlyJS.scatter(
@@ -423,6 +434,7 @@ function plot_simulation_data_Plotly(
                 ),
             )
 
+            # Plot ribbons for standard deviation (upper bounds)
             add_trace!(
                 p_means,
                 PlotlyJS.scatter(
@@ -440,6 +452,7 @@ function plot_simulation_data_Plotly(
                 ),
             )
 
+            # Plot ribbons for standard deviation (lower bounds)
             add_trace!(
                 p_means,
                 PlotlyJS.scatter(
@@ -514,6 +527,7 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
         string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .*
         string.(statistics.payoff_mean_std)
 
+    # Define dependent variables to plot    
     plot_var_set = [
         ["action", "a", "p", "T_ext", "T_self", "payoff"],
         ["p", "T_ext", "T_self"],
@@ -521,12 +535,14 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
         ["action", "a"],
     ]
 
+    # Plot each set of dependent variables
     for plot_var in plot_var_set
         # Initialize plot
         p = Plot()
 
         # Plot replicate means with ribbons for standard deviation
         for trait in plot_var
+            # Plot replicate means
             add_trace!(
                 p,
                 PlotlyJS.scatter(
@@ -540,6 +556,7 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
                 ),
             )
 
+            # Plot ribbons for standard deviation (uppder bounds)
             add_trace!(
                 p,
                 PlotlyJS.scatter(
@@ -557,6 +574,7 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
                 ),
             )
 
+            # Plot ribbons for standard deviation (lower bound)
             add_trace!(
                 p,
                 PlotlyJS.scatter(
@@ -604,6 +622,7 @@ function plot_sweep_rep_Plotly(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     ep_values = sort(unique(statistics.ext_pun))
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
@@ -640,6 +659,7 @@ function plot_sweep_rip_Plotly(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     ip_values = sort(unique(statistics.int_pun))
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :int_pun, :relatedness, var)
@@ -683,6 +703,7 @@ function plot_sweep_rgs_Plotly(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     gs_values = sort(unique(statistics.group_size))
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :group_size, :relatedness, var)
@@ -733,6 +754,7 @@ function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
     r_fine = range(minimum(r_values), maximum(r_values), length = r_length)  # Fine relatedness grid
     ep_fine = range(minimum(ep_values), maximum(ep_values), length = ep_length)  # Fine external punishment grid
 
+    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)

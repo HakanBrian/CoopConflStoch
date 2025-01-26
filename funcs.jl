@@ -202,6 +202,7 @@ end
     return action_i + actions_j
 end
 
+
 ##################
 # payoff and objective
 ##################
@@ -560,9 +561,12 @@ function behavioral_equilibrium!(
     temp_actions = @inbounds view(pop.action, group)
     action_sqrt_view = @inbounds view(action_sqrt, group)
 
+    # Initialize variables for the loop
     action_change = 1.0f0
     delta_action = 0.1f0
     time_step = 0
+
+    # Iterate until convergence or max time steps
     while time_step < max_time_steps
         time_step += 1
 
@@ -615,6 +619,7 @@ function shuffle_and_group(
     group_size::Int64,
     relatedness::Float64,
 )
+    # Collect and shuffle individual indices
     individuals_indices = collect(1:population_size)
     shuffle!(individuals_indices)
 
@@ -650,7 +655,7 @@ function find_actions_payoffs!(
     groups::Matrix{Int64},
     pop::Population,
 )
-    # Iterate over each group to find actions and payoffs
+    # Iterate over each group to find actions, sqrt of actions, and payoffs
     for i in axes(groups, 1)
         group = @inbounds @view groups[i, :]
 

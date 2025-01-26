@@ -48,7 +48,7 @@ function sum_sqrt_loop(actions_j::AbstractVector{Float32})
     @inbounds @simd for action_j in actions_j
         sum += sqrt_llvm(action_j)
     end
-    return sum
+    return sum  # Return sum of square roots
 end
 
 function sqrt_sum_loop(action_i::Float32, actions_j::AbstractVector{Float32})
@@ -56,7 +56,7 @@ function sqrt_sum_loop(action_i::Float32, actions_j::AbstractVector{Float32})
     @inbounds @simd for action_j in actions_j
         sum += action_j
     end
-    return sqrt_llvm(action_i + sum)
+    return sqrt_llvm(action_i + sum)  # Return sqrt of sum
 end
 
 
@@ -300,6 +300,7 @@ function sweep_statistics_rip(
         percentages_to_save,
     )
 
+    # Add relatedness and int_pun columns to each DataFrame
     for (key, df) in statistics_rip
         rename!(df, :generation => :relatedness)
         df.relatedness = repeat(r_values, inner = length(ip_values))
@@ -329,6 +330,7 @@ function sweep_statistics_rgs(
         percentages_to_save,
     )
 
+    # Add relatedness and group_size columns to each DataFrame
     for (key, df) in statistics_rgs
         rename!(df, :generation => :relatedness)
         df.relatedness = repeat(r_values, inner = length(gs_values))

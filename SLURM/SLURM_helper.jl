@@ -3,6 +3,7 @@
 ####################################
 
 function update_params(base_params::SimulationParameters; kwargs...)
+    # Update parameters by merging base parameters with new parameters
     return SimulationParameters(;
         merge(
             Dict(
@@ -20,11 +21,14 @@ function run_sim_r(
     generations_to_save::Vector{Int64} = Int[],
     percentages_to_save::Vector{Float64} = Float64[],
 )
+    # Sweep over relatedness values
     r_values = collect(range(0, 1.0, step = 0.01))
 
+    # Generate parameter sweep
     parameter_sweep =
         [update_params(base_params, relatedness = r_value) for r_value in r_values]
 
+    # Run simulation and calculate statistics
     simulation_sweep = simulation_replicate(parameter_sweep, 40)
     simulation_sweep_stats = sweep_statistics_r(
         simulation_sweep,
@@ -34,6 +38,7 @@ function run_sim_r(
         percentages_to_save,
     )
 
+    # Save simulation data
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
@@ -48,9 +53,11 @@ function run_sim_rep(
     generations_to_save::Vector{Int64} = Int[],
     percentages_to_save::Vector{Float64} = Float64[],
 )
+    # Sweep over relatedness and external punishment values
     r_values = collect(range(0, 0.5, step = 0.05))
     ep_values = collect(range(0.0f0, 0.5f0, step = 0.05f0))
 
+    # Generate parameter sweep
     parameter_sweep = [
         update_params(
             base_params,
@@ -60,6 +67,7 @@ function run_sim_rep(
         ) for r_value in r_values for ep_value in ep_values
     ]
 
+    # Run simulation ad calculate statistics
     simulation_sweep = simulation_replicate(parameter_sweep, 40)
     simulation_sweep_stats = sweep_statistics_rep(
         simulation_sweep,
@@ -70,6 +78,7 @@ function run_sim_rep(
         percentages_to_save,
     )
 
+    # Save simulation data
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
@@ -84,9 +93,11 @@ function run_sim_rip(
     generations_to_save::Vector{Int64} = Int[],
     percentages_to_save::Vector{Float64} = Float64[],
 )
+    # Sweep over relatedness and internal punishment values
     r_values = collect(range(0, 0.5, step = 0.05))
     ip_values = collect(range(0.0f0, 0.5f0, step = 0.05f0))
 
+    # Generate parameter sweep
     parameter_sweep = [
         update_params(
             base_params,
@@ -98,6 +109,7 @@ function run_sim_rip(
         ) for r_value in r_values for ip_value in ip_values
     ]
 
+    # Run simulation and calculate statistics
     simulation_sweep = simulation_replicate(parameter_sweep, 40)
     simulation_sweep_stats = sweep_statistics_rip(
         simulation_sweep,
@@ -108,6 +120,7 @@ function run_sim_rip(
         percentages_to_save,
     )
 
+    # Save simulation data
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end
@@ -122,14 +135,17 @@ function run_sim_rgs(
     generations_to_save::Vector{Int64} = Int[],
     percentages_to_save::Vector{Float64} = Float64[],
 )
+    # Sweep over relatedness and group size values
     r_values = collect(range(0, 0.5, step = 0.05))
     gs_values = collect(range(50, 500, step = 50))
 
+    # Generate parameter sweep
     parameter_sweep = [
         update_params(base_params, relatedness = r_value, group_size = gs_value) for
         r_value in r_values for gs_value in gs_values
     ]
 
+    # Run simulation and calculate statistics
     simulation_sweep = simulation_replicate(parameter_sweep, 20)
     simulation_sweep_stats = sweep_statistics_rgs(
         simulation_sweep,
@@ -140,6 +156,7 @@ function run_sim_rgs(
         percentages_to_save,
     )
 
+    # Save simulation data
     for (key, df) in simulation_sweep_stats
         save_simulation(df, joinpath(@__DIR__, filename * "_" * key * ".csv"))
     end

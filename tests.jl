@@ -55,6 +55,8 @@ action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
     pun_pool,
     population,
 )
+
+# Calculate best response
 @code_warntype best_response(
     1,
     groups[1, :],
@@ -65,6 +67,8 @@ action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
     population,
     0.1f0,
 )
+
+# Print actions
 println(population.action)
 
 # Calculate payoff
@@ -99,12 +103,14 @@ base_params = SimulationParameters(
     output_save_tick = 10,
 )
 
+# Sweep over different parameter values
 action_values = collect(range(0.0f0, 10.0f0, step = 0.01f0));
 norm_values = collect(range(0.0f0, 10.0f0, step = 0.01f0));
 ext_pun_values = collect(range(0.0f0, 10.0f0, step = 0.01f0));
 int_pun_ext_values = collect(range(0.0f0, 10.0f0, step = 0.01f0));
 int_pun_self_values = collect(range(0.0f0, 10.0f0, step = 0.01f0));
 
+# Create parameter sweeps
 parameter_sweep_action =
     [update_params(base_params, action0 = action_value) for action_value in action_values]
 parameter_sweep_norm =
@@ -121,6 +127,7 @@ parameter_sweep_int_pun_self = [
     int_pun_self_value in int_pun_self_values
 ]
 
+# Test the behavior of the behavioral equilibrium
 function test_behav_eq(param_sweep::Vector{SimulationParameters})
     actions = Vector{Float32}(undef, length(param_sweep))
 
@@ -161,6 +168,7 @@ function test_behav_eq(param_sweep::Vector{SimulationParameters})
     display("image/png", p)
 end
 
+# Run the tests
 test_behav_eq(parameter_sweep_action)
 test_behav_eq(parameter_sweep_norm)
 test_behav_eq(parameter_sweep_ext_pun)
@@ -216,6 +224,7 @@ println(
 # Mutate
 ##################
 
+# Create test mutate function
 mutate!(population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
 println(population)
 
@@ -234,6 +243,7 @@ println(population)
 # Group size
 ##################
 
+# Test group size 10
 parameter_10 = SimulationParameters(
     action0 = 0.1f0,
     norm0 = 2.0f0,
@@ -248,7 +258,7 @@ population_10 = population_construction(parameter_10);
 @time simulation_10 = simulation(population_10);
 @profview @time simulation_10 = simulation(population_10);
 
-
+# Test group size 20
 parameter_20 = SimulationParameters(
     action0 = 0.1f0,
     norm0 = 2.0f0,
