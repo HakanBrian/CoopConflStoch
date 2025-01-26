@@ -30,7 +30,7 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     alpha = 1 - retain_proportion
 
     # Calculate z-score corresponding to alpha/2
-    z_alpha_over_2 = quantile(Normal(), 1 - alpha/2)
+    z_alpha_over_2 = quantile(Normal(), 1 - alpha / 2)
 
     # Calculate truncation bounds
     lower_bound = -z_alpha_over_2 * √variance
@@ -64,7 +64,11 @@ end
 # Behavioral Equilibrium
 ##################
 
-function filter_out_val!(arr::AbstractVector{T}, exclude_val::T, buffer::Vector{T}) where T
+function filter_out_val!(
+    arr::AbstractVector{T},
+    exclude_val::T,
+    buffer::Vector{T},
+) where {T}
     count = 1
     @inbounds for i in eachindex(arr)
         if arr[i] != exclude_val  # Exclude based on the value
@@ -75,7 +79,11 @@ function filter_out_val!(arr::AbstractVector{T}, exclude_val::T, buffer::Vector{
     return view(buffer, 1:count-1)  # Return a view of the filtered buffer
 end
 
-function filter_out_idx!(arr::AbstractVector{T}, exclude_idx::Int, buffer::Vector{T}) where T
+function filter_out_idx!(
+    arr::AbstractVector{T},
+    exclude_idx::Int,
+    buffer::Vector{T},
+) where {T}
     count = 1
     @inbounds for i in eachindex(arr)
         if i != exclude_idx  # Exclude based on the index
@@ -99,10 +107,10 @@ function probabilistic_round(x::Float64)::Int64
     return rand() < probability_up ? upper : lower
 end
 
-function in_place_sample!(data::AbstractVector{T}, k::Int) where T
+function in_place_sample!(data::AbstractVector{T}, k::Int) where {T}
     n = length(data)
 
-    for i in 1:k
+    for i = 1:k
         j = rand(i:n)  # Random index between i and n (inclusive)
         data[i], data[j] = data[j], data[i]  # Swap elements
     end
@@ -139,19 +147,21 @@ function calculate_statistics(all_simulation_means::DataFrame)
     grouped = groupby(all_simulation_means, :generation)
 
     # Calculate mean and standard deviation for each trait across replicates
-    stats = combine(grouped,
-                    :action_mean => mean => :action_mean_mean,
-                    :action_mean => std => :action_mean_std,
-                    :a_mean => mean => :a_mean_mean,
-                    :a_mean => std => :a_mean_std,
-                    :p_mean => mean => :p_mean_mean,
-                    :p_mean => std => :p_mean_std,
-                    :T_ext_mean => mean => :T_ext_mean_mean,
-                    :T_ext_mean => std => :T_ext_mean_std,
-                    :T_self_mean => mean => :T_self_mean_mean,
-                    :T_self_mean => std => :T_self_mean_std,
-                    :payoff_mean => mean => :payoff_mean_mean,
-                    :payoff_mean => std => :payoff_mean_std)
+    stats = combine(
+        grouped,
+        :action_mean => mean => :action_mean_mean,
+        :action_mean => std => :action_mean_std,
+        :a_mean => mean => :a_mean_mean,
+        :a_mean => std => :a_mean_std,
+        :p_mean => mean => :p_mean_mean,
+        :p_mean => std => :p_mean_std,
+        :T_ext_mean => mean => :T_ext_mean_mean,
+        :T_ext_mean => std => :T_ext_mean_std,
+        :T_self_mean => mean => :T_self_mean_mean,
+        :T_self_mean => std => :T_self_mean_std,
+        :payoff_mean => mean => :payoff_mean_mean,
+        :payoff_mean => std => :payoff_mean_std,
+    )
 
     return stats
 end
@@ -160,7 +170,7 @@ function statistics_selection(
     all_simulation_means::DataFrame,
     output_save_tick::Int,
     generations_to_save::Vector{Int64} = Int[],
-    percentages_to_save::Vector{Float64} = Float64[]
+    percentages_to_save::Vector{Float64} = Float64[],
 )
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
@@ -169,19 +179,17 @@ function statistics_selection(
     total_generations = maximum(all_simulation_means.generation)
 
     # Initialize a dictionary to store DataFrames for each specified generation or percentage
-    selected_data = Dict{String, DataFrame}()
+    selected_data = Dict{String,DataFrame}()
 
     # Calculate the specific generations based on percentages
     percent_generations = [
-        (p, round(Int, p * total_generations / output_save_tick) * output_save_tick)
-        for p in percentages_to_save
+        (p, round(Int, p * total_generations / output_save_tick) * output_save_tick) for
+        p in percentages_to_save
     ]
 
     # Combine specific generations and percentage-based generations
-    generations_to_select = unique(vcat(
-        generations_to_save,
-        map(x -> x[2], percent_generations)
-    ))
+    generations_to_select =
+        unique(vcat(generations_to_save, map(x -> x[2], percent_generations)))
 
     # If no specific generations or percentages are given, save the last row
     if isempty(generations_to_select)
@@ -194,7 +202,7 @@ function statistics_selection(
         selected_data[string("gen_", gen)] = DataFrame()
     end
 
-    for i in 1:num_params
+    for i = 1:num_params
         # Filter rows by `param_id`
         param_data = filter(row -> row.param_id == i, all_simulation_means)
 
@@ -232,12 +240,13 @@ function sweep_statistics_r(
     r_values::Vector{Float64},
     output_save_tick::Int,
     generations_to_save::Vector{Int64} = Int[],
-    percentages_to_save::Vector{Float64} = Float64[]
+    percentages_to_save::Vector{Float64} = Float64[],
 )
-    statistics_r = statistics_selection(all_simulation_means,
-                                        output_save_tick,
-                                        generations_to_save,
-                                        percentages_to_save
+    statistics_r = statistics_selection(
+        all_simulation_means,
+        output_save_tick,
+        generations_to_save,
+        percentages_to_save,
     )
 
     # Add relatedness columns to each DataFrame
@@ -255,12 +264,13 @@ function sweep_statistics_rep(
     ep_values::Vector{Float32},
     output_save_tick::Int,
     generations_to_save::Vector{Int64} = Int[],
-    percentages_to_save::Vector{Float64} = Float64[]
+    percentages_to_save::Vector{Float64} = Float64[],
 )
-    statistics_rep = statistics_selection(all_simulation_means,
-                                        output_save_tick,
-                                        generations_to_save,
-                                        percentages_to_save
+    statistics_rep = statistics_selection(
+        all_simulation_means,
+        output_save_tick,
+        generations_to_save,
+        percentages_to_save,
     )
 
     # Add relatedness and ext_pun columns to each DataFrame
@@ -281,12 +291,13 @@ function sweep_statistics_rip(
     ip_values::Vector{Float32},
     output_save_tick::Int,
     generations_to_save::Vector{Int64} = Int[],
-    percentages_to_save::Vector{Float64} = Float64[]
+    percentages_to_save::Vector{Float64} = Float64[],
 )
-    statistics_rip = statistics_selection(all_simulation_means,
-                                        output_save_tick,
-                                        generations_to_save,
-                                        percentages_to_save
+    statistics_rip = statistics_selection(
+        all_simulation_means,
+        output_save_tick,
+        generations_to_save,
+        percentages_to_save,
     )
 
     for (key, df) in statistics_rip
@@ -294,7 +305,10 @@ function sweep_statistics_rip(
         df.relatedness = repeat(r_values, inner = length(ip_values))
 
         insertcols!(df, 2, :int_pun => repeat(ip_values, length(r_values)))
-        select!(df, Not([:T_ext_mean_mean, :T_ext_mean_std, :T_self_mean_mean, :T_self_mean_std]))
+        select!(
+            df,
+            Not([:T_ext_mean_mean, :T_ext_mean_std, :T_self_mean_mean, :T_self_mean_std]),
+        )
     end
 
     return statistics_rip
@@ -306,12 +320,13 @@ function sweep_statistics_rgs(
     gs_values::Vector{Int64},
     output_save_tick::Int,
     generations_to_save::Vector{Int64} = Int[],
-    percentages_to_save::Vector{Float64} = Float64[]
+    percentages_to_save::Vector{Float64} = Float64[],
 )
-    statistics_rgs = statistics_selection(all_simulation_means,
-                                        output_save_tick,
-                                        generations_to_save,
-                                        percentages_to_save
+    statistics_rgs = statistics_selection(
+        all_simulation_means,
+        output_save_tick,
+        generations_to_save,
+        percentages_to_save,
     )
 
     for (key, df) in statistics_rgs

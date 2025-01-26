@@ -12,7 +12,10 @@ include("CoopConflGameHelper.jl")
 # Plot Function
 ##################
 
-function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
+function plot_simulation_data_Plots(
+    all_simulation_means::DataFrame;
+    param_id::Union{Nothing,Int64} = nothing,
+)
     # Filter the data if param_id is provided
     if param_id !== nothing
         all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
@@ -34,13 +37,13 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
         "p mean" => :green4,
         "T_ext mean" => :purple4,
         "T_self mean" => :yellow4,
-        "payoff mean" => :orange4
+        "payoff mean" => :orange4,
     )
 
     # Initialize the plot
-    p = Plots.plot(legend=false)
+    p = Plots.plot(legend = false)
 
-    for i in 1:num_params
+    for i = 1:num_params
         # Filter by param_id
         param_data = filter(row -> row.param_id == i, all_simulation_means)
 
@@ -49,12 +52,17 @@ function plot_simulation_data_Plots(all_simulation_means::DataFrame; param_id::U
 
         # Plot mean and ribbons for each trait with a distinct label for each parameter set
         for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
-            Plots.plot!(p,
-                        statistics.generation,
-                        statistics[!, trait * "_mean_mean"],
-                        ribbon=(statistics[!, trait * "_mean_std"], statistics[!, trait * "_mean_std"]), 
-                        label=trait * " ($i)",
-                        color=colors[trait * " mean"])
+            Plots.plot!(
+                p,
+                statistics.generation,
+                statistics[!, trait*"_mean_mean"],
+                ribbon = (
+                    statistics[!, trait*"_mean_std"],
+                    statistics[!, trait*"_mean_std"],
+                ),
+                label = trait * " ($i)",
+                color = colors[trait*" mean"],
+            )
         end
     end
 
@@ -78,23 +86,33 @@ function plot_sweep_r_Plots(statistics::DataFrame)
         "p mean" => :green4,
         "T_ext mean" => :purple4,
         "T_self mean" => :yellow4,
-        "payoff mean" => :orange4
+        "payoff mean" => :orange4,
     )
 
-    plot_var_set = [["action", "a", "p", "T_ext", "T_self", "payoff"], ["p", "T_ext", "T_self"], ["p"], ["action", "a"]]
+    plot_var_set = [
+        ["action", "a", "p", "T_ext", "T_self", "payoff"],
+        ["p", "T_ext", "T_self"],
+        ["p"],
+        ["action", "a"],
+    ]
 
     for plot_var in plot_var_set
         # Initialize plot
-        p = Plots.plot(legend=true)
+        p = Plots.plot(legend = true)
 
         # Plot mean and ribbons for each trait
         for trait in plot_var
-            Plots.plot!(p,
-                        statistics.relatedness,
-                        statistics[!, trait * "_mean_mean"],
-                        ribbon=(statistics[!, trait * "_mean_std"], statistics[!, trait * "_mean_std"]), 
-                        label=trait,
-                        color=colors[trait * " mean"])
+            Plots.plot!(
+                p,
+                statistics.relatedness,
+                statistics[!, trait*"_mean_mean"],
+                ribbon = (
+                    statistics[!, trait*"_mean_std"],
+                    statistics[!, trait*"_mean_std"],
+                ),
+                label = trait,
+                color = colors[trait*" mean"],
+            )
         end
 
         # Display the plot
@@ -106,7 +124,13 @@ end
 
 function plot_sweep_rep_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -120,12 +144,16 @@ function plot_sweep_rep_Plots(statistics::DataFrame)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
 
         # Plot heatmap
-        p = Plots.heatmap(r_values, ep_values, heatmap_matrix,
-                            color=:viridis,
-                            xlabel="Relatedness",
-                            ylabel="External Punishment",
-                            title="Heatmap of $var",
-                            colorbar_title="Value")
+        p = Plots.heatmap(
+            r_values,
+            ep_values,
+            heatmap_matrix,
+            color = :viridis,
+            xlabel = "Relatedness",
+            ylabel = "External Punishment",
+            title = "Heatmap of $var",
+            colorbar_title = "Value",
+        )
 
         display("image/png", p)
     end
@@ -147,12 +175,16 @@ function plot_sweep_rip_Plots(statistics::DataFrame)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:int_pun)])
 
         # Plot heatmap
-        p = Plots.heatmap(r_values, ip_values, heatmap_matrix,
-                            color=:viridis,
-                            xlabel="Relatedness",
-                            ylabel="Internal Punishment",
-                            title="Heatmap of $var",
-                            colorbar_title="Value")
+        p = Plots.heatmap(
+            r_values,
+            ip_values,
+            heatmap_matrix,
+            color = :viridis,
+            xlabel = "Relatedness",
+            ylabel = "Internal Punishment",
+            title = "Heatmap of $var",
+            colorbar_title = "Value",
+        )
 
         display("image/png", p)
     end
@@ -160,7 +192,14 @@ end
 
 function plot_sweep_rgs_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :p_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -174,12 +213,16 @@ function plot_sweep_rgs_Plots(statistics::DataFrame)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:group_size)])
 
         # Plot heatmap
-        p = Plots.heatmap(r_values, gs_values, heatmap_matrix,
-                            color=:viridis,
-                            xlabel="Relatedness",
-                            ylabel="Group Size",
-                            title="Heatmap of $var",
-                            colorbar_title="Value")
+        p = Plots.heatmap(
+            r_values,
+            gs_values,
+            heatmap_matrix,
+            color = :viridis,
+            xlabel = "Relatedness",
+            ylabel = "Group Size",
+            title = "Heatmap of $var",
+            colorbar_title = "Value",
+        )
 
         display("image/png", p)
     end
@@ -187,19 +230,25 @@ end
 
 function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
     ep_values = sort(unique(statistics.ext_pun))
 
     # Define grid fineness
-    r_length = 10*length(r_values)
-    ep_length = 10*length(ep_values)
+    r_length = 10 * length(r_values)
+    ep_length = 10 * length(ep_values)
 
     # Define a finer grid for smoothing
-    r_fine = range(minimum(r_values), maximum(r_values), length=r_length)  # Fine relatedness grid
-    ep_fine = range(minimum(ep_values), maximum(ep_values), length=ep_length)  # Fine external punishment grid
+    r_fine = range(minimum(r_values), maximum(r_values), length = r_length)  # Fine relatedness grid
+    ep_fine = range(minimum(ep_values), maximum(ep_values), length = ep_length)  # Fine external punishment grid
 
     for var in dependent_vars
         # Pivot the data for the current dependent variable
@@ -209,21 +258,40 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
 
         # Create the interpolator using grid dimensions and matrix
-        interp = interpolate((1:size(heatmap_matrix, 2), 1:size(heatmap_matrix, 1)), heatmap_matrix, Gridded(Linear()))
+        interp = interpolate(
+            (1:size(heatmap_matrix, 2), 1:size(heatmap_matrix, 1)),
+            heatmap_matrix,
+            Gridded(Linear()),
+        )
 
         # Evaluate interpolation on the finer grid
-        interp_r_fine = range(1, size(heatmap_matrix, 2), length=r_length)
-        interp_ep_fine = range(1, size(heatmap_matrix, 1), length=ep_length)
+        interp_r_fine = range(1, size(heatmap_matrix, 2), length = r_length)
+        interp_ep_fine = range(1, size(heatmap_matrix, 1), length = ep_length)
 
         # Smooth the data based on interpolator
         heatmap_smooth = [interp(i, j) for i in interp_r_fine, j in interp_ep_fine]
 
         # Plot heatmap
-        p = Plots.heatmap(r_fine, ep_fine, heatmap_smooth, color=:viridis, xlabel="Relatedness", ylabel="External Punishment",
-                          title="Heatmap of $var", colorbar_title="Value")
+        p = Plots.heatmap(
+            r_fine,
+            ep_fine,
+            heatmap_smooth,
+            color = :viridis,
+            xlabel = "Relatedness",
+            ylabel = "External Punishment",
+            title = "Heatmap of $var",
+            colorbar_title = "Value",
+        )
 
         # Add contour lines
-        contour!(r_fine, ep_fine, heatmap_smooth, levels=10, color=:white, linewidth=0.8)
+        contour!(
+            r_fine,
+            ep_fine,
+            heatmap_smooth,
+            levels = 10,
+            color = :white,
+            linewidth = 0.8,
+        )
 
         display("image/png", p)
     end
@@ -242,7 +310,8 @@ function create_trait_table(all_simulation_means::DataFrame)
 
     for group in grouped_by_param
         param_id_val = group.param_id[1]  # Extract the param_id value
-        for trait in ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
+        for trait in
+            ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
             start_values = first(group)[trait]  # Start value (first generation)
             end_values = last(group)[trait]  # End value (last generation)
             push!(table_data, (param_id_val, trait, start_values, end_values))
@@ -255,21 +324,31 @@ function create_trait_table(all_simulation_means::DataFrame)
     # Create table trace
     table_trace = PlotlyJS.table(
         header = Dict(:values => ["Param ID", "Trait", "Start Value", "End Value"]),
-        cells = Dict(:values => [table_df.Param_ID, table_df.Trait, table_df.Start_Value, table_df.End_Value])
+        cells = Dict(
+            :values => [
+                table_df.Param_ID,
+                table_df.Trait,
+                table_df.Start_Value,
+                table_df.End_Value,
+            ],
+        ),
     )
 
     # Set table layout
     table_layout = Layout(
-        title="Beginning and Final Values",
-        margin=Dict(:t => 50, :b => 50),
-        height=300
+        title = "Beginning and Final Values",
+        margin = Dict(:t => 50, :b => 50),
+        height = 300,
     )
 
     # Display the table
     display(Plot([table_trace], table_layout))
 end
 
-function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::Union{Nothing, Int64}=nothing)
+function plot_simulation_data_Plotly(
+    all_simulation_means::DataFrame;
+    param_id::Union{Nothing,Int64} = nothing,
+)
     # Filter the data if param_id is provided
     if param_id !== nothing
         all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
@@ -297,43 +376,98 @@ function plot_simulation_data_Plotly(all_simulation_means::DataFrame; param_id::
     )
 
     # Plot each param_id's data
-    for i in 1:num_params
+    for i = 1:num_params
         param_data = filter(row -> row.param_id == i, all_simulation_means)
 
         # Calculate statistics for the current param_id
         statistics = calculate_statistics(param_data)
 
         # Create formatted hover text for each trait
-        statistics[!, :action_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
-        statistics[!, :a_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>a Mean: " .* string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
-        statistics[!, :p_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>p Mean: " .* string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
-        statistics[!, :T_ext_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>T_ext Mean: " .* string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_ext_mean_std)
-        statistics[!, :T_self_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>T_self Mean: " .* string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_self_mean_std)
-        statistics[!, :payoff_mean_hover] = "Generation: " .* string.(statistics.generation) .* "<br>payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
+        statistics[!, :action_mean_hover] =
+            "Generation: " .* string.(statistics.generation) .* "<br>action Mean: " .*
+            string.(statistics.action_mean_mean) .* "<br>Std Dev: " .*
+            string.(statistics.action_mean_std)
+        statistics[!, :a_mean_hover] =
+            "Generation: " .* string.(statistics.generation) .* "<br>a Mean: " .*
+            string.(statistics.a_mean_mean) .* "<br>Std Dev: " .*
+            string.(statistics.a_mean_std)
+        statistics[!, :p_mean_hover] =
+            "Generation: " .* string.(statistics.generation) .* "<br>p Mean: " .*
+            string.(statistics.p_mean_mean) .* "<br>Std Dev: " .*
+            string.(statistics.p_mean_std)
+        statistics[!, :T_ext_mean_hover] =
+            "Generation: " .* string.(statistics.generation) .* "<br>T_ext Mean: " .*
+            string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .*
+            string.(statistics.T_ext_mean_std)
+        statistics[!, :T_self_mean_hover] =
+            "Generation: " .* string.(statistics.generation) .* "<br>T_self Mean: " .*
+            string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .*
+            string.(statistics.T_self_mean_std)
+        statistics[!, :payoff_mean_hover] =
+            "Generation: " .* string.(statistics.generation) .* "<br>payoff Mean: " .*
+            string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .*
+            string.(statistics.payoff_mean_std)
 
         # Plot replicate means with ribbons for standard deviation
         for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
-            add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"],
-                                                mode="lines", line_color=colors[trait], name=trait * " ($i)",
-                                                hovertext=statistics[!, trait * "_mean_hover"],
-                                                hoverinfo="text"))
+            add_trace!(
+                p_means,
+                PlotlyJS.scatter(
+                    x = statistics.generation,
+                    y = statistics[!, trait*"_mean_mean"],
+                    mode = "lines",
+                    line_color = colors[trait],
+                    name = trait * " ($i)",
+                    hovertext = statistics[!, trait*"_mean_hover"],
+                    hoverinfo = "text",
+                ),
+            )
 
-            add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"] .+ statistics[!, trait * "_mean_std"],
-                                                mode="lines", line_color=colors[trait], name="", fill="tonexty",
-                                                fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
-                                                hoverinfo="none", showlegend=false))
+            add_trace!(
+                p_means,
+                PlotlyJS.scatter(
+                    x = statistics.generation,
+                    y = statistics[!, trait*"_mean_mean"] .+
+                        statistics[!, trait*"_mean_std"],
+                    mode = "lines",
+                    line_color = colors[trait],
+                    name = "",
+                    fill = "tonexty",
+                    fillcolor = colors[trait*"_stdev"],
+                    line = Dict(:width => 0),
+                    hoverinfo = "none",
+                    showlegend = false,
+                ),
+            )
 
-            add_trace!(p_means, PlotlyJS.scatter(x=statistics.generation, y=statistics[!, trait * "_mean_mean"] .- statistics[!, trait * "_mean_std"],
-                                                mode="lines", line_color=colors[trait], name="", fill="tonexty",
-                                                fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
-                                                hoverinfo="none", showlegend=false))
+            add_trace!(
+                p_means,
+                PlotlyJS.scatter(
+                    x = statistics.generation,
+                    y = statistics[!, trait*"_mean_mean"] .-
+                        statistics[!, trait*"_mean_std"],
+                    mode = "lines",
+                    line_color = colors[trait],
+                    name = "",
+                    fill = "tonexty",
+                    fillcolor = colors[trait*"_stdev"],
+                    line = Dict(:width => 0),
+                    hoverinfo = "none",
+                    showlegend = false,
+                ),
+            )
         end
     end
 
     # Layout for replicate means
-    relayout!(p_means, title="Mean of Replicates",
-            xaxis_title="Generation", yaxis_title="Traits",
-            legend=Dict(:orientation => "h", :x => 0, :y => -0.2), hovermode="x unified")
+    relayout!(
+        p_means,
+        title = "Mean of Replicates",
+        xaxis_title = "Generation",
+        yaxis_title = "Traits",
+        legend = Dict(:orientation => "h", :x => 0, :y => -0.2),
+        hovermode = "x unified",
+    )
 
     # Display plots
     display(p_means)
@@ -357,14 +491,35 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
     )
 
     # Create formatted hover text for each trait
-    statistics[!, :action_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>action Mean: " .* string.(statistics.action_mean_mean) .* "<br>Std Dev: " .* string.(statistics.action_mean_std)
-    statistics[!, :a_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>a Mean: " .* string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
-    statistics[!, :p_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>p Mean: " .* string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
-    statistics[!, :T_ext_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>T_ext Mean: " .* string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_ext_mean_std)
-    statistics[!, :T_self_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>T_self Mean: " .* string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .* string.(statistics.T_self_mean_std)
-    statistics[!, :payoff_mean_hover] = "Relatedness: " .* string.(statistics.relatedness) .* "<br>payoff Mean: " .* string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .* string.(statistics.payoff_mean_std)
+    statistics[!, :action_mean_hover] =
+        "Relatedness: " .* string.(statistics.relatedness) .* "<br>action Mean: " .*
+        string.(statistics.action_mean_mean) .* "<br>Std Dev: " .*
+        string.(statistics.action_mean_std)
+    statistics[!, :a_mean_hover] =
+        "Relatedness: " .* string.(statistics.relatedness) .* "<br>a Mean: " .*
+        string.(statistics.a_mean_mean) .* "<br>Std Dev: " .* string.(statistics.a_mean_std)
+    statistics[!, :p_mean_hover] =
+        "Relatedness: " .* string.(statistics.relatedness) .* "<br>p Mean: " .*
+        string.(statistics.p_mean_mean) .* "<br>Std Dev: " .* string.(statistics.p_mean_std)
+    statistics[!, :T_ext_mean_hover] =
+        "Relatedness: " .* string.(statistics.relatedness) .* "<br>T_ext Mean: " .*
+        string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .*
+        string.(statistics.T_ext_mean_std)
+    statistics[!, :T_self_mean_hover] =
+        "Relatedness: " .* string.(statistics.relatedness) .* "<br>T_self Mean: " .*
+        string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .*
+        string.(statistics.T_self_mean_std)
+    statistics[!, :payoff_mean_hover] =
+        "Relatedness: " .* string.(statistics.relatedness) .* "<br>payoff Mean: " .*
+        string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .*
+        string.(statistics.payoff_mean_std)
 
-    plot_var_set = [["action", "a", "p", "T_ext", "T_self", "payoff"], ["p", "T_ext", "T_self"], ["p"], ["action", "a"]]
+    plot_var_set = [
+        ["action", "a", "p", "T_ext", "T_self", "payoff"],
+        ["p", "T_ext", "T_self"],
+        ["p"],
+        ["action", "a"],
+    ]
 
     for plot_var in plot_var_set
         # Initialize plot
@@ -372,26 +527,63 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
 
         # Plot replicate means with ribbons for standard deviation
         for trait in plot_var
-            add_trace!(p, PlotlyJS.scatter(x=statistics.relatedness, y=statistics[!, trait * "_mean_mean"],
-                                            mode="lines", line_color=colors[trait], name=trait,
-                                            hovertext=statistics[!, trait * "_mean_hover"],
-                                            hoverinfo="text"))
+            add_trace!(
+                p,
+                PlotlyJS.scatter(
+                    x = statistics.relatedness,
+                    y = statistics[!, trait*"_mean_mean"],
+                    mode = "lines",
+                    line_color = colors[trait],
+                    name = trait,
+                    hovertext = statistics[!, trait*"_mean_hover"],
+                    hoverinfo = "text",
+                ),
+            )
 
-            add_trace!(p, PlotlyJS.scatter(x=statistics.relatedness, y=statistics[!, trait * "_mean_mean"] .+ statistics[!, trait * "_mean_std"],
-                                            mode="lines", line_color=colors[trait], name="", fill="tonexty",
-                                            fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
-                                            hoverinfo="none", showlegend=false))
+            add_trace!(
+                p,
+                PlotlyJS.scatter(
+                    x = statistics.relatedness,
+                    y = statistics[!, trait*"_mean_mean"] .+
+                        statistics[!, trait*"_mean_std"],
+                    mode = "lines",
+                    line_color = colors[trait],
+                    name = "",
+                    fill = "tonexty",
+                    fillcolor = colors[trait*"_stdev"],
+                    line = Dict(:width => 0),
+                    hoverinfo = "none",
+                    showlegend = false,
+                ),
+            )
 
-            add_trace!(p, PlotlyJS.scatter(x=statistics.relatedness, y=statistics[!, trait * "_mean_mean"] .- statistics[!, trait * "_mean_std"],
-                                            mode="lines", line_color=colors[trait], name="", fill="tonexty",
-                                            fillcolor=colors[trait * "_stdev"], line=Dict(:width => 0),
-                                            hoverinfo="none", showlegend=false))
+            add_trace!(
+                p,
+                PlotlyJS.scatter(
+                    x = statistics.relatedness,
+                    y = statistics[!, trait*"_mean_mean"] .-
+                        statistics[!, trait*"_mean_std"],
+                    mode = "lines",
+                    line_color = colors[trait],
+                    name = "",
+                    fill = "tonexty",
+                    fillcolor = colors[trait*"_stdev"],
+                    line = Dict(:width => 0),
+                    hoverinfo = "none",
+                    showlegend = false,
+                ),
+            )
         end
 
         # Layout for replicate means
-        relayout!(p, title="Mean of Replicates",
-                xaxis_title="Relatedness", yaxis_title="Traits",
-                legend=Dict(:orientation => "h", :x => 0, :y => -0.2), hovermode="x unified")
+        relayout!(
+            p,
+            title = "Mean of Replicates",
+            xaxis_title = "Relatedness",
+            yaxis_title = "Traits",
+            legend = Dict(:orientation => "h", :x => 0, :y => -0.2),
+            hovermode = "x unified",
+        )
 
         # Display plots
         display(p)
@@ -400,7 +592,13 @@ end
 
 function plot_sweep_rep_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -415,18 +613,18 @@ function plot_sweep_rep_Plotly(statistics::DataFrame)
 
         # Create a heatmap trace
         trace = PlotlyJS.heatmap(
-            z=heatmap_matrix,  # Data matrix
-            x=r_values,  # Relatedness (x-axis)
-            y=ep_values,  # External Punishment (y-axis)
-            colorscale="Viridis",
-            colorbar_title="Value"
+            z = heatmap_matrix,  # Data matrix
+            x = r_values,  # Relatedness (x-axis)
+            y = ep_values,  # External Punishment (y-axis)
+            colorscale = "Viridis",
+            colorbar_title = "Value",
         )
 
         # Add layout
         layout = Layout(
-            title="Heatmap of $var",
-            xaxis_title="Relatedness",
-            yaxis_title="External Punishment"
+            title = "Heatmap of $var",
+            xaxis_title = "Relatedness",
+            yaxis_title = "External Punishment",
         )
 
         # Plot
@@ -451,18 +649,18 @@ function plot_sweep_rip_Plotly(statistics::DataFrame)
 
         # Create a heatmap trace
         trace = PlotlyJS.heatmap(
-            z=heatmap_matrix,  # Data matrix
-            x=r_values,  # Relatedness (x-axis)
-            y=ip_values,  # External Punishment (y-axis)
-            colorscale="Viridis",
-            colorbar_title="Value"
+            z = heatmap_matrix,  # Data matrix
+            x = r_values,  # Relatedness (x-axis)
+            y = ip_values,  # External Punishment (y-axis)
+            colorscale = "Viridis",
+            colorbar_title = "Value",
         )
 
         # Add layout
         layout = Layout(
-            title="Heatmap of $var",
-            xaxis_title="Relatedness",
-            yaxis_title="Internal Punishment"
+            title = "Heatmap of $var",
+            xaxis_title = "Relatedness",
+            yaxis_title = "Internal Punishment",
         )
 
         # Plot
@@ -472,7 +670,14 @@ end
 
 function plot_sweep_rgs_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :p_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -487,18 +692,18 @@ function plot_sweep_rgs_Plotly(statistics::DataFrame)
 
         # Create a heatmap trace
         trace = PlotlyJS.heatmap(
-            z=heatmap_matrix,  # Data matrix
-            x=r_values,  # Relatedness (x-axis)
-            y=gs_values,  # External Punishment (y-axis)
-            colorscale="Viridis",
-            colorbar_title="Value"
+            z = heatmap_matrix,  # Data matrix
+            x = r_values,  # Relatedness (x-axis)
+            y = gs_values,  # External Punishment (y-axis)
+            colorscale = "Viridis",
+            colorbar_title = "Value",
         )
 
         # Add layout
         layout = Layout(
-            title="Heatmap of $var",
-            xaxis_title="Relatedness",
-            yaxis_title="Group Size"
+            title = "Heatmap of $var",
+            xaxis_title = "Relatedness",
+            yaxis_title = "Group Size",
         )
 
         # Plot
@@ -508,7 +713,13 @@ end
 
 function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
     # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
 
     # Get r_values and ep_values dynamically
     r_values = sort(unique(statistics.relatedness))
@@ -519,8 +730,8 @@ function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
     ep_length = 10 * length(ep_values)
 
     # Define a finer grid for smoothing
-    r_fine = range(minimum(r_values), maximum(r_values), length=r_length)  # Fine relatedness grid
-    ep_fine = range(minimum(ep_values), maximum(ep_values), length=ep_length)  # Fine external punishment grid
+    r_fine = range(minimum(r_values), maximum(r_values), length = r_length)  # Fine relatedness grid
+    ep_fine = range(minimum(ep_values), maximum(ep_values), length = ep_length)  # Fine external punishment grid
 
     for var in dependent_vars
         # Pivot the data for the current dependent variable
@@ -530,41 +741,45 @@ function plot_sweep_rep_smooth_Plotly(statistics::DataFrame)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
 
         # Create the interpolator using grid dimensions and matrix
-        interp = interpolate((1:size(heatmap_matrix, 2), 1:size(heatmap_matrix, 1)), heatmap_matrix, Gridded(Linear()))
+        interp = interpolate(
+            (1:size(heatmap_matrix, 2), 1:size(heatmap_matrix, 1)),
+            heatmap_matrix,
+            Gridded(Linear()),
+        )
 
         # Evaluate interpolation on the finer grid
-        interp_r_fine = range(1, size(heatmap_matrix, 2), length=r_length)
-        interp_ep_fine = range(1, size(heatmap_matrix, 1), length=ep_length)
+        interp_r_fine = range(1, size(heatmap_matrix, 2), length = r_length)
+        interp_ep_fine = range(1, size(heatmap_matrix, 1), length = ep_length)
 
         # Smooth the data based on interpolator
         heatmap_smooth = [interp(i, j) for i in interp_r_fine, j in interp_ep_fine]
 
         # Create heatmap trace
         heatmap_trace = PlotlyJS.heatmap(
-            z=heatmap_smooth,  # Smoothed data matrix
-            x=r_fine,  # Fine relatedness grid
-            y=ep_fine,  # Fine external punishment grid
-            colorscale="Viridis",
-            colorbar_title="Value"
+            z = heatmap_smooth,  # Smoothed data matrix
+            x = r_fine,  # Fine relatedness grid
+            y = ep_fine,  # Fine external punishment grid
+            colorscale = "Viridis",
+            colorbar_title = "Value",
         )
 
         # Create contour trace
         contour_trace = PlotlyJS.contour(
-            z=heatmap_smooth,  # Smoothed data matrix
-            x=r_fine,  # Fine relatedness grid
-            y=ep_fine,  # Fine external punishment grid
-            colorscale="Viridis",
-            contours_coloring="lines",
-            line_width=0.8,
-            line_color="white",
-            ncontours=10  # Number of contour levels
+            z = heatmap_smooth,  # Smoothed data matrix
+            x = r_fine,  # Fine relatedness grid
+            y = ep_fine,  # Fine external punishment grid
+            colorscale = "Viridis",
+            contours_coloring = "lines",
+            line_width = 0.8,
+            line_color = "white",
+            ncontours = 10,  # Number of contour levels
         )
 
         # Add layout
         layout = Layout(
-            title="Heatmap of $var with Contours",
-            xaxis_title="Relatedness",
-            yaxis_title="External Punishment"
+            title = "Heatmap of $var with Contours",
+            xaxis_title = "Relatedness",
+            yaxis_title = "External Punishment",
         )
 
         # Combine traces and plot
