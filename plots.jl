@@ -136,7 +136,7 @@ function plot_sweep_r_Plots(statistics::DataFrame; display_plot::Bool = false)
     return plots_array  # Return all plots
 end
 
-function plot_sweep_heatmaps(statistics::DataFrame, x_var::Symbol, y_var::Symbol, dependent_vars::Vector{Symbol}; display_plot::Bool=false)
+function plot_sweep_heatmap_Plots(statistics::DataFrame, x_var::Symbol, y_var::Symbol, dependent_vars::Vector{Symbol}; display_plot::Bool=false)
     # Get unique sorted values for x and y axes
     x_values = sort(unique(statistics[!, x_var]))
     y_values = sort(unique(statistics[!, y_var]))
@@ -178,19 +178,19 @@ end
 function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
     dependent_vars = intersect(names(statistics), 
         [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean])
-    plot_sweep_heatmaps(statistics, :relatedness, :ext_pun, dependent_vars, display_plot=display_plot)
+        plot_sweep_heatmap_Plots(statistics, :relatedness, :ext_pun, dependent_vars, display_plot=display_plot)
 end
 
 function plot_sweep_rip_Plots(statistics::DataFrame; display_plot::Bool = false)
     dependent_vars = intersect(names(statistics), 
         [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean])
-    plot_sweep_heatmaps(statistics, :relatedness, :int_pun, dependent_vars, display_plot=display_plot)
+        plot_sweep_heatmap_Plots(statistics, :relatedness, :int_pun, dependent_vars, display_plot=display_plot)
 end
 
 function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
     dependent_vars = intersect(names(statistics), 
         [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean])
-    plot_sweep_heatmaps(statistics, :relatedness, :group_size, dependent_vars, display_plot=display_plot)
+        plot_sweep_heatmap_Plots(statistics, :relatedness, :group_size, dependent_vars, display_plot=display_plot)
 end
 
 
