@@ -136,19 +136,10 @@ function plot_sweep_r_Plots(statistics::DataFrame; display_plot::Bool = false)
     return plots_array  # Return all plots
 end
 
-function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
-    # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [
-        :action_mean_mean,
-        :a_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
-        :payoff_mean_mean,
-    ]
-
-    # Get r_values and ep_values dynamically
-    r_values = sort(unique(statistics.relatedness))
-    ep_values = sort(unique(statistics.ext_pun))
+function plot_sweep_heatmaps(statistics::DataFrame, x_var::Symbol, y_var::Symbol, dependent_vars::Vector{Symbol}; display_plot::Bool=false)
+    # Get unique sorted values for x and y axes
+    x_values = sort(unique(statistics[!, x_var]))
+    y_values = sort(unique(statistics[!, y_var]))
 
     # Store plots in an array
     plots_array = []
@@ -156,21 +147,21 @@ function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
     # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
+        heatmap_data = unstack(statistics, y_var, x_var, var)
 
-        # Convert DataFrame to a matrix (remove `ext_pun` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
+        # Convert DataFrame to a matrix (remove `y_var` column)
+        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(y_var)])
 
         # Create heatmap plot
         p = Plots.heatmap(
-            r_values,
-            ep_values,
+            x_values,
+            y_values,
             heatmap_matrix,
-            color = :viridis,
-            xlabel = "Relatedness",
-            ylabel = "External Punishment",
-            title = "Heatmap of $var",
-            colorbar_title = "Value",
+            color=:viridis,
+            xlabel=string(x_var),
+            ylabel=string(y_var),
+            title="Heatmap of $var",
+            colorbar_title="Value",
         )
 
         push!(plots_array, p)  # Store plot in array
@@ -182,96 +173,24 @@ function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
     end
 
     return plots_array  # Return all plots
+end
+
+function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
+    dependent_vars = intersect(names(statistics), 
+        [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean])
+    plot_sweep_heatmaps(statistics, :relatedness, :ext_pun, dependent_vars, display_plot=display_plot)
 end
 
 function plot_sweep_rip_Plots(statistics::DataFrame; display_plot::Bool = false)
-    # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
-
-    # Get r_values and ep_values dynamically
-    r_values = sort(unique(statistics.relatedness))
-    ip_values = sort(unique(statistics.int_pun))
-
-    # Store plots in an array
-    plots_array = []
-
-    for var in dependent_vars
-        # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, :int_pun, :relatedness, var)
-
-        # Convert DataFrame to a matrix (remove `int_pun` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:int_pun)])
-
-        # Create heatmap plot
-        p = Plots.heatmap(
-            r_values,
-            ip_values,
-            heatmap_matrix,
-            color = :viridis,
-            xlabel = "Relatedness",
-            ylabel = "Internal Punishment",
-            title = "Heatmap of $var",
-            colorbar_title = "Value",
-        )
-
-        push!(plots_array, p)  # Store plot in array
-
-        # Conditionally display plot
-        if display_plot
-            display("image/png", p)
-        end
-    end
-
-    return plots_array  # Return all plots
+    dependent_vars = intersect(names(statistics), 
+        [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean])
+    plot_sweep_heatmaps(statistics, :relatedness, :int_pun, dependent_vars, display_plot=display_plot)
 end
 
 function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
-    # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [
-        :action_mean_mean,
-        :a_mean_mean,
-        :p_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
-        :payoff_mean_mean,
-    ]
-
-    # Get r_values and gs_values dynamically
-    r_values = sort(unique(statistics.relatedness))
-    gs_values = sort(unique(statistics.group_size))
-
-    # Store plots in an array
-    plots_array = []
-
-    # Plot each dependent variable as a separate heatmap
-    for var in dependent_vars
-        # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, :group_size, :relatedness, var)
-
-        # Convert DataFrame to a matrix (remove `group_size` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:group_size)])
-
-        # Create heatmap plot
-        p = Plots.heatmap(
-            r_values,
-            gs_values,
-            heatmap_matrix,
-            color = :viridis,
-            xlabel = "Relatedness",
-            ylabel = "Group Size",
-            title = "Heatmap of $var",
-            colorbar_title = "Value",
-        )
-
-        push!(plots_array, p)  # Store plot in array
-
-        # Conditionally display plot
-        if display_plot
-            display("image/png", p)
-        end
-    end
-
-    return plots_array  # Return all plots
+    dependent_vars = intersect(names(statistics), 
+        [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean])
+    plot_sweep_heatmaps(statistics, :relatedness, :group_size, dependent_vars, display_plot=display_plot)
 end
 
 function plot_sweep_rep_smooth_Plots(statistics::DataFrame; display_plot::Bool = false)
@@ -363,7 +282,7 @@ function compare_plot_lists(plots1::Vector{Any}, plots2::Vector{Any})
     @assert length(plots1) == length(plots2) "Both lists must have the same number of plots!"
 
     for i in 1:length(plots1)
-        # Determine x and y limits for this specific pair
+        # Determine x, y and z limits for this specific pair
         xlims_pair = (
             minimum([Plots.xlims(plots1[i])[1], Plots.xlims(plots2[i])[1]]),
             maximum([Plots.xlims(plots1[i])[2], Plots.xlims(plots2[i])[2]]),
@@ -379,7 +298,8 @@ function compare_plot_lists(plots1::Vector{Any}, plots2::Vector{Any})
 
         # Display the comparison with synchronized limits for this pair
         p = Plots.plot(
-            plots1[i], plots2[i];
+            plots1[i],
+            plots2[i];
             layout = (1, 2),
             size = (1200, 400),
             xlims = xlims_pair,
