@@ -535,126 +535,59 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
     end
 end
 
-function plot_sweep_rep_Plotly(statistics::DataFrame)
-    # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [
-        :action_mean_mean,
-        :a_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
-        :payoff_mean_mean,
-    ]
+function plot_sweep_heatmap_Plotly(statistics::DataFrame, x_var::Symbol, y_var::Symbol, dependent_vars::Vector{Symbol})
+    # Get unique sorted values for x and y axes
+    x_values = sort(unique(statistics[!, x_var]))
+    y_values = sort(unique(statistics[!, y_var]))
 
-    # Get r_values and ep_values dynamically
-    r_values = sort(unique(statistics.relatedness))
-    ep_values = sort(unique(statistics.ext_pun))
+    # Store plots in an array
+    plots_array = []
 
-    # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
+        heatmap_data = unstack(statistics, y_var, x_var, var)
 
-        # Convert the DataFrame to a matrix (remove `ext_pun` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
+        # Convert DataFrame to a matrix (remove `y_var` column)
+        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(y_var)])
 
         # Create a heatmap trace
         trace = PlotlyJS.heatmap(
             z = heatmap_matrix,  # Data matrix
-            x = r_values,  # Relatedness (x-axis)
-            y = ep_values,  # External Punishment (y-axis)
+            x = x_values,  # X-axis values
+            y = y_values,  # Y-axis values
             colorscale = "Viridis",
             colorbar_title = "Value",
         )
 
-        # Add layout
+        # Define layout
         layout = Layout(
             title = "Heatmap of $var",
-            xaxis_title = "Relatedness",
-            yaxis_title = "External Punishment",
+            xaxis_title = string(x_var),
+            yaxis_title = string(y_var),
         )
 
-        # Plot
-        display(PlotlyJS.plot([trace], layout))
+        # Create the plot
+        p = PlotlyJS.plot([trace], layout)
+        push!(plots_array, p)
+
+        # Display plot
+        display(p)
     end
+
+    return plots_array
+end
+
+function plot_sweep_rep_Plotly(statistics::DataFrame)
+    dependent_vars = intersect(names(statistics), [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean])
+    plot_sweep_heatmap_Plotly(statistics, :relatedness, :ext_pun, dependent_vars)
 end
 
 function plot_sweep_rip_Plotly(statistics::DataFrame)
-    # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
-
-    # Get r_values and ep_values dynamically
-    r_values = sort(unique(statistics.relatedness))
-    ip_values = sort(unique(statistics.int_pun))
-
-    # Plot each dependent variable as a separate heatmap
-    for var in dependent_vars
-        # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, :int_pun, :relatedness, var)
-
-        # Convert the DataFrame to a matrix (remove `int_pun` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:int_pun)])
-
-        # Create a heatmap trace
-        trace = PlotlyJS.heatmap(
-            z = heatmap_matrix,  # Data matrix
-            x = r_values,  # Relatedness (x-axis)
-            y = ip_values,  # External Punishment (y-axis)
-            colorscale = "Viridis",
-            colorbar_title = "Value",
-        )
-
-        # Add layout
-        layout = Layout(
-            title = "Heatmap of $var",
-            xaxis_title = "Relatedness",
-            yaxis_title = "Internal Punishment",
-        )
-
-        # Plot
-        display(PlotlyJS.plot([trace], layout))
-    end
+    dependent_vars = intersect(names(statistics), [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean])
+    plot_sweep_heatmap_Plotly(statistics, :relatedness, :int_pun, dependent_vars)
 end
 
 function plot_sweep_rgs_Plotly(statistics::DataFrame)
-    # List of dependent variables to plot as separate heatmaps
-    dependent_vars = [
-        :action_mean_mean,
-        :a_mean_mean,
-        :p_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
-        :payoff_mean_mean,
-    ]
-
-    # Get r_values and ep_values dynamically
-    r_values = sort(unique(statistics.relatedness))
-    gs_values = sort(unique(statistics.group_size))
-
-    # Plot each dependent variable as a separate heatmap
-    for var in dependent_vars
-        # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, :group_size, :relatedness, var)
-
-        # Convert the DataFrame to a matrix (remove `group_size` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:group_size)])
-
-        # Create a heatmap trace
-        trace = PlotlyJS.heatmap(
-            z = heatmap_matrix,  # Data matrix
-            x = r_values,  # Relatedness (x-axis)
-            y = gs_values,  # External Punishment (y-axis)
-            colorscale = "Viridis",
-            colorbar_title = "Value",
-        )
-
-        # Add layout
-        layout = Layout(
-            title = "Heatmap of $var",
-            xaxis_title = "Relatedness",
-            yaxis_title = "Group Size",
-        )
-
-        # Plot
-        display(PlotlyJS.plot([trace], layout))
-    end
+    dependent_vars = intersect(names(statistics), [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean])
+    plot_sweep_heatmap_Plotly(statistics, :relatedness, :group_size, dependent_vars)
 end
