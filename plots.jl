@@ -405,6 +405,8 @@ function plot_simulation_data_Plotly(
         title = "Mean of Replicates",
         xaxis_title = "Generation",
         yaxis_title = "Traits",
+        width = 600,   # Set width to 600px
+        height = 400,   # Set height to 400px
         legend = Dict(:orientation => "h", :x => 0, :y => -0.2),
         hovermode = "x unified",
     )
@@ -413,7 +415,7 @@ function plot_simulation_data_Plotly(
     display(p_means)
 end
 
-function plot_full_sweep_Plotly(statistics::DataFrame)
+function plot_sweep_r_Plotly(statistics::DataFrame)
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
@@ -526,6 +528,8 @@ function plot_full_sweep_Plotly(statistics::DataFrame)
             title = "Mean of Replicates",
             xaxis_title = "Relatedness",
             yaxis_title = "Traits",
+            width = 600,   # Set width to 600px
+            height = 400,   # Set height to 400px
             legend = Dict(:orientation => "h", :x => 0, :y => -0.2),
             hovermode = "x unified",
         )
@@ -564,6 +568,8 @@ function plot_sweep_heatmap_Plotly(statistics::DataFrame, x_var::Symbol, y_var::
             title = "Heatmap of $var",
             xaxis_title = string(x_var),
             yaxis_title = string(y_var),
+            width = 600,   # Set width to 600px
+            height = 400   # Set height to 400px
         )
 
         # Create the plot
