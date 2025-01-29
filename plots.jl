@@ -136,7 +136,13 @@ function plot_sweep_r_Plots(statistics::DataFrame; display_plot::Bool = false)
     return plots_array  # Return all plots
 end
 
-function plot_sweep_heatmap_Plots(statistics::DataFrame, x_var::Symbol, y_var::Symbol, dependent_vars::Vector{Symbol}; display_plot::Bool=false)
+function plot_sweep_heatmap_Plots(
+    statistics::DataFrame,
+    x_var::Symbol,
+    y_var::Symbol,
+    dependent_vars::Vector{Symbol};
+    display_plot::Bool = false,
+)
     # Get unique sorted values for x and y axes
     x_values = sort(unique(statistics[!, x_var]))
     y_values = sort(unique(statistics[!, y_var]))
@@ -157,11 +163,11 @@ function plot_sweep_heatmap_Plots(statistics::DataFrame, x_var::Symbol, y_var::S
             x_values,
             y_values,
             heatmap_matrix,
-            color=:viridis,
-            xlabel=string(x_var),
-            ylabel=string(y_var),
-            title="Heatmap of $var",
-            colorbar_title="Value",
+            color = :viridis,
+            xlabel = string(x_var),
+            ylabel = string(y_var),
+            title = "Heatmap of $var",
+            colorbar_title = "Value",
         )
 
         push!(plots_array, p)  # Store plot in array
@@ -176,18 +182,49 @@ function plot_sweep_heatmap_Plots(statistics::DataFrame, x_var::Symbol, y_var::S
 end
 
 function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
-        plot_sweep_heatmap_Plots(statistics, :relatedness, :ext_pun, dependent_vars, display_plot=display_plot)
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
+    plot_sweep_heatmap_Plots(
+        statistics,
+        :relatedness,
+        :ext_pun,
+        dependent_vars,
+        display_plot = display_plot,
+    )
 end
 
 function plot_sweep_rip_Plots(statistics::DataFrame; display_plot::Bool = false)
     dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
-        plot_sweep_heatmap_Plots(statistics, :relatedness, :int_pun, dependent_vars, display_plot=display_plot)
+    plot_sweep_heatmap_Plots(
+        statistics,
+        :relatedness,
+        :int_pun,
+        dependent_vars,
+        display_plot = display_plot,
+    )
 end
 
 function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
-        plot_sweep_heatmap_Plots(statistics, :relatedness, :group_size, dependent_vars, display_plot=display_plot)
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :p_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
+    plot_sweep_heatmap_Plots(
+        statistics,
+        :relatedness,
+        :group_size,
+        dependent_vars,
+        display_plot = display_plot,
+    )
 end
 
 
@@ -491,7 +528,12 @@ function plot_sweep_r_Plotly(statistics::DataFrame)
     end
 end
 
-function plot_sweep_heatmap_Plotly(statistics::DataFrame, x_var::Symbol, y_var::Symbol, dependent_vars::Vector{Symbol})
+function plot_sweep_heatmap_Plotly(
+    statistics::DataFrame,
+    x_var::Symbol,
+    y_var::Symbol,
+    dependent_vars::Vector{Symbol},
+)
     # Get unique sorted values for x and y axes
     x_values = sort(unique(statistics[!, x_var]))
     y_values = sort(unique(statistics[!, y_var]))
@@ -521,7 +563,7 @@ function plot_sweep_heatmap_Plotly(statistics::DataFrame, x_var::Symbol, y_var::
             xaxis_title = string(x_var),
             yaxis_title = string(y_var),
             width = 600,   # Set width to 600px
-            height = 400   # Set height to 400px
+            height = 400,   # Set height to 400px
         )
 
         # Create the plot
@@ -536,7 +578,13 @@ function plot_sweep_heatmap_Plotly(statistics::DataFrame, x_var::Symbol, y_var::
 end
 
 function plot_sweep_rep_Plotly(statistics::DataFrame)
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
     plot_sweep_heatmap_Plotly(statistics, :relatedness, :ext_pun, dependent_vars)
 end
 
@@ -546,6 +594,13 @@ function plot_sweep_rip_Plotly(statistics::DataFrame)
 end
 
 function plot_sweep_rgs_Plotly(statistics::DataFrame)
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :T_ext_mean_mean, :T_self_mean_mean, :payoff_mean_mean]
+    dependent_vars = [
+        :action_mean_mean,
+        :a_mean_mean,
+        :p_mean_mean,
+        :T_ext_mean_mean,
+        :T_self_mean_mean,
+        :payoff_mean_mean,
+    ]
     plot_sweep_heatmap_Plotly(statistics, :relatedness, :group_size, dependent_vars)
 end
