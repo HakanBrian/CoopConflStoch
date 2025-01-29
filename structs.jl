@@ -1,6 +1,6 @@
-##################
-# Simulation Parameters
-##################
+########################
+# Simulation Parameters #########################################################################################################
+########################
 
 mutable struct SimulationParameters
     # Game params
@@ -163,9 +163,9 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
 end
 
 
-##################
-# Population
-##################
+#############
+# Population ####################################################################################################################
+#############
 
 mutable struct Population
     parameters::SimulationParameters
@@ -208,9 +208,9 @@ function Base.copy!(old_population::Population, new_population::Population)
 end
 
 
-##################
-# Overloaded Exponential
-##################
+#########################
+# Overloaded Exponential ########################################################################################################
+#########################
 
 struct Exponential
     base::Float64  # The exponent value (e.g., 342 for e^342)

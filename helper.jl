@@ -1,16 +1,16 @@
 using CSV, FilePathsBase, DataFrames
 
 
-####################################
-# Helper Functions
-####################################
+###################
+# Helper Functions ##############################################################################################################
+###################
 
 include("structs.jl")
 
 
-###############################
-# Population Simulation
-###############################
+########################
+# Population Simulation #########################################################################################################
+########################
 
 function offspring!(pop::Population, offspring_index::Int64, parent_index::Int64)
     # Copy traits from parent to offspring
@@ -39,9 +39,9 @@ function truncation_bounds(variance::Float64, retain_proportion::Float64)
     return (lower_bound, upper_bound)
 end
 
-##################
-# Fitness
-##################
+##########
+# Fitness #######################################################################################################################
+##########
 
 function sum_sqrt_loop(actions_j::AbstractVector{Float32})
     sum = 0.0f0
@@ -60,9 +60,9 @@ function sqrt_sum_loop(action_i::Float32, actions_j::AbstractVector{Float32})
 end
 
 
-##################
-# Behavioral Equilibrium
-##################
+#########################
+# Behavioral Equilibrium ########################################################################################################
+#########################
 
 function filter_out_val!(
     arr::AbstractVector{T},
@@ -95,9 +95,9 @@ function filter_out_idx!(
 end
 
 
-##################
-# Social Interaction
-##################
+#####################
+# Social Interaction ############################################################################################################
+#####################
 
 function probabilistic_round(x::Float64)::Int64
     lower = floor(Int64, x)
@@ -118,9 +118,9 @@ function in_place_sample!(data::AbstractVector{T}, k::Int) where {T}
 end
 
 
-##################
-# Reproduction
-##################
+###############
+# Reproduction ##################################################################################################################
+###############
 
 function normalize_exponentials(values::Vector{Exponential})
     max_base = maximum(v -> v.base, values)
@@ -138,9 +138,9 @@ function normalize_exponentials(values::Vector{Exponential})
 end
 
 
-##################
-# Statistics Function
-##################
+######################
+# Statistics Function ###########################################################################################################
+######################
 
 function calculate_statistics(all_simulation_means::DataFrame)
     # Group by generation
@@ -342,9 +342,9 @@ function sweep_statistics_rgs(
 end
 
 
-##################
-# I/O Function
-##################
+###############
+# I/O Function ##################################################################################################################
+###############
 
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension

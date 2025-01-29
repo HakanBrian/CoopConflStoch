@@ -1,6 +1,6 @@
-####################################
-# SLURM Functions
-####################################
+##################
+# SLURM Functions ###############################################################################################################
+##################
 
 function update_params(base_params::SimulationParameters; kwargs...)
     # Update parameters by merging base parameters with new parameters

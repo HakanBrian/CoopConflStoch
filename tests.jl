@@ -1,9 +1,9 @@
 using BenchmarkTools
 
 
-##################
-# Game Functions
-##################
+#################
+# Game Functions ################################################################################################################
+#################
 
 include("funcs.jl")
 include("plots.jl")
@@ -18,9 +18,9 @@ params = SimulationParameters()  # uses all default values
 population = population_construction(params);
 
 
-##################
-# BehavEq & Payoff & Fitness & Social Interactions
-##################
+###################################################
+# BehavEq & Payoff & Fitness & Social Interactions ##############################################################################
+###################################################
 
 params = SimulationParameters(
     action0 = 0.1f0,
@@ -83,9 +83,9 @@ fitness(population, groups[1, 1])
 println(population)
 
 
-##################
-# Behavior of BehavEq
-##################
+######################
+# Behavior of BehavEq ###########################################################################################################
+######################
 
 base_params = SimulationParameters(
     action0 = 0.0f0,
@@ -176,9 +176,9 @@ test_behav_eq(parameter_sweep_int_pun_ext)
 test_behav_eq(parameter_sweep_int_pun_self)
 
 
-##################
-# Reproduce
-##################
+############
+# Reproduce #####################################################################################################################
+############
 
 # IMPORTANT: To use this test payoffs need to be copied into the next generation !!!
 
@@ -220,18 +220,18 @@ println(
 )
 
 
-##################
-# Mutate
-##################
+#########
+# Mutate ########################################################################################################################
+#########
 
 # Create test mutate function
 mutate!(population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
 println(population)
 
 
-##################
-# Profiling
-##################
+############
+# Profiling #####################################################################################################################
+############
 
 # compilation
 @time simulation(population);
@@ -239,9 +239,9 @@ println(population)
 @profview @time simulation(population);
 
 
-##################
-# Group size
-##################
+#############
+# Group size ####################################################################################################################
+#############
 
 # Test group size 10
 parameter_10 = SimulationParameters(

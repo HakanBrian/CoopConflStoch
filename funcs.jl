@@ -1,17 +1,17 @@
 using Core.Intrinsics, StatsBase, Random, Distributions, DataFrames, Distributed
 
 
-####################################
-# Helper Functions
-####################################
+###################
+# Helper Functions ##############################################################################################################
+###################
 
 include("structs.jl")
 include("helper.jl")
 
 
-###############################
-# Population Simulation
-###############################
+########################
+# Population Simulation #########################################################################################################
+########################
 
 function population_construction(parameters::SimulationParameters)
     trait_variance = parameters.trait_variance
@@ -125,9 +125,9 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
 end
 
 
-##################
-# Cost and Punishemnt
-##################
+######################
+# Cost and Punishemnt ###########################################################################################################
+######################
 
 @inline function cost(action_i::Float32)
     return action_i^2
@@ -174,9 +174,9 @@ end
 end
 
 
-##################
-# Benefit
-##################
+##########
+# Benefit #######################################################################################################################
+##########
 
 @inline function benefit(action_i::Float32, actions_j::AbstractVector{Float32})
     sqrt_action_i = sqrt_llvm(action_i)
@@ -203,9 +203,9 @@ end
 end
 
 
-##################
-# payoff and objective
-##################
+#######################
+# payoff and objective ##########################################################################################################
+#######################
 
 # Normal version =================================
 @inline function payoff(
@@ -363,9 +363,9 @@ function total_payoff!(
 end
 
 
-##################
-# Fitness
-##################
+##########
+# Fitness #######################################################################################################################
+##########
 
 @inline function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
@@ -382,9 +382,9 @@ function fitness_exp_norm(pop::Population, idx::Int64)
 end
 
 
-##################
-# Behavioral Equilibrium
-##################
+#########################
+# Behavioral Equilibrium ########################################################################################################
+#########################
 
 @inline function best_response(
     focal_idx::Int64,
@@ -609,9 +609,9 @@ function behavioral_equilibrium!(
 end
 
 
-##################
-# Social Interaction
-##################
+#####################
+# Social Interaction ############################################################################################################
+#####################
 
 function shuffle_and_group(
     groups::Matrix{Int64},
@@ -712,9 +712,9 @@ function social_interactions!(pop::Population)
 end
 
 
-##################
-# Reproduction
-##################
+###############
+# Reproduction ##################################################################################################################
+###############
 
 function reproduce!(pop::Population)
     # Create a list of indices corresponding to individuals
@@ -791,9 +791,9 @@ end
 =#
 
 
-##################
-# Mutation 
-##################
+###########
+# Mutation ######################################################################################################################
+###########
 
 function mutate!(pop::Population, truncate_bounds::Tuple{Float64,Float64})
     mutation_variance = pop.parameters.mutation_variance
@@ -897,9 +897,9 @@ end
 =#
 
 
-#######################
-# Simulation #
-#######################
+#############
+# Simulation ####################################################################################################################
+#############
 
 function simulation(pop::Population)
 
