@@ -26,7 +26,7 @@ function run_sim_sweep(
 )
     # Generate parameter sweep
     parameter_sweep = [
-        update_params(base_params; NamedTuple{keys(sweep_vars)}(values)) for
+        update_params(base_params; NamedTuple{Tuple(keys(sweep_vars))}(values)...) for
         values in Iterators.product(values(sweep_vars)...)
     ]
 
@@ -50,10 +50,14 @@ function run_sim_sweep(
 end
 
 function run_sim_r(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    sweep_vars = Dict{Symbol, AbstractVector}(
+        :relatedness => collect(range(0, 1.0, step=0.01))
+    )
+    
     run_sim_sweep(
         base_params,
         filename,
-        Dict(:relatedness => collect(range(0, 1.0, step=0.01))),
+        sweep_vars,
         sweep_statistics_r,
         40,
         generations_to_save,
@@ -62,13 +66,15 @@ function run_sim_r(base_params::SimulationParameters, filename::String, generati
 end
 
 function run_sim_rep(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    sweep_vars = Dict(
+        :relatedness => collect(range(0, 0.5, step=0.05)),
+        :ext_pun0 => collect(range(0.0f0, 0.5f0, step=0.05f0))
+    )
+    
     run_sim_sweep(
         base_params,
         filename,
-        Dict(
-            :relatedness => collect(range(0, 0.5, step=0.05)),
-            :ext_pun0 => collect(range(0.0f0, 0.5f0, step=0.05f0))
-        ),
+        sweep_vars,
         sweep_statistics_rep,
         40,
         generations_to_save,
@@ -77,14 +83,16 @@ function run_sim_rep(base_params::SimulationParameters, filename::String, genera
 end
 
 function run_sim_rip(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    sweep_vars = Dict(
+        :relatedness => collect(range(0, 0.5, step=0.05)),
+        :int_pun_ext0 => collect(range(0.0f0, 0.5f0, step=0.05f0)),
+        :int_pun_self0 => collect(range(0.0f0, 0.5f0, step=0.05f0))
+    )
+    
     run_sim_sweep(
         base_params,
         filename,
-        Dict(
-            :relatedness => collect(range(0, 0.5, step=0.05)),
-            :int_pun_ext0 => collect(range(0.0f0, 0.5f0, step=0.05f0)),
-            :int_pun_self0 => collect(range(0.0f0, 0.5f0, step=0.05f0))
-        ),
+        sweep_vars,
         sweep_statistics_rip,
         40,
         generations_to_save,
@@ -93,13 +101,15 @@ function run_sim_rip(base_params::SimulationParameters, filename::String, genera
 end
 
 function run_sim_rgs(base_params::SimulationParameters, filename::String, generations_to_save::Vector{Int64} = Int[], percentages_to_save::Vector{Float64} = Float64[])
+    sweep_vars = Dict(
+        :relatedness => collect(range(0, 0.5, step=0.05)),
+        :group_size => collect(range(50, 500, step=50))
+    )
+
     run_sim_sweep(
         base_params,
         filename,
-        Dict(
-            :relatedness => collect(range(0, 0.5, step=0.05)),
-            :group_size => collect(range(50, 500, step=50))
-        ),
+        sweep_vars,
         sweep_statistics_rgs,
         20,
         generations_to_save,
