@@ -236,51 +236,6 @@ end
 # Plotly Function ###############################################################################################################
 ##################
 
-function create_trait_table(all_simulation_means::DataFrame)
-    # Initialize table data
-    table_data = []
-
-    # Group by param_id and extract start and end values for each group
-    grouped_by_param = groupby(all_simulation_means, :param_id)
-
-    # Iterate over each group and extract start and end values for each trait
-    for group in grouped_by_param
-        param_id_val = group.param_id[1]  # Extract the param_id value
-        for trait in
-            ["action_mean", "a_mean", "p_mean", "T_ext_mean", "T_self_mean", "payoff_mean"]
-            start_values = first(group)[trait]  # Start value (first generation)
-            end_values = last(group)[trait]  # End value (last generation)
-            push!(table_data, (param_id_val, trait, start_values, end_values))
-        end
-    end
-
-    # Create a DataFrame for the table with Param_ID
-    table_df = DataFrame(table_data, [:Param_ID, :Trait, :Start_Value, :End_Value])
-
-    # Create table trace
-    table_trace = PlotlyJS.table(
-        header = Dict(:values => ["Param ID", "Trait", "Start Value", "End Value"]),
-        cells = Dict(
-            :values => [
-                table_df.Param_ID,
-                table_df.Trait,
-                table_df.Start_Value,
-                table_df.End_Value,
-            ],
-        ),
-    )
-
-    # Set table layout
-    table_layout = Layout(
-        title = "Beginning and Final Values",
-        margin = Dict(:t => 50, :b => 50),
-        height = 300,
-    )
-
-    # Display the table
-    display(Plot([table_trace], table_layout))
-end
-
 function plot_simulation_data_Plotly(
     all_simulation_means::DataFrame;
     param_id::Union{Nothing,Int64} = nothing,
