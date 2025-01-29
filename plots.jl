@@ -372,18 +372,22 @@ function compare_plot_lists(plots1::Vector{Any}, plots2::Vector{Any})
             minimum([Plots.ylims(plots1[i])[1], Plots.ylims(plots2[i])[1]]),
             maximum([Plots.ylims(plots1[i])[2], Plots.ylims(plots2[i])[2]]),
         )
+        clims_pair = (
+            minimum([Plots.zlims(plots1[i])[1], Plots.zlims(plots2[i])[1]]),
+            maximum([Plots.zlims(plots1[i])[2], Plots.zlims(plots2[i])[2]]),
+        )
 
         # Display the comparison with synchronized limits for this pair
-        display(
-            Plots.plot(
-                plots1[i],
-                plots2[i];
-                layout = (1, 2),
-                size = (1200, 400),
-                xlims = xlims_pair,
-                ylims = ylims_pair,
-            ),
+        p = Plots.plot(
+            plots1[i], plots2[i];
+            layout = (1, 2),
+            size = (1200, 400),
+            xlims = xlims_pair,
+            ylims = ylims_pair,
+            clims = clims_pair,
         )
+
+        display(p)
     end
 end
 
