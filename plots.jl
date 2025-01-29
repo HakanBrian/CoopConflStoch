@@ -98,12 +98,15 @@ function plot_sweep_r_Plots(statistics::DataFrame)
         ["action", "a"],
     ]
 
+    # Store plots in an array
+    plots_array = []
+
     # Plot each set of dependent variables
     for plot_var in plot_var_set
         # Initialize plot
         p = Plots.plot(legend = true)
 
-        # Plot mean and ribbons for each trait
+        # Create mean and ribbons for each trait
         for trait in plot_var
             Plots.plot!(
                 p,
@@ -118,11 +121,15 @@ function plot_sweep_r_Plots(statistics::DataFrame)
             )
         end
 
-        # Display the plot
+        push!(plots_array, p)  # Store plot in array
+
+        # Display plot
         xlabel!("Relatedness")
         ylabel!("Value")
         display("image/png", p)
     end
+
+    return plots_array  # Return all plots
 end
 
 function plot_sweep_rep_Plots(statistics::DataFrame)
@@ -139,15 +146,18 @@ function plot_sweep_rep_Plots(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     ep_values = sort(unique(statistics.ext_pun))
 
+    # Store plots in an array
+    plots_array = []
+
     # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :ext_pun, :relatedness, var)
 
-        # Convert the DataFrame to a matrix (remove `ext_pun` column)
+        # Convert DataFrame to a matrix (remove `ext_pun` column)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:ext_pun)])
 
-        # Plot heatmap
+        # Create heatmap plot
         p = Plots.heatmap(
             r_values,
             ep_values,
@@ -159,8 +169,11 @@ function plot_sweep_rep_Plots(statistics::DataFrame)
             colorbar_title = "Value",
         )
 
-        display("image/png", p)
+        push!(plots_array, p)  # Store plot in array
+        display("image/png", p)  # Display plot
     end
+
+    return plots_array  # Return all plots
 end
 
 function plot_sweep_rip_Plots(statistics::DataFrame)
@@ -171,15 +184,17 @@ function plot_sweep_rip_Plots(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     ip_values = sort(unique(statistics.int_pun))
 
-    # Plot each dependent variable as a separate heatmap
+    # Store plots in an array
+    plots_array = []
+
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :int_pun, :relatedness, var)
 
-        # Convert the DataFrame to a matrix (remove `int_pun` column)
+        # Convert DataFrame to a matrix (remove `int_pun` column)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:int_pun)])
 
-        # Plot heatmap
+        # Create heatmap plot
         p = Plots.heatmap(
             r_values,
             ip_values,
@@ -191,8 +206,11 @@ function plot_sweep_rip_Plots(statistics::DataFrame)
             colorbar_title = "Value",
         )
 
-        display("image/png", p)
+        push!(plots_array, p)  # Store plot in array
+        display("image/png", p)  # Display plot
     end
+
+    return plots_array  # Return all plots
 end
 
 function plot_sweep_rgs_Plots(statistics::DataFrame)
@@ -210,15 +228,18 @@ function plot_sweep_rgs_Plots(statistics::DataFrame)
     r_values = sort(unique(statistics.relatedness))
     gs_values = sort(unique(statistics.group_size))
 
+    # Store plots in an array
+    plots_array = []
+
     # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, :group_size, :relatedness, var)
 
-        # Convert the DataFrame to a matrix (remove `group_size` column)
+        # Convert DataFrame to a matrix (remove `group_size` column)
         heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(:group_size)])
 
-        # Plot heatmap
+        # Create heatmap plot
         p = Plots.heatmap(
             r_values,
             gs_values,
@@ -230,8 +251,11 @@ function plot_sweep_rgs_Plots(statistics::DataFrame)
             colorbar_title = "Value",
         )
 
-        display("image/png", p)
+        push!(plots_array, p)  # Store plot in array
+        display("image/png", p)  # Display plot
     end
+
+    return plots_array  # Return all plots
 end
 
 function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
@@ -256,6 +280,9 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
     r_fine = range(minimum(r_values), maximum(r_values), length = r_length)  # Fine relatedness grid
     ep_fine = range(minimum(ep_values), maximum(ep_values), length = ep_length)  # Fine external punishment grid
 
+    # Store plots in an array
+    plots_array = []
+
     # Plot each dependent variable as a separate heatmap
     for var in dependent_vars
         # Pivot the data for the current dependent variable
@@ -278,7 +305,7 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
         # Smooth the data based on interpolator
         heatmap_smooth = [interp(i, j) for i in interp_r_fine, j in interp_ep_fine]
 
-        # Plot heatmap
+        # Create heatmap plot
         p = Plots.heatmap(
             r_fine,
             ep_fine,
@@ -300,8 +327,27 @@ function plot_sweep_rep_smooth_Plots(statistics::DataFrame)
             linewidth = 0.8,
         )
 
-        display("image/png", p)
+        push!(plots_array, p)  # Store plot in array
+        display("image/png", p)  # Display plot
     end
+
+    return plots_array  # Return all plots
+end
+
+
+##################
+# Compare Function ###############################################################################################################
+##################
+
+function compare_plot_lists(plots1::Vector{Plots.Plot}, plots2::Vector{Plots.Plot})
+    # Ensure both lists have the same number of plots
+    @assert length(plots1) == length(plots2) "Mismatch: Both lists must have the same number of plots!"
+
+    # Store combined plots
+    combined_plots = [plot(plots1[i], plots2[i], layout=(1, 2)) for i in 1:length(plots1)]
+
+    # Display all combined plots in a stacked layout
+    return plot(combined_plots..., layout=(length(plots1), 1))
 end
 
 
