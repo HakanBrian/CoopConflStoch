@@ -8,8 +8,12 @@
 #SBATCH -o slurm-%j.out             # Output file for this job.
 #SBATCH -A <your project account>   # Project allocation account name (REQUIRED)
 #SBATCH --mail-type ALL             # Send email when job starts/ends
+#SBATCH --mail-user <your email>    # Email address to send email to
  
 module purge                        # Unload other software modules
 
-# Execute the Julia script
-julia SLURM.jl
+# Expand SLURM node list and format it for Julia
+NODELIST=$(scontrol show hostnames $SLURM_NODELIST | awk '{print "(\"" $1 "\", :auto)"}' | paste -sd "," -)
+
+# Run Julia with distributed processing
+julia -e "using Distributed; addprocs([$NODELIST]); include(\"SLURM.jl\")"
