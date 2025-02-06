@@ -9,7 +9,7 @@
 #SBATCH -A <your project account>   # Project allocation account name (REQUIRED)
 #SBATCH --mail-type ALL             # Send email when job starts/ends
 #SBATCH --mail-user <your email>    # Email address to send email to
- 
+
 module purge                        # Unload other software modules
 
 # Expand SLURM node list and determine allocated CPUs per node
