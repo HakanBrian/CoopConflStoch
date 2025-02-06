@@ -12,8 +12,14 @@
  
 module purge                        # Unload other software modules
 
-# Expand SLURM node list and format it for Julia
-NODELIST=$(scontrol show hostnames $SLURM_NODELIST | awk '{print "(\"" $1 "\", :auto)"}' | paste -sd "," -)
+# Expand SLURM node list and determine allocated CPUs per node
+NODELIST=$(scontrol show hostnames $SLURM_NODELIST)
 
-# Run Julia with distributed processing
-julia -e "using Distributed; addprocs([$NODELIST]); include(\"SLURM.jl\")"
+# Construct addprocs list with explicit CPU allocations
+NODEINFO=$(while read -r node; do
+    cpus=$(scontrol show node $node | awk '/CPUAlloc/ {print $1}' | cut -d= -f2)
+    echo "(\"$node\", $cpus)"
+done <<< "$NODELIST" | paste -sd "," -)
+
+# Run Julia with distributed processing using allocated CPU counts
+julia -e "using Distributed; addprocs([$NODEINFO]); include(\"SLURM.jl\")"
