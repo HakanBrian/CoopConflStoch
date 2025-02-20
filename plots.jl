@@ -73,9 +73,7 @@ function plot_simulation_data_Plots(
     display("image/png", p)
 end
 
-function plot_sim_Plots(
-    all_simulation_means::DataFrame,
-)
+function plot_sim_Plots(all_simulation_means::DataFrame)
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
@@ -447,9 +445,7 @@ function plot_simulation_data_Plotly(
     display(p_means)
 end
 
-function plot_sim_Plotly(
-    all_simulation_means::DataFrame,
-)
+function plot_sim_Plotly(all_simulation_means::DataFrame)
     # Initialize plot
     p = Plot()
 
@@ -474,23 +470,23 @@ function plot_sim_Plotly(
         "Generation: " .* string.(all_simulation_means.generation) .* "<br>action Mean: " .*
         string.(all_simulation_means.action_mean_mean) .* "<br>Std Dev: " .*
         string.(all_simulation_means.action_mean_std)
-        all_simulation_means[!, :a_mean_hover] =
+    all_simulation_means[!, :a_mean_hover] =
         "Generation: " .* string.(all_simulation_means.generation) .* "<br>a Mean: " .*
         string.(all_simulation_means.a_mean_mean) .* "<br>Std Dev: " .*
         string.(all_simulation_means.a_mean_std)
-        all_simulation_means[!, :p_mean_hover] =
+    all_simulation_means[!, :p_mean_hover] =
         "Generation: " .* string.(all_simulation_means.generation) .* "<br>p Mean: " .*
         string.(all_simulation_means.p_mean_mean) .* "<br>Std Dev: " .*
         string.(all_simulation_means.p_mean_std)
-        all_simulation_means[!, :T_ext_mean_hover] =
+    all_simulation_means[!, :T_ext_mean_hover] =
         "Generation: " .* string.(all_simulation_means.generation) .* "<br>T_ext Mean: " .*
         string.(all_simulation_means.T_ext_mean_mean) .* "<br>Std Dev: " .*
         string.(all_simulation_means.T_ext_mean_std)
-        all_simulation_means[!, :T_self_mean_hover] =
+    all_simulation_means[!, :T_self_mean_hover] =
         "Generation: " .* string.(all_simulation_means.generation) .* "<br>T_self Mean: " .*
         string.(all_simulation_means.T_self_mean_mean) .* "<br>Std Dev: " .*
         string.(all_simulation_means.T_self_mean_std)
-        all_simulation_means[!, :payoff_mean_hover] =
+    all_simulation_means[!, :payoff_mean_hover] =
         "Generation: " .* string.(all_simulation_means.generation) .* "<br>payoff Mean: " .*
         string.(all_simulation_means.payoff_mean_mean) .* "<br>Std Dev: " .*
         string.(all_simulation_means.payoff_mean_std)
@@ -517,7 +513,7 @@ function plot_sim_Plotly(
             PlotlyJS.scatter(
                 x = all_simulation_means.generation,
                 y = all_simulation_means[!, trait*"_mean_mean"] .+
-                all_simulation_means[!, trait*"_mean_std"],
+                    all_simulation_means[!, trait*"_mean_std"],
                 mode = "lines",
                 line_color = colors[trait],
                 name = "",
@@ -535,7 +531,7 @@ function plot_sim_Plotly(
             PlotlyJS.scatter(
                 x = all_simulation_means.generation,
                 y = all_simulation_means[!, trait*"_mean_mean"] .-
-                all_simulation_means[!, trait*"_mean_std"],
+                    all_simulation_means[!, trait*"_mean_std"],
                 mode = "lines",
                 line_color = colors[trait],
                 name = "",
