@@ -4,6 +4,7 @@ using Distributed
 ###############################
 # Game
 ###############################
+
 cd(dirname(@__FILE__))  # change to the directory of this file
 @everywhere include("../processing.jl");
 

@@ -352,7 +352,7 @@ function run_sim_r(
         filename,
         sweep_vars,
         sweep_statistics_r,
-        4,
+        40,
         generations_to_save,
         percentages_to_save,
     )
