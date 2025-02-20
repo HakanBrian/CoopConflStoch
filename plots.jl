@@ -6,6 +6,7 @@ using Plots, PlotlyJS, DataFrames
 #########
 
 include("helper.jl")
+include("processing.jl")
 
 
 #######
