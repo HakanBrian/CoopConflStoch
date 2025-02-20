@@ -169,13 +169,8 @@ function statistics_selection(
         end
     end
 
-    # Remove empty DataFrames from the dictionary
-    for key in keys(selected_data)
-        if isempty(selected_data[key])
-            @warn "Key $key has an empty DataFrame and will be removed"
-            delete!(selected_data, key)
-        end
-    end
+    # Remove empty DataFrames from the dictionary efficiently
+    filter!(kv -> !isempty(kv.second), selected_data)
 
     return selected_data
 end
@@ -284,6 +279,42 @@ function sweep_statistics_rgs(
     end
 
     return statistics_rgs
+end
+
+function statistics_all(
+    all_simulation_means::DataFrame,
+    sweep_var::Dict{Symbol,AbstractVector},
+)
+    # Determine the number of params
+    num_params = maximum(all_simulation_means.param_id)
+
+    # Extract the independent variable
+    independent_var = only(keys(sweep_var))
+
+    # Initialize a dictionary to store DataFrames for each independent value
+    independent_data = Dict{String,DataFrame}()
+
+    # Iterate over the values of the independent variable
+    for value in sweep_var[independent_var]
+        independent_data[string(independent_var, "_", value)] = DataFrame()
+    end
+
+    for i in 1:num_params
+        # Filter rows by `param_id`
+        param_data = filter(row -> row.param_id == i, all_simulation_means)
+
+        # Calculate statistics for the current parameter set
+        statistics = calculate_statistics(param_data)
+
+        # Collect data corresponding to the specified independent variable values
+        key = string(independent_var, "_", sweep_var[independent_var][i])
+        append!(independent_data[key], statistics)
+    end
+
+    # Remove empty DataFrames from the dictionary efficiently
+    filter!(kv -> !isempty(kv.second), independent_data)
+
+    return independent_data
 end
 
 
@@ -423,4 +454,32 @@ function run_sim_rgs(
         generations_to_save,
         percentages_to_save,
     )
+end
+
+function run_sim_all(
+    base_params::SimulationParameters,
+    filename::String,
+    sweep_var::Dict{Symbol,AbstractVector},
+    num_replicates::Int = 40,
+)
+    # Generate parameter sweep
+    parameter_sweep = [
+        update_params(base_params; NamedTuple{Tuple(keys(sweep_var))}(values)...) for
+        values in Iterators.product(values(sweep_var)...)
+    ]
+
+    # Run simulation and calculate statistics
+    simulation_sweep = simulation_replicate(parameter_sweep, num_replicates)
+    simulation_sweep_stats = statistics_all(
+        simulation_sweep,
+        sweep_var,
+    )
+
+    # Save simulation data
+    for (key, df) in simulation_sweep_stats
+        save_simulation(df, joinpath(pwd(), filename * "_" * key * ".csv"))
+    end
+
+    # Clear memory
+    GC.gc()
 end
