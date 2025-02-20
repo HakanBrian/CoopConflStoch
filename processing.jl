@@ -470,10 +470,7 @@ function run_sim_all(
 
     # Run simulation and calculate statistics
     simulation_sweep = simulation_replicate(parameter_sweep, num_replicates)
-    simulation_sweep_stats = statistics_all(
-        simulation_sweep,
-        sweep_var,
-    )
+    simulation_sweep_stats = statistics_all(simulation_sweep, sweep_var)
 
     # Save simulation data
     for (key, df) in simulation_sweep_stats
