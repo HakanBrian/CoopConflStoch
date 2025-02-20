@@ -1,18 +1,17 @@
 using BenchmarkTools
 
 
-#################
-# Game Functions ################################################################################################################
-#################
+#######
+# Game ##########################################################################################################################
+#######
 
-include("funcs.jl")
+include("processing.jl")
 include("plots.jl")
-include("SLURM/SLURM_helper.jl")
 
 
-##################
-# Population Construction
-##################
+##########################
+# Population Construction #######################################################################################################
+##########################
 
 params = SimulationParameters()  # uses all default values
 population = population_construction(params);

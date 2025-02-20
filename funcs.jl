@@ -1,9 +1,9 @@
 using Core.Intrinsics, StatsBase, Random, Distributions, DataFrames, Distributed
 
 
-###################
-# Helper Functions ##############################################################################################################
-###################
+#########
+# Helper ########################################################################################################################
+#########
 
 include("structs.jl")
 include("helper.jl")
@@ -946,70 +946,4 @@ function simulation(pop::Population)
     end
 
     return outputs
-end
-
-function run_simulation(
-    parameters::SimulationParameters,
-    param_id::Int64,
-    replicate_id::Int64,
-)
-    println("Running simulation replicate $replicate_id for param_id $param_id")
-
-    # Run the simulation
-    population = population_construction(parameters)
-    simulation_replicate = simulation(population)
-
-    # Group by generation and compute mean for each generation
-    simulation_gdf = groupby(simulation_replicate, :generation)
-    simulation_mean = combine(
-        simulation_gdf,
-        :action => mean,
-        :a => mean,
-        :p => mean,
-        :T_ext => mean,
-        :T_self => mean,
-        :payoff => mean,
-    )
-
-    # Add columns for replicate and param_id
-    rows_to_insert = nrow(simulation_mean)
-    insertcols!(simulation_mean, 1, :param_id => fill(param_id, rows_to_insert))
-    insertcols!(simulation_mean, 2, :replicate => fill(replicate_id, rows_to_insert))
-
-    return simulation_mean
-end
-
-function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)
-    # Use pmap to parallelize the simulation
-    results = pmap(1:num_replicates) do i
-        run_simulation(parameters, 1, i)
-    end
-
-    # Concatenate all the simulation means returned by each worker
-    all_simulation_means = vcat(results...)
-
-    return all_simulation_means
-end
-
-function simulation_replicate(
-    parameter_sweep::Vector{SimulationParameters},
-    num_replicates::Int64,
-)
-    # Create a list of tasks (parameter set index, parameter set, replicate) to distribute
-    tasks = [
-        (idx, parameters, replicate) for (idx, parameters) in enumerate(parameter_sweep) for
-        replicate in 1:num_replicates
-    ]
-
-    # Use pmap to distribute the tasks across the workers
-    results = pmap(tasks) do task
-        param_idx, parameters, replicate = task
-        # Run simulation and store the result with the parameter set index
-        run_simulation(parameters, param_idx, replicate)
-    end
-
-    # Concatenate all results into a single DataFrame
-    all_simulation_means = vcat(results...)
-
-    return all_simulation_means
 end

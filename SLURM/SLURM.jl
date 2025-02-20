@@ -2,11 +2,10 @@ using Distributed
 
 
 ###############################
-# Game Function
+# Game
 ###############################
-
-@everywhere include("../funcs.jl");
-include("SLURM_helper.jl");
+cd(dirname(@__FILE__))  # change to the directory of this file
+@everywhere include("../processing.jl");
 
 
 ###############################
@@ -28,10 +27,10 @@ base_params = SimulationParameters(
     output_save_tick = 10,
 )
 
-run_sim_r(base_params, "r1", Int[], Float64[])
+run_sim_r(base_params, "r1")
 
-run_sim_rep(base_params, "rep1", Int[], Float64[])
+run_sim_rep(base_params, "rep1")
 
-run_sim_rip(base_params, "rep1", Int[], Float64[])
+run_sim_rip(base_params, "rep1")
 
-run_sim_rgs(base_params, "rgs1", Int[], Float64[])
+run_sim_rgs(base_params, "rgs1")
