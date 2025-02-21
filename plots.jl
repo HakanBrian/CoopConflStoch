@@ -179,7 +179,7 @@ end
 # Compare #######################################################################################################################
 ##########
 
-function compare_plot_lists(plot_lists::Vector{Vector{Any}}...)
+function compare_plot_lists(plot_lists::Vector{Vector{Any}})
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
 
