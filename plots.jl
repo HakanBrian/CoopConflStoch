@@ -14,71 +14,10 @@ include("processing.jl")
 #######
 
 function plot_simulation_data_Plots(
-    all_simulation_means::DataFrame;
-    param_id::Union{Nothing,Int64} = nothing,
-)
-    # Filter the data if param_id is provided
-    if param_id !== nothing
-        all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
-    end
-
-    # Determine the number of params and replicates
-    num_params = maximum(all_simulation_means.param_id)  # Assuming replicate param are consistent
-
-    # Define color palette for each trait type
-    colors = Dict(
-        "action" => :blue,
-        "a" => :red,
-        "p" => :green,
-        "T_ext" => :purple,
-        "T_self" => :yellow,
-        "payoff" => :orange,
-        "action mean" => :blue4,
-        "a mean" => :red4,
-        "p mean" => :green4,
-        "T_ext mean" => :purple4,
-        "T_self mean" => :yellow4,
-        "payoff mean" => :orange4,
-    )
-
-    # Initialize the plot
-    p = Plots.plot(legend = false)
-
-    # Plot mean and ribbons for param_id's data
-    for i in 1:num_params
-        # Filter by param_id
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current parameter set
-        statistics = calculate_statistics(param_data)
-
-        # Plot mean and ribbons for each trait with a distinct label for each parameter set
-        for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
-            Plots.plot!(
-                p,
-                statistics.generation,
-                statistics[!, trait*"_mean_mean"],
-                ribbon = (
-                    statistics[!, trait*"_mean_std"],
-                    statistics[!, trait*"_mean_std"],
-                ),
-                label = trait * " ($i)",
-                color = colors[trait*" mean"],
-            )
-        end
-    end
-
-    # Display the plot
-    xlabel!("Generation")
-    ylabel!("Traits")
-    display("image/png", p)
-end
-
-function plot_simulation_data(
-    df::DataFrame, 
-    x_axis_variable::Symbol, 
-    xlabel_text::String, 
-    display_plot::Bool=false
+    df::DataFrame,
+    x_axis_variable::Symbol,
+    xlabel_text::String,
+    display_plot::Bool = false,
 )
     # Define color palette for each trait type
     colors = Dict(
@@ -121,7 +60,7 @@ function plot_simulation_data(
                 df[!, mean_col],
                 ribbon = (df[!, std_col], df[!, std_col]),
                 label = trait,
-                color = colors[trait * " mean"],
+                color = colors[trait*" mean"],
             )
         end
 
@@ -138,11 +77,11 @@ function plot_simulation_data(
     return plots_array
 end
 
-plot_sim_Plots(df::DataFrame; display_plot=false) = 
-    plot_simulation_data(df, :generation, "Generation", display_plot)
+plot_sim_Plots(df::DataFrame; display_plot = false) =
+    plot_simulation_data_Plots(df, :generation, "Generation", display_plot)
 
-plot_sweep_r_Plots(df::DataFrame; display_plot=false) = 
-    plot_simulation_data(df, :relatedness, "Relatedness", display_plot)
+plot_sweep_r_Plots(df::DataFrame; display_plot = false) =
+    plot_simulation_data_Plots(df, :relatedness, "Relatedness", display_plot)
 
 function plot_sweep_heatmap_Plots(
     statistics::DataFrame,
@@ -279,144 +218,10 @@ end
 #########
 
 function plot_simulation_data_Plotly(
-    all_simulation_means::DataFrame;
-    param_id::Union{Nothing,Int64} = nothing,
-)
-    # Filter the data if param_id is provided
-    if param_id !== nothing
-        all_simulation_means = filter(row -> row.param_id == param_id, all_simulation_means)
-    end
-
-    # Determine the number of params and replicates
-    num_params = maximum(all_simulation_means.param_id)  # Assuming param numbers are consistent
-
-    # Initialize plot
-    p_means = Plot()
-
-    # Define color palette for each trait type
-    colors = Dict(
-        "action" => :blue,
-        "a" => :red,
-        "p" => :green,
-        "T_ext" => :purple,
-        "T_self" => :yellow,
-        "payoff" => :orange,
-        "action_stdev" => "rgba(0,0,255,0.2)",
-        "a_stdev" => "rgba(255,0,0,0.2)",
-        "p_stdev" => "rgba(0,255,0,0.2)",
-        "T_ext_stdev" => "rgba(128,0,128,0.2)",
-        "T_self_stdev" => "rgba(255,255,0,0.2)",
-        "payoff_stdev" => "rgba(255,165,0,0.2)",
-    )
-
-    # Plot each param_id's data
-    for i in 1:num_params
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
-
-        # Calculate statistics for the current param_id
-        statistics = calculate_statistics(param_data)
-
-        # Create formatted hover text for each trait
-        statistics[!, :action_mean_hover] =
-            "Generation: " .* string.(statistics.generation) .* "<br>action Mean: " .*
-            string.(statistics.action_mean_mean) .* "<br>Std Dev: " .*
-            string.(statistics.action_mean_std)
-        statistics[!, :a_mean_hover] =
-            "Generation: " .* string.(statistics.generation) .* "<br>a Mean: " .*
-            string.(statistics.a_mean_mean) .* "<br>Std Dev: " .*
-            string.(statistics.a_mean_std)
-        statistics[!, :p_mean_hover] =
-            "Generation: " .* string.(statistics.generation) .* "<br>p Mean: " .*
-            string.(statistics.p_mean_mean) .* "<br>Std Dev: " .*
-            string.(statistics.p_mean_std)
-        statistics[!, :T_ext_mean_hover] =
-            "Generation: " .* string.(statistics.generation) .* "<br>T_ext Mean: " .*
-            string.(statistics.T_ext_mean_mean) .* "<br>Std Dev: " .*
-            string.(statistics.T_ext_mean_std)
-        statistics[!, :T_self_mean_hover] =
-            "Generation: " .* string.(statistics.generation) .* "<br>T_self Mean: " .*
-            string.(statistics.T_self_mean_mean) .* "<br>Std Dev: " .*
-            string.(statistics.T_self_mean_std)
-        statistics[!, :payoff_mean_hover] =
-            "Generation: " .* string.(statistics.generation) .* "<br>payoff Mean: " .*
-            string.(statistics.payoff_mean_mean) .* "<br>Std Dev: " .*
-            string.(statistics.payoff_mean_std)
-
-        # Plot replicate means with ribbons for standard deviation
-        for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
-            # Plot replicate means
-            add_trace!(
-                p_means,
-                PlotlyJS.scatter(
-                    x = statistics.generation,
-                    y = statistics[!, trait*"_mean_mean"],
-                    mode = "lines",
-                    line_color = colors[trait],
-                    name = trait * " ($i)",
-                    hovertext = statistics[!, trait*"_mean_hover"],
-                    hoverinfo = "text",
-                ),
-            )
-
-            # Plot ribbons for standard deviation (upper bounds)
-            add_trace!(
-                p_means,
-                PlotlyJS.scatter(
-                    x = statistics.generation,
-                    y = statistics[!, trait*"_mean_mean"] .+
-                        statistics[!, trait*"_mean_std"],
-                    mode = "lines",
-                    line_color = colors[trait],
-                    name = "",
-                    fill = "tonexty",
-                    fillcolor = colors[trait*"_stdev"],
-                    line = Dict(:width => 0),
-                    hoverinfo = "none",
-                    showlegend = false,
-                ),
-            )
-
-            # Plot ribbons for standard deviation (lower bounds)
-            add_trace!(
-                p_means,
-                PlotlyJS.scatter(
-                    x = statistics.generation,
-                    y = statistics[!, trait*"_mean_mean"] .-
-                        statistics[!, trait*"_mean_std"],
-                    mode = "lines",
-                    line_color = colors[trait],
-                    name = "",
-                    fill = "tonexty",
-                    fillcolor = colors[trait*"_stdev"],
-                    line = Dict(:width => 0),
-                    hoverinfo = "none",
-                    showlegend = false,
-                ),
-            )
-        end
-    end
-
-    # Layout for replicate means
-    relayout!(
-        p_means,
-        title = "Mean of Replicates",
-        xaxis_title = "Generation",
-        yaxis_title = "Traits",
-        width = 600,   # Set width to 600px
-        height = 400,   # Set height to 400px
-        legend = Dict(:orientation => "h", :x => 0, :y => -0.2),
-        hovermode = "x unified",
-    )
-
-    # Display plots
-    display(p_means)
-end
-
-function plot_plotly_data(
-    df::DataFrame, 
-    x_axis_variable::Symbol, 
-    xlabel_text::String, 
-    title_text::String
+    df::DataFrame,
+    x_axis_variable::Symbol,
+    xlabel_text::String,
+    title_text::String,
 )
     # Initialize plot
     p = Plot()
@@ -442,10 +247,10 @@ function plot_plotly_data(
         hover_col = Symbol(trait * "_mean_hover")
         mean_col = Symbol(trait * "_mean_mean")
         std_col = Symbol(trait * "_mean_std")
-        
-        df[!, hover_col] = 
-            xlabel_text * ": " .* string.(df[!, x_axis_variable]) .* "<br>" * 
-            trait * " Mean: " .* string.(df[!, mean_col]) .* "<br>Std Dev: " .* 
+
+        df[!, hover_col] =
+            xlabel_text .* ": " .* string.(df[!, x_axis_variable]) .* "<br>" .* trait .*
+            " Mean: " .* string.(df[!, mean_col]) .* "<br>Std Dev: " .*
             string.(df[!, std_col])
     end
 
@@ -479,7 +284,7 @@ function plot_plotly_data(
                 line_color = colors[trait],
                 name = "",
                 fill = "tonexty",
-                fillcolor = colors[trait * "_stdev"],
+                fillcolor = colors[trait*"_stdev"],
                 line = Dict(:width => 0),
                 hoverinfo = "none",
                 showlegend = false,
@@ -496,7 +301,7 @@ function plot_plotly_data(
                 line_color = colors[trait],
                 name = "",
                 fill = "tonexty",
-                fillcolor = colors[trait * "_stdev"],
+                fillcolor = colors[trait*"_stdev"],
                 line = Dict(:width => 0),
                 hoverinfo = "none",
                 showlegend = false,
@@ -510,8 +315,8 @@ function plot_plotly_data(
         title = title_text,
         xaxis_title = xlabel_text,
         yaxis_title = "Traits",
-        width = 600,   
-        height = 400,   
+        width = 600,
+        height = 400,
         legend = Dict(:orientation => "h", :x => 0, :y => -0.2),
         hovermode = "x unified",
     )
@@ -520,11 +325,11 @@ function plot_plotly_data(
     display(p)
 end
 
-plot_sim_Plotly(df::DataFrame) = 
-    plot_plotly_data(df, :generation, "Generation", "Mean of Replicates")
+plot_sim_Plotly(df::DataFrame) =
+    plot_simulation_data_Plotly(df, :generation, "Generation", "Mean of Replicates")
 
-plot_sweep_r_Plotly(df::DataFrame) = 
-    plot_plotly_data(df, :relatedness, "Relatedness", "Mean of Replicates")
+plot_sweep_r_Plotly(df::DataFrame) =
+    plot_simulation_data_Plotly(df, :relatedness, "Relatedness", "Mean of Replicates")
 
 function plot_sweep_heatmap_Plotly(
     statistics::DataFrame,

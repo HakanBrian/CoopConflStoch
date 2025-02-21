@@ -110,8 +110,7 @@ end
 function statistics_selection(
     all_simulation_means::DataFrame,
     output_save_tick::Int,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
     # Determine the number of params
     num_params = maximum(all_simulation_means.param_id)
@@ -122,25 +121,22 @@ function statistics_selection(
     # Initialize a dictionary to store DataFrames for each specified generation or percentage
     selected_data = Dict{String,DataFrame}()
 
-    # Initialize empty arrays if no specific generations or percentages are given
-    generations_to_save = isnothing(generations_to_save) ? Int64[] : generations_to_save
-    percentages_to_save = isnothing(percentages_to_save) ? Float64[] : percentages_to_save
+    # Handle empty save_generations by defaulting to the last generation
+    save_generations = isnothing(save_generations) ? [total_generations] : save_generations
 
-    # Calculate the specific generations based on percentages
+    # Extract absolute and percentage-based generations
+    abs_generations = filter(x -> x isa Int, save_generations)
+    pct_generations = filter(x -> x isa Float64, save_generations)
+
+    # Convert percentage-based values to specific generations
     percent_generations = [
         (p, round(Int, p * total_generations / output_save_tick) * output_save_tick) for
-        p in percentages_to_save
+        p in pct_generations
     ]
 
-    # Combine specific generations and percentage-based generations
+    # Combine absolute and percentage-based generations, ensuring uniqueness
     generations_to_select =
-        unique(vcat(generations_to_save, map(x -> x[2], percent_generations)))
-
-    # If no specific generations or percentages are given, save the last row
-    if isempty(generations_to_select)
-        generations_to_select = [total_generations]  # Default to the last generation
-        generations_to_save = [total_generations]
-    end
+        unique(vcat(abs_generations, map(x -> x[2], percent_generations)))
 
     # Preallocating keys in dictionary
     for gen in generations_to_select
@@ -163,7 +159,7 @@ function statistics_selection(
                 # Determine key and append data
                 key = string("gen_", gen)
                 append!(selected_data[key], gen_data)
-            elseif isempty(gen_data)
+            else
                 @warn "Generation $gen not found in data"
             end
         end
@@ -179,15 +175,10 @@ function sweep_statistics_r(
     all_simulation_means::DataFrame,
     r_values::Vector{Float64},
     output_save_tick::Int,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_r = statistics_selection(
-        all_simulation_means,
-        output_save_tick,
-        generations_to_save,
-        percentages_to_save,
-    )
+    statistics_r =
+        statistics_selection(all_simulation_means, output_save_tick, save_generations)
 
     # Add relatedness columns to each DataFrame
     for (key, df) in statistics_r
@@ -203,15 +194,10 @@ function sweep_statistics_rep(
     r_values::Vector{Float64},
     ep_values::Vector{Float32},
     output_save_tick::Int,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_rep = statistics_selection(
-        all_simulation_means,
-        output_save_tick,
-        generations_to_save,
-        percentages_to_save,
-    )
+    statistics_rep =
+        statistics_selection(all_simulation_means, output_save_tick, save_generations)
 
     # Add relatedness and ext_pun columns to each DataFrame
     for (key, df) in statistics_rep
@@ -230,15 +216,10 @@ function sweep_statistics_rip(
     r_values::Vector{Float64},
     ip_values::Vector{Float32},
     output_save_tick::Int,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_rip = statistics_selection(
-        all_simulation_means,
-        output_save_tick,
-        generations_to_save,
-        percentages_to_save,
-    )
+    statistics_rip =
+        statistics_selection(all_simulation_means, output_save_tick, save_generations)
 
     # Add relatedness and int_pun columns to each DataFrame
     for (key, df) in statistics_rip
@@ -260,15 +241,10 @@ function sweep_statistics_rgs(
     r_values::Vector{Float64},
     gs_values::Vector{Int64},
     output_save_tick::Int,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_rgs = statistics_selection(
-        all_simulation_means,
-        output_save_tick,
-        generations_to_save,
-        percentages_to_save,
-    )
+    statistics_rgs =
+        statistics_selection(all_simulation_means, output_save_tick, save_generations)
 
     # Add relatedness and group_size columns to each DataFrame
     for (key, df) in statistics_rgs
@@ -335,148 +311,132 @@ function update_params(base_params::SimulationParameters; kwargs...)
     )
 end
 
-function run_sim_sweep(
-    base_params::SimulationParameters,
-    filename::String,
-    sweep_vars::Dict{Symbol,AbstractVector},
-    statistics_function::Function,
+function run_sim_all(
+    base_params::SimulationParameters;
     num_replicates::Int = 40,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    save_file::Bool = true,
+    filename::Union{String,Nothing} = nothing,
+    sweep_full::Bool = false,
+    sweep_vars::Union{Dict{Symbol,AbstractVector},Nothing} = nothing,
+    statistics_function::Union{Function,Nothing} = nothing,
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    # Generate parameter sweep
-    parameter_sweep = [
-        update_params(base_params; NamedTuple{Tuple(keys(sweep_vars))}(values)...) for
-        values in Iterators.product(values(sweep_vars)...)
-    ]
+    # Ensure filename is provided if saving is enabled
+    if save_file && isnothing(filename)
+        error("A filename must be provided if save_file is true.")
+    end
+
+    # Determine if a sweep is being performed
+    is_sweep = !isnothing(sweep_vars) && !isempty(sweep_vars)
+
+    # Ensure sweep_vars and statistics_function are valid when sweeping
+    if is_sweep
+        if isnothing(statistics_function)
+            error("A statistics function must be provided when performing a sweep.")
+        end
+
+        # Generate parameter sweep
+        parameters = [
+            update_params(base_params; NamedTuple{Tuple(keys(sweep_vars))}(values)...)
+            for values in Iterators.product(values(sweep_vars)...)
+        ]
+    else
+        # Wrap base_params in an array to maintain consistency
+        parameters = [base_params]
+    end
 
     # Run simulation and calculate statistics
-    simulation_sweep = simulation_replicate(parameter_sweep, num_replicates)
-    simulation_sweep_stats = statistics_function(
-        simulation_sweep,
-        values(sweep_vars)...,
-        base_params.output_save_tick,
-        generations_to_save,
-        percentages_to_save,
-    )
+    simulation_sweep = simulation_replicate(parameters, num_replicates)
 
-    # Save simulation data
-    for (key, df) in simulation_sweep_stats
-        save_simulation(df, joinpath(pwd(), filename * "_" * key * ".csv"))
+    # Compute statistics dynamically
+    simulation_sweep_stats = if is_sweep && !sweep_full
+        statistics_function(
+            simulation_sweep,
+            values(sweep_vars)...,
+            base_params.output_save_tick,
+            save_generations,
+        )
+    elseif is_sweep && sweep_full
+        statistics_all(simulation_sweep, sweep_vars)
+    else
+        calculate_statistics(simulation_sweep)
+    end
+
+    # Save results if needed
+    if save_file
+        for (key, df) in simulation_sweep_stats
+            filepath = joinpath(pwd(), filename * "_" * key * ".csv")
+            save_simulation(df, filepath)
+        end
+    else
+        return simulation_sweep_stats
     end
 
     # Clear memory
     GC.gc()
 end
 
-function run_sim_r(
+run_sim_r(
     base_params::SimulationParameters,
-    filename::String,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    filename::String;
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
+) = run_sim_all(
+    base_params,
+    filename = filename,
+    save_file = true,
+    sweep_vars = Dict{Symbol,AbstractVector}(
+        :relatedness => collect(range(0, 1.0, step = 0.01)),
+    ),
+    statistics_function = sweep_statistics_r,
+    save_generations = save_generations,
 )
-    sweep_vars =
-        Dict{Symbol,AbstractVector}(:relatedness => collect(range(0, 1.0, step = 0.01)))
 
-    run_sim_sweep(
-        base_params,
-        filename,
-        sweep_vars,
-        sweep_statistics_r,
-        40,
-        generations_to_save,
-        percentages_to_save,
-    )
-end
-
-function run_sim_rep(
+run_sim_rep(
     base_params::SimulationParameters,
-    filename::String,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
-)
+    filename::String;
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
+) = run_sim_all(
+    base_params,
+    filename = filename,
+    save_file = true,
     sweep_vars = Dict(
         :relatedness => collect(range(0, 0.5, step = 0.05)),
         :ext_pun0 => collect(range(0.0f0, 0.5f0, step = 0.05f0)),
-    )
-
-    run_sim_sweep(
-        base_params,
-        filename,
-        sweep_vars,
-        sweep_statistics_rep,
-        40,
-        generations_to_save,
-        percentages_to_save,
-    )
-end
-
-function run_sim_rip(
-    base_params::SimulationParameters,
-    filename::String,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    ),
+    statistics_function = statistics_selection,
+    save_generations = save_generations,
 )
+
+run_sim_rip(
+    base_params::SimulationParameters,
+    filename::String;
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
+) = run_sim_all(
+    base_params,
+    filename = filename,
+    save_file = true,
     sweep_vars = Dict(
         :relatedness => collect(range(0, 0.5, step = 0.05)),
         :int_pun_ext0 => collect(range(0.0f0, 0.5f0, step = 0.05f0)),
         :int_pun_self0 => collect(range(0.0f0, 0.5f0, step = 0.05f0)),
-    )
-
-    run_sim_sweep(
-        base_params,
-        filename,
-        sweep_vars,
-        sweep_statistics_rip,
-        40,
-        generations_to_save,
-        percentages_to_save,
-    )
-end
-
-function run_sim_rgs(
-    base_params::SimulationParameters,
-    filename::String,
-    generations_to_save::Union{Nothing,Vector{Int64}} = nothing,
-    percentages_to_save::Union{Nothing,Vector{Float64}} = nothing,
+    ),
+    statistics_function = sweep_statistics_rip,
+    save_generations = save_generations,
 )
+
+run_sim_rgs(
+    base_params::SimulationParameters,
+    filename::String;
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
+) = run_sim_all(
+    base_params,
+    num_replicates = 20,
+    save_file = true,
+    filename = filename,
     sweep_vars = Dict(
         :relatedness => collect(range(0, 0.5, step = 0.05)),
         :group_size => collect(range(50, 500, step = 50)),
-    )
-
-    run_sim_sweep(
-        base_params,
-        filename,
-        sweep_vars,
-        sweep_statistics_rgs,
-        20,
-        generations_to_save,
-        percentages_to_save,
-    )
-end
-
-function run_sim_all(
-    base_params::SimulationParameters,
-    filename::String,
-    sweep_var::Dict{Symbol,AbstractVector},
-    num_replicates::Int = 40,
+    ),
+    statistics_function = sweep_statistics_rgs,
+    save_generations = save_generations,
 )
-    # Generate parameter sweep
-    parameter_sweep = [
-        update_params(base_params; NamedTuple{Tuple(keys(sweep_var))}(values)...) for
-        values in Iterators.product(values(sweep_var)...)
-    ]
-
-    # Run simulation and calculate statistics
-    simulation_sweep = simulation_replicate(parameter_sweep, num_replicates)
-    simulation_sweep_stats = statistics_all(simulation_sweep, sweep_var)
-
-    # Save simulation data
-    for (key, df) in simulation_sweep_stats
-        save_simulation(df, joinpath(pwd(), filename * "_" * key * ".csv"))
-    end
-
-    # Clear memory
-    GC.gc()
-end
