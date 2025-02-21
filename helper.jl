@@ -180,3 +180,32 @@ function read_simulation(filepath::String)
         return simulation
     end
 end
+
+function process_simulation(
+    input_dir::String,
+    output_dir::String,
+    process_function::Function;
+    file_extension::String = ".csv"
+)
+    # Ensure the output directory exists
+    if !isdir(output_dir)
+        mkpath(output_dir)
+    end
+
+    # Get a list of all files in the input directory matching the file extension
+    files = filter(f -> endswith(f, file_extension), readdir(input_dir, join=true))
+
+    for file in files
+        # Load file
+        data = read_simulation(file)
+
+        # Process the data
+        processed_data = process_function(data)
+
+        # Create output file path
+        output_file = joinpath(output_dir, basename(file))
+
+        # Save processed data
+        save_simulation(processed_data, output_file)
+    end
+end
