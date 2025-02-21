@@ -9,9 +9,9 @@ include("helper.jl")
 include("processing.jl")
 
 
-#######
-# Plot ##########################################################################################################################
-#######
+########
+# Plots ##########################################################################################################################
+########
 
 function plot_simulation_data_Plots(
     df::DataFrame,
@@ -47,7 +47,7 @@ function plot_simulation_data_Plots(
 
     for plot_var in plot_var_set
         # Initialize plot
-        p = Plots.plot(legend = true)
+        p = Plots.plot(legend = true, fmt = :pdf)
 
         # Create mean and ribbons for each trait
         for trait in plot_var
@@ -70,7 +70,7 @@ function plot_simulation_data_Plots(
         ylabel!("Traits")
 
         if display_plot
-            display("image/png", p)
+            display(p)
         end
     end
 
@@ -115,13 +115,14 @@ function plot_sweep_heatmap_Plots(
             ylabel = string(y_var),
             title = "Heatmap of $var",
             colorbar_title = "Value",
+            fmt = :pdf,
         )
 
         push!(plots_array, p)  # Store plot in array
 
         # Conditionally display plot
         if display_plot
-            display("image/png", p)
+            display(p)
         end
     end
 
@@ -175,9 +176,9 @@ function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
 end
 
 
-##########
-# Compare #######################################################################################################################
-##########
+################
+# Compare Plots #######################################################################################################################
+################
 
 function compare_plot_lists(plot_lists::Vector{Vector{Any}})
     num_sets = length(plot_lists)  # Number of sets of plots
@@ -212,6 +213,7 @@ function compare_plot_lists(plot_lists::Vector{Vector{Any}})
             xlims = xlims_global,
             ylims = ylims_global,
             clims = clims_global,
+            fmt = :pdf,
         )
 
         display(p)
@@ -219,9 +221,9 @@ function compare_plot_lists(plot_lists::Vector{Vector{Any}})
 end
 
 
-#########
-# Plotly ########################################################################################################################
-#########
+###########
+# PlotlyJS ########################################################################################################################
+###########
 
 function plot_simulation_data_Plotly(
     df::DataFrame,
@@ -230,7 +232,7 @@ function plot_simulation_data_Plotly(
     title_text::String,
 )
     # Initialize plot
-    p = Plot()
+    p = PlotlyJS.Plot()
 
     # Define color palette for each trait type
     colors = Dict(

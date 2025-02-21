@@ -185,7 +185,7 @@ function process_simulation(
     input_dir::String,
     output_dir::String,
     process_function::Function;
-    file_extension::String = ".csv"
+    file_extension::String = ".csv",
 )
     # Ensure the output directory exists
     if !isdir(output_dir)
@@ -193,7 +193,7 @@ function process_simulation(
     end
 
     # Get a list of all files in the input directory matching the file extension
-    files = filter(f -> endswith(f, file_extension), readdir(input_dir, join=true))
+    files = filter(f -> endswith(f, file_extension), readdir(input_dir, join = true))
 
     for file in files
         # Load file
