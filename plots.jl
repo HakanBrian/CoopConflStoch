@@ -179,33 +179,39 @@ end
 # Compare #######################################################################################################################
 ##########
 
-function compare_plot_lists(plots1::Vector{Any}, plots2::Vector{Any})
-    @assert length(plots1) == length(plots2) "Both lists must have the same number of plots!"
+function compare_plot_lists(plot_lists::Vector{Vector{Any}}...)
+    num_sets = length(plot_lists)  # Number of sets of plots
+    num_plots = length(plot_lists[1])  # Number of plots per set
 
-    for i in 1:length(plots1)
-        # Determine x, y and z limits for this specific pair
-        xlims_pair = (
-            minimum([Plots.xlims(plots1[i])[1], Plots.xlims(plots2[i])[1]]),
-            maximum([Plots.xlims(plots1[i])[2], Plots.xlims(plots2[i])[2]]),
+    # Ensure all plot lists have the same number of plots
+    @assert all(length(p) == num_plots for p in plot_lists) "All plot lists must have the same number of plots!"
+
+    for i in 1:num_plots
+        # Gather all corresponding plots from each list
+        plots_i = [plots[i] for plots in plot_lists]
+
+        # Determine global limits for x, y, and z across all plots in this index
+        xlims_global = (
+            minimum(Plots.xlims(p)[1] for p in plots_i),
+            maximum(Plots.xlims(p)[2] for p in plots_i),
         )
-        ylims_pair = (
-            minimum([Plots.ylims(plots1[i])[1], Plots.ylims(plots2[i])[1]]),
-            maximum([Plots.ylims(plots1[i])[2], Plots.ylims(plots2[i])[2]]),
+        ylims_global = (
+            minimum(Plots.ylims(p)[1] for p in plots_i),
+            maximum(Plots.ylims(p)[2] for p in plots_i),
         )
-        clims_pair = (
-            minimum([Plots.zlims(plots1[i])[1], Plots.zlims(plots2[i])[1]]),
-            maximum([Plots.zlims(plots1[i])[2], Plots.zlims(plots2[i])[2]]),
+        clims_global = (
+            minimum(Plots.zlims(p)[1] for p in plots_i),
+            maximum(Plots.zlims(p)[2] for p in plots_i),
         )
 
-        # Display the comparison with synchronized limits for this pair
+        # Create a grid layout based on the number of plot sets
         p = Plots.plot(
-            plots1[i],
-            plots2[i];
-            layout = (1, 2),
-            size = (1200, 400),
-            xlims = xlims_pair,
-            ylims = ylims_pair,
-            clims = clims_pair,
+            plots_i...;
+            layout = (1, num_sets),
+            size = (600 * num_sets, 400),
+            xlims = xlims_global,
+            ylims = ylims_global,
+            clims = clims_global,
         )
 
         display(p)
