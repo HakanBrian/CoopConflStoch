@@ -331,7 +331,7 @@ function run_sim_all(
 
     # Ensure sweep_vars and statistics_function are valid when sweeping
     if is_sweep
-        if isnothing(statistics_function)
+        if !sweep_full && isnothing(statistics_function)
             error("A statistics function must be provided when performing a sweep.")
         end
 
