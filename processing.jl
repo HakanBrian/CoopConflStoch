@@ -50,9 +50,9 @@ function simulation_replicate(parameters::SimulationParameters, num_replicates::
     end
 
     # Concatenate all the simulation means returned by each worker
-    all_simulation_means = vcat(results...)
+    df = vcat(results...)
 
-    return all_simulation_means
+    return df
 end
 
 function simulation_replicate(
@@ -73,9 +73,9 @@ function simulation_replicate(
     end
 
     # Concatenate all results into a single DataFrame
-    all_simulation_means = vcat(results...)
+    df = vcat(results...)
 
-    return all_simulation_means
+    return df
 end
 
 
@@ -83,9 +83,9 @@ end
 # Statistics ####################################################################################################################
 #############
 
-function calculate_statistics(all_simulation_means::DataFrame)
+function calculate_statistics(df::DataFrame)
     # Group by generation
-    grouped = groupby(all_simulation_means, :generation)
+    grouped = groupby(df, :generation)
 
     # Calculate mean and standard deviation for each trait across replicates
     stats = combine(
@@ -108,15 +108,15 @@ function calculate_statistics(all_simulation_means::DataFrame)
 end
 
 function statistics_selection(
-    all_simulation_means::DataFrame,
+    df::DataFrame,
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
     # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
+    num_params = maximum(df.param_id)
 
     # Determine total number of generations
-    total_generations = maximum(all_simulation_means.generation)
+    total_generations = maximum(df.generation)
 
     # Initialize a dictionary to store DataFrames for each specified generation or percentage
     selected_data = Dict{String,DataFrame}()
@@ -145,7 +145,7 @@ function statistics_selection(
 
     for i in 1:num_params
         # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
+        param_data = filter(row -> row.param_id == i, df)
 
         # Calculate statistics for the current parameter set
         statistics = calculate_statistics(param_data)
@@ -172,13 +172,12 @@ function statistics_selection(
 end
 
 function sweep_statistics_r(
-    all_simulation_means::DataFrame,
+    df::DataFrame,
     r_values::Vector{Float64},
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_r =
-        statistics_selection(all_simulation_means, output_save_tick, save_generations)
+    statistics_r = statistics_selection(df, output_save_tick, save_generations)
 
     # Add relatedness columns to each DataFrame
     for (key, df) in statistics_r
@@ -190,14 +189,13 @@ function sweep_statistics_r(
 end
 
 function sweep_statistics_rep(
-    all_simulation_means::DataFrame,
+    df::DataFrame,
     r_values::Vector{Float64},
     ep_values::Vector{Float32},
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_rep =
-        statistics_selection(all_simulation_means, output_save_tick, save_generations)
+    statistics_rep = statistics_selection(df, output_save_tick, save_generations)
 
     # Add relatedness and ext_pun columns to each DataFrame
     for (key, df) in statistics_rep
@@ -212,14 +210,13 @@ function sweep_statistics_rep(
 end
 
 function sweep_statistics_rip(
-    all_simulation_means::DataFrame,
+    df::DataFrame,
     r_values::Vector{Float64},
     ip_values::Vector{Float32},
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_rip =
-        statistics_selection(all_simulation_means, output_save_tick, save_generations)
+    statistics_rip = statistics_selection(df, output_save_tick, save_generations)
 
     # Add relatedness and int_pun columns to each DataFrame
     for (key, df) in statistics_rip
@@ -237,14 +234,13 @@ function sweep_statistics_rip(
 end
 
 function sweep_statistics_rgs(
-    all_simulation_means::DataFrame,
+    df::DataFrame,
     r_values::Vector{Float64},
     gs_values::Vector{Int64},
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 )
-    statistics_rgs =
-        statistics_selection(all_simulation_means, output_save_tick, save_generations)
+    statistics_rgs = statistics_selection(df, output_save_tick, save_generations)
 
     # Add relatedness and group_size columns to each DataFrame
     for (key, df) in statistics_rgs
@@ -257,12 +253,9 @@ function sweep_statistics_rgs(
     return statistics_rgs
 end
 
-function statistics_all(
-    all_simulation_means::DataFrame,
-    sweep_var::Dict{Symbol,AbstractVector},
-)
+function statistics_all(df::DataFrame, sweep_var::Dict{Symbol,AbstractVector})
     # Determine the number of params
-    num_params = maximum(all_simulation_means.param_id)
+    num_params = maximum(df.param_id)
 
     # Extract the independent variable
     independent_var = only(keys(sweep_var))
@@ -277,7 +270,7 @@ function statistics_all(
 
     for i in 1:num_params
         # Filter rows by `param_id`
-        param_data = filter(row -> row.param_id == i, all_simulation_means)
+        param_data = filter(row -> row.param_id == i, df)
 
         # Calculate statistics for the current parameter set
         statistics = calculate_statistics(param_data)
