@@ -681,7 +681,7 @@ function find_actions_payoffs!(
         )
         total_payoff!(group, norm_pool, pun_pool, pop)
 
-        # Update final actions
+        # Update final action of the focal individual
         final_actions[group[1]] = pop.action[group[1]]
     end
 end

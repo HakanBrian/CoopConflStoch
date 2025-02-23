@@ -349,9 +349,6 @@ function plot_sweep_heatmap_Plotly(
     x_values = sort(unique(statistics[!, x_var]))
     y_values = sort(unique(statistics[!, y_var]))
 
-    # Store plots in an array
-    plots_array = []
-
     for var in dependent_vars
         # Pivot the data for the current dependent variable
         heatmap_data = unstack(statistics, y_var, x_var, var)
@@ -379,13 +376,10 @@ function plot_sweep_heatmap_Plotly(
 
         # Create the plot
         p = PlotlyJS.plot([trace], layout)
-        push!(plots_array, p)
 
         # Display plot
         display(p)
     end
-
-    return plots_array
 end
 
 function plot_sweep_rep_Plotly(statistics::DataFrame)
