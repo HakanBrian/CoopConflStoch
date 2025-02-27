@@ -5,8 +5,8 @@ using BenchmarkTools
 # Game ##########################################################################################################################
 #######
 
-include("processing.jl")
-include("plots.jl")
+include("../src/processing.jl")
+include("../src/plots.jl")
 
 
 ##########################
