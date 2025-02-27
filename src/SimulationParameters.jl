@@ -56,12 +56,28 @@ function SimulationParameter(;
     output_save_tick::Int64 = 10,
 )
     return SimulationParameter(
-        action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0,
-        generations, max_time_steps, tolerance, population_size, group_size,
-        synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b,
-        mutation_rate, mutation_variance, trait_variance,
-        norm_mutation_enabled, ext_pun_mutation_enabled, int_pun_ext_mutation_enabled, int_pun_self_mutation_enabled,
-        output_save_tick
+        action0,
+        norm0,
+        ext_pun0,
+        int_pun_ext0,
+        int_pun_self0,
+        generations,
+        max_time_steps,
+        tolerance,
+        population_size,
+        group_size,
+        synergy,
+        relatedness,
+        fitness_scaling_factor_a,
+        fitness_scaling_factor_b,
+        mutation_rate,
+        mutation_variance,
+        trait_variance,
+        norm_mutation_enabled,
+        ext_pun_mutation_enabled,
+        int_pun_ext_mutation_enabled,
+        int_pun_self_mutation_enabled,
+        output_save_tick,
     )
 end
 

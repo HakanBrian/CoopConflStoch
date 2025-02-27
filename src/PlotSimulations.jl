@@ -1,3 +1,7 @@
+module PlotSimulations
+
+export plot_sim_Plots, plot_sweep_r_Plots, plot_sweep_rep_Plots, plot_sweep_rip_Plots, plot_sweep_rgs_Plots, compare_plot_lists, plot_sim_Plotly, plot_sweep_r_Plotly, plot_sweep_rep_Plotly, plot_sweep_rip_Plotly, plot_sweep_rgs_Plotly
+
 using Plots, PlotlyJS, DataFrames
 
 
@@ -401,3 +405,5 @@ function plot_sweep_rgs_Plotly(statistics::DataFrame)
     ]
     plot_sweep_heatmap_Plotly(statistics, :relatedness, :group_size, dependent_vars)
 end
+
+end # module Plots

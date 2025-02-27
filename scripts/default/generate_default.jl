@@ -5,14 +5,14 @@ using Distributed
 # Game
 ###############################
 
-@everywhere include("../../src/processing.jl");
-
+@everywhere include(joinpath(pwd(), "src", "RunSimulations.jl"))
+@everywhere using .RunSimulations
 
 ###############################
 # Run Simulation
 ###############################
 
-base_params = SimulationParameter(
+base_params = RunSimulations.SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,

@@ -5,23 +5,23 @@ using BenchmarkTools
 # Game ##########################################################################################################################
 #######
 
-include("../src/processing.jl")
-include("../src/plots.jl")
+include("../src/Simulations.jl")
+using .Simulations
 
 
 ##########################
 # Population Construction #######################################################################################################
 ##########################
 
-params = SimulationParameters()  # uses all default values
-population = population_construction(params);
+params = Simulations.SimulationParameter()  # uses all default values
+population = Simulations.population_construction(params);
 
 
 ###################################################
 # BehavEq & Payoff & Fitness & Social Interactions ##############################################################################
 ###################################################
 
-params = SimulationParameters(
+params = Simulations.SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,
@@ -31,9 +31,9 @@ params = SimulationParameters(
     group_size = 2,
     relatedness = 1.0,
 )
-population = population_construction(params)
+population = Simulations.population_construction(params)
 
-groups = shuffle_and_group(
+groups = Simulations.shuffle_and_group(
     population.groups,
     params.population_size,
     params.group_size,
@@ -41,12 +41,12 @@ groups = shuffle_and_group(
 )
 norm_pool = sum(@view population.norm[groups[1, :]]) / params.group_size
 pun_pool = sum(@view population.ext_pun[groups[1, :]]) / params.group_size
-action_sqrt = sqrt_llvm.(population.action)
+action_sqrt = Simulations.sqrt_llvm.(population.action)
 action_sqrt_view = view(action_sqrt, groups[1, :])
 action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
 
 # Calculate behav eq
-@time behavioral_equilibrium!(
+@time Simulations.behavioral_equilibrium!(
     groups[1, :],
     action_sqrt,
     action_sqrt_sum,
@@ -56,7 +56,7 @@ action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
 )
 
 # Calculate best response
-@code_warntype best_response(
+@code_warntype Simulations.best_response(
     1,
     groups[1, :],
     action_sqrt_view,
@@ -71,14 +71,14 @@ action_sqrt_sum = sum(@view action_sqrt[groups[1, :]])
 println(population.action)
 
 # Calculate payoff
-total_payoff!(groups[1, :], norm_pool, pun_pool, population)
+Simulations.total_payoff!(groups[1, :], norm_pool, pun_pool, population)
 println(population.payoff)
 
 # Calculate fitness
-fitness(population, groups[1, 1])
+Simulations.fitness(population, groups[1, 1])
 
 # Run social interactions
-@time social_interactions!(population)
+@time Simulations.social_interactions!(population)
 println(population)
 
 
@@ -86,7 +86,7 @@ println(population)
 # Behavior of BehavEq ###########################################################################################################
 ######################
 
-base_params = SimulationParameters(
+base_params = Simulations.SimulationParameter(
     action0 = 0.0f0,
     norm0 = 0.0f0,
     ext_pun0 = 0.0f0,
@@ -111,37 +111,37 @@ int_pun_self_values = collect(range(0.0f0, 10.0f0, step = 0.01f0));
 
 # Create parameter sweeps
 parameter_sweep_action =
-    [update_params(base_params, action0 = action_value) for action_value in action_values]
+    [Simulations.update_params(base_params, action0 = action_value) for action_value in action_values]
 parameter_sweep_norm =
-    [update_params(base_params, norm0 = norm_value) for norm_value in norm_values]
+    [Simulations.update_params(base_params, norm0 = norm_value) for norm_value in norm_values]
 parameter_sweep_ext_pun = [
-    update_params(base_params, ext_pun0 = ext_pun_value) for ext_pun_value in ext_pun_values
+    Simulations.update_params(base_params, ext_pun0 = ext_pun_value) for ext_pun_value in ext_pun_values
 ]
 parameter_sweep_int_pun_ext = [
-    update_params(base_params, int_pun_ext0 = int_pun_ext_value) for
+    Simulations.update_params(base_params, int_pun_ext0 = int_pun_ext_value) for
     int_pun_ext_value in int_pun_ext_values
 ]
 parameter_sweep_int_pun_self = [
-    update_params(base_params, int_pun_self0 = int_pun_self_value) for
+    Simulations.update_params(base_params, int_pun_self0 = int_pun_self_value) for
     int_pun_self_value in int_pun_self_values
 ]
 
 # Test the behavior of the behavioral equilibrium
-function test_behav_eq(param_sweep::Vector{SimulationParameters})
+function test_behav_eq(param_sweep::Vector{Simulations.SimulationParameters.SimulationParameter})
     actions = Vector{Float32}(undef, length(param_sweep))
 
     for (i, param) in enumerate(param_sweep)
-        population = population_construction(param)
-        groups = shuffle_and_group(
+        population = Simulations.population_construction(param)
+        groups = Simulations.shuffle_and_group(
             population.groups,
             param.population_size,
             param.group_size,
             param.relatedness,
         )
-        norm_pool, pun_pool = collect_group(groups[1, :], population)
-        action_sqrt = sqrt_llvm.(population.action)
+        norm_pool, pun_pool = Simulations.collect_group(groups[1, :], population)
+        action_sqrt = Simulations.sqrt_llvm.(population.action)
         buffer = Vector{Float32}(undef, param.group_size - 1)
-        behavioral_equilibrium!(
+        Simulations.behavioral_equilibrium!(
             groups[1, :],
             buffer,
             action_sqrt,
@@ -152,7 +152,7 @@ function test_behav_eq(param_sweep::Vector{SimulationParameters})
         actions[i] = mean(population.action)
     end
 
-    p = Plots.plot(
+    p = Simulations.Plots.plot(
         action_values,
         actions,
         legend = true,
@@ -182,7 +182,7 @@ test_behav_eq(parameter_sweep_int_pun_self)
 # IMPORTANT: To use this test payoffs need to be copied into the next generation !!!
 
 # Create sample population
-param = SimulationParameters(
+param = Simulations.SimulationParameter(
     action0 = 0.5f0,
     norm0 = 0.5f0,
     ext_pun0 = 0.0f0,
@@ -190,7 +190,7 @@ param = SimulationParameters(
     population_size = 1000,
     mutation_rate = 0.0,
 )
-population = population_construction(param)
+population = Simulations.population_construction(param)
 population.payoff[1:4] .= [1.0f0, 2.0f0, 3.0f0, 4.0f0]
 
 # Bootstrap to increase sample size
@@ -210,7 +210,7 @@ println(
 )
 
 # Complete a round of reproduction
-reproduce!(population)
+Simulations.reproduce!(population)
 
 # Offspring should have parent 4 as their parent ~40% of the time (only if there is no scaling)
 println(
@@ -224,8 +224,8 @@ println(
 #########
 
 # Create test mutate function
-mutate!(population, truncation_bounds(my_population.parameters.mutation_variance, 0.99))
-println(population)
+Simulations.mutate!(population, Simulations.truncation_bounds(population.parameters.mutation_variance, 0.99))
+Simulations.println(population)
 
 
 ############
@@ -233,9 +233,9 @@ println(population)
 ############
 
 # compilation
-@time simulation(population);
+@time Simulations.simulation(population);
 # pure runtime
-@profview @time simulation(population);
+@profview @time Simulations.simulation(population);
 
 
 #############
@@ -243,7 +243,7 @@ println(population)
 #############
 
 # Test group size 10
-parameter_10 = SimulationParameters(
+parameter_10 = Simulations.SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,
@@ -253,12 +253,12 @@ parameter_10 = SimulationParameters(
     group_size = 10,
     relatedness = 0.5,
 );
-population_10 = population_construction(parameter_10);
-@time simulation_10 = simulation(population_10);
-@profview @time simulation_10 = simulation(population_10);
+population_10 = Simulations.population_construction(parameter_10);
+@time simulation_10 = Simulations.simulation(population_10);
+@profview @time simulation_10 = Simulations.simulation(population_10);
 
 # Test group size 20
-parameter_20 = SimulationParameters(
+parameter_20 = Simulations.SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,
@@ -268,6 +268,6 @@ parameter_20 = SimulationParameters(
     group_size = 20,
     relatedness = 0.5,
 );
-population_20 = population_construction(parameter_20);
-@time simulation_20 = simulation(population_20);
-@profview @time simulation_20 = simulation(population_20);
+population_20 = Simulations.population_construction(parameter_20);
+@time simulation_20 = Simulations.simulation(population_20);
+@profview @time simulation_20 = Simulations.simulation(population_20);
