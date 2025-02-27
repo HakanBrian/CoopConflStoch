@@ -358,7 +358,7 @@ function run_sim_all(
     # Save results if needed
     if save_file
         for (key, df) in simulation_sweep_stats
-            filepath = joinpath(pwd(), filename * "_" * key * ".csv")
+            filepath = add_suffix_to_filepath(filename, key)
             save_simulation(df, filepath)
         end
     else

@@ -181,6 +181,22 @@ function read_simulation(filepath::String)
     end
 end
 
+function add_suffix_to_filepath(filepath::String, key::String)
+    dir, filename = splitdir(filepath)
+    base, ext = splitext(filename)
+
+    # If no extension, assume ".csv"
+    if ext == ""
+        ext = ".csv"
+    end
+
+    # Construct the new filepath with suffix
+    new_filepath = joinpath(dir, base * "_" * key * ext)
+
+    # Ensure forward slashes for consistency
+    return replace(new_filepath, "\\" => "/")
+end
+
 function process_simulation(
     input_dir::String,
     output_dir::String,

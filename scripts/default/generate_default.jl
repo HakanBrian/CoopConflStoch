@@ -5,7 +5,6 @@ using Distributed
 # Game
 ###############################
 
-cd(dirname(@__FILE__))  # change to the directory of this file
 @everywhere include("../../src/processing.jl");
 
 
@@ -28,10 +27,10 @@ base_params = SimulationParameters(
     output_save_tick = 10,
 )
 
-run_sim_r(base_params, "r2.csv")
+run_sim_r(base_params, "data/default/r2.csv")
 
-run_sim_rep(base_params, "rep2.csv")
+run_sim_rep(base_params, "data/default/rep2.csv")
 
-run_sim_rip(base_params, "rep2.csv")
+run_sim_rip(base_params, "data/default/rep2.csv")
 
-run_sim_rgs(base_params, "rgs2.csv")
+run_sim_rgs(base_params, "data/default/rgs2.csv")
