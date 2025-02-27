@@ -1,13 +1,6 @@
 using CSV, FilePathsBase
 
 
-#########
-# Helper ########################################################################################################################
-#########
-
-include("structs.jl")
-
-
 ########################
 # Population Simulation #########################################################################################################
 ########################
@@ -122,7 +115,7 @@ end
 # Reproduction ##################################################################################################################
 ###############
 
-function normalize_exponentials(values::Vector{Exponential})
+function normalize_exponentials(values::Vector{Exponentials.Exponential})
     max_base = maximum(v -> v.base, values)
     sum_probs = 0.0
     probs = similar(values, Float64)  # Pre-allocate for probabilities

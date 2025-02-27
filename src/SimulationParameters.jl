@@ -1,18 +1,18 @@
-########################
-# Simulation Parameters #########################################################################################################
-########################
+module SimulationParameters
 
-mutable struct SimulationParameters
-    # Game params
+export SimulationParameter, update_params
+
+mutable struct SimulationParameter
+    # Game parameters
     action0::Float32
     norm0::Float32
     ext_pun0::Float32
     int_pun_ext0::Float32
     int_pun_self0::Float32
-    # Population-genetic params
+    # Population-genetic parameters
     generations::Int64
-    max_time_steps::Int64  # behav eq params
-    tolerance::Float64  # behav eq params
+    max_time_steps::Int64  # Behavioral equilibrium params
+    tolerance::Float64
     population_size::Int64
     group_size::Int64
     synergy::Float32
@@ -27,11 +27,11 @@ mutable struct SimulationParameters
     ext_pun_mutation_enabled::Bool
     int_pun_ext_mutation_enabled::Bool
     int_pun_self_mutation_enabled::Bool
-    # File/simulation params
-    output_save_tick::Int64  # when to save output
+    # File/simulation parameters
+    output_save_tick::Int64
 end
 
-function SimulationParameters(;
+function SimulationParameter(;
     action0::Float32 = 0.5f0,
     norm0::Float32 = 0.5f0,
     ext_pun0::Float32 = 0.5f0,
@@ -55,33 +55,30 @@ function SimulationParameters(;
     int_pun_self_mutation_enabled::Bool = true,
     output_save_tick::Int64 = 10,
 )
-    return SimulationParameters(
-        action0,
-        norm0,
-        ext_pun0,
-        int_pun_ext0,
-        int_pun_self0,
-        generations,
-        max_time_steps,
-        tolerance,
-        population_size,
-        group_size,
-        synergy,
-        relatedness,
-        fitness_scaling_factor_a,
-        fitness_scaling_factor_b,
-        mutation_rate,
-        mutation_variance,
-        trait_variance,
-        norm_mutation_enabled,
-        ext_pun_mutation_enabled,
-        int_pun_ext_mutation_enabled,
-        int_pun_self_mutation_enabled,
-        output_save_tick,
+    return SimulationParameter(
+        action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0,
+        generations, max_time_steps, tolerance, population_size, group_size,
+        synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b,
+        mutation_rate, mutation_variance, trait_variance,
+        norm_mutation_enabled, ext_pun_mutation_enabled, int_pun_ext_mutation_enabled, int_pun_self_mutation_enabled,
+        output_save_tick
     )
 end
 
-function Base.copy(parameters::SimulationParameters)
+function update_params(base_params::SimulationParameter; kwargs...)
+    # Update parameters by merging base parameters with new parameters
+    return SimulationParameter(;
+        merge(
+            Dict(
+                fieldname => getfield(base_params, fieldname) for
+                fieldname in fieldnames(SimulationParameter)
+            ),
+            kwargs,
+        )...,
+    )
+end
+
+function Base.copy(parameters::SimulationParameter)
     return SimulationParameters(
         action0 = getfield(parameters, :action0),
         norm0 = getfield(parameters, :norm0),
@@ -111,7 +108,7 @@ function Base.copy(parameters::SimulationParameters)
     )
 end
 
-function Base.copy!(old_params::SimulationParameters, new_params::SimulationParameters)
+function Base.copy!(old_params::SimulationParameter, new_params::SimulationParameter)
     setfield!(old_params, :action0, getfield(new_params, :action0))
     setfield!(old_params, :norm0, getfield(new_params, :norm0))
     setfield!(old_params, :ext_pun0, getfield(new_params, :ext_pun0))
@@ -162,60 +159,4 @@ function Base.copy!(old_params::SimulationParameters, new_params::SimulationPara
     nothing
 end
 
-
-#############
-# Population ####################################################################################################################
-#############
-
-mutable struct Population
-    parameters::SimulationParameters
-    action::Vector{Float32}
-    norm::Vector{Float32}
-    ext_pun::Vector{Float32}
-    int_pun_ext::Vector{Float32}
-    int_pun_self::Vector{Float32}
-    payoff::Vector{Float32}
-    interactions::Vector{Int64}
-    groups::Matrix{Int64}
-end
-
-function Base.copy(pop::Population)
-    return Population(
-        copy(getfield(pop, :parameters)),
-        copy(getfield(pop, :action)),
-        copy(getfield(pop, :norm)),
-        copy(getfield(pop, :ext_pun)),
-        copy(getfield(pop, :int_pun_ext)),
-        copy(getfield(pop, :int_pun_self)),
-        copy(getfield(pop, :payoff)),
-        copy(getfield(pop, :interactions)),
-        copy(getfield(pop, :groups)),
-    )
-end
-
-function Base.copy!(old_population::Population, new_population::Population)
-    copy!(getfield(old_population, :parameters), getfield(new_population, :parameters))
-    copy!(getfield(old_population, :action), getfield(new_population, :action))
-    copy!(getfield(old_population, :norm), getfield(new_population, :norm))
-    copy!(getfield(old_population, :ext_pun), getfield(new_population, :ext_pun))
-    copy!(getfield(old_population, :int_pun_ext), getfield(new_population, :int_pun_ext))
-    copy!(getfield(old_population, :int_pun_self), getfield(new_population, :int_pun_self))
-    copy!(getfield(old_population, :payoff), getfield(new_population, :payoff))
-    copy!(getfield(old_population, :interactions), getfield(new_population, :interactions))
-    copy!(getfield(old_population, :groups), getfield(new_population, :groups))
-
-    nothing
-end
-
-
-#########################
-# Overloaded Exponential ########################################################################################################
-#########################
-
-struct Exponential
-    base::Float64  # The exponent value (e.g., 342 for e^342)
-end
-
-Base.:-(a::Exponential, b::Exponential) = Exponential(
-    clamp(a.base - b.base, -floatmax(Float64), floatmax(Float64)),  # Prevent overflow (Subtraction)
-)
+end # module SimulationParameters

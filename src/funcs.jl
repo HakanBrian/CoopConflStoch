@@ -5,7 +5,14 @@ using Core.Intrinsics, StatsBase, Random, Distributions, DataFrames, Distributed
 # Helper ########################################################################################################################
 #########
 
-include("structs.jl")
+include("SimulationParameters.jl")
+include("Populations.jl")
+include("Exponentials.jl")
+
+using .SimulationParameters
+using .Populations
+using .Exponentials
+
 include("helper.jl")
 
 
@@ -13,7 +20,7 @@ include("helper.jl")
 # Population Simulation #########################################################################################################
 ########################
 
-function population_construction(parameters::SimulationParameters)
+function population_construction(parameters::SimulationParameter)
     trait_variance = parameters.trait_variance
     use_distribution = trait_variance != 0
 
@@ -378,7 +385,7 @@ end
 
 function fitness_exp_norm(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return Exponential(base_fitness * 10.0)
+    return Exponentials.Exponential(base_fitness * 10.0)
 end
 
 

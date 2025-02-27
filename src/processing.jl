@@ -13,7 +13,7 @@ include("funcs.jl")
 ########################
 
 function run_simulation(
-    parameters::SimulationParameters,
+    parameters::SimulationParameter,
     param_id::Int64,
     replicate_id::Int64,
 )
@@ -43,7 +43,7 @@ function run_simulation(
     return simulation_mean
 end
 
-function simulation_replicate(parameters::SimulationParameters, num_replicates::Int64)
+function simulation_replicate(parameters::SimulationParameter, num_replicates::Int64)
     # Use pmap to parallelize the simulation
     results = pmap(1:num_replicates) do i
         run_simulation(parameters, 1, i)
@@ -56,7 +56,7 @@ function simulation_replicate(parameters::SimulationParameters, num_replicates::
 end
 
 function simulation_replicate(
-    parameter_sweep::Vector{SimulationParameters},
+    parameter_sweep::Vector{SimulationParameter},
     num_replicates::Int64,
 )
     # Create a list of tasks (parameter set index, parameter set, replicate) to distribute
@@ -291,21 +291,8 @@ end
 # SLURM #########################################################################################################################
 ########
 
-function update_params(base_params::SimulationParameters; kwargs...)
-    # Update parameters by merging base parameters with new parameters
-    return SimulationParameters(;
-        merge(
-            Dict(
-                fieldname => getfield(base_params, fieldname) for
-                fieldname in fieldnames(SimulationParameters)
-            ),
-            kwargs,
-        )...,
-    )
-end
-
 function run_sim_all(
-    base_params::SimulationParameters;
+    base_params::SimulationParameter;
     num_replicates::Int = 40,
     save_file::Bool = true,
     filename::Union{String,Nothing} = nothing,
@@ -329,10 +316,10 @@ function run_sim_all(
         end
 
         # Generate parameter sweep
-        parameters = [
+        parameters = vec([
             update_params(base_params; NamedTuple{Tuple(keys(sweep_vars))}(values)...)
             for values in Iterators.product(values(sweep_vars)...)
-        ]
+        ])
     else
         # Wrap base_params in an array to maintain consistency
         parameters = [base_params]
@@ -370,7 +357,7 @@ function run_sim_all(
 end
 
 run_sim_r(
-    base_params::SimulationParameters,
+    base_params::SimulationParameter,
     filename::String;
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 ) = run_sim_all(
@@ -385,30 +372,30 @@ run_sim_r(
 )
 
 run_sim_rep(
-    base_params::SimulationParameters,
+    base_params::SimulationParameter,
     filename::String;
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 ) = run_sim_all(
     base_params,
     filename = filename,
     save_file = true,
-    sweep_vars = Dict(
+    sweep_vars = Dict{Symbol,AbstractVector}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
         :ext_pun0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
     ),
-    statistics_function = statistics_selection,
+    statistics_function = sweep_statistics_rep,
     save_generations = save_generations,
 )
 
 run_sim_rip(
-    base_params::SimulationParameters,
+    base_params::SimulationParameter,
     filename::String;
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 ) = run_sim_all(
     base_params,
     filename = filename,
     save_file = true,
-    sweep_vars = Dict(
+    sweep_vars = Dict{Symbol,AbstractVector}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
         :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
         :int_pun_self0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
@@ -418,7 +405,7 @@ run_sim_rip(
 )
 
 run_sim_rgs(
-    base_params::SimulationParameters,
+    base_params::SimulationParameter,
     filename::String;
     save_generations::Union{Nothing,Vector{Real}} = nothing,
 ) = run_sim_all(
@@ -426,7 +413,7 @@ run_sim_rgs(
     num_replicates = 20,
     save_file = true,
     filename = filename,
-    sweep_vars = Dict(
+    sweep_vars = Dict{Symbol,AbstractVector}(
         :relatedness => collect(range(0, 1.0, step = 0.1)),
         :group_size => [collect(range(5, 50, step = 5))..., collect(range(50, 500, step = 50))...],
     ),
