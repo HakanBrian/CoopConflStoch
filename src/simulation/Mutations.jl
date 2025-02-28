@@ -2,7 +2,10 @@ module Mutations
 
 export mutate!
 
-using ..Populations, Distributions, StatsBase, Random
+using ..MainSimulation.Populations
+import ..MainSimulation.Populations: Population
+
+using Distributions, StatsBase, Random
 
 function mutate!(pop::Population, truncate_bounds::Tuple{Float64,Float64})
     mutation_variance = pop.parameters.mutation_variance

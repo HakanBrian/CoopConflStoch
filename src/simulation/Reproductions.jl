@@ -2,7 +2,13 @@ module Reproductions
 
 export reproduce!, fitness, fitness_exp, fitness_exp_norm
 
-using ..Populations, ..Exponentials, StatsBase
+using ..MainSimulation.Populations
+import ..MainSimulation.Populations: Population, offspring!
+
+using ..MainSimulation.Exponentials
+import ..MainSimulation.Exponentials: Exponential, normalize_exponentials
+
+using StatsBase
 
 @inline function fitness(pop::Population, idx::Int64)
     return pop.payoff[idx] - pop.ext_pun[idx]
@@ -15,7 +21,7 @@ end
 
 function fitness_exp_norm(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return Exponentials.Exponential(base_fitness * 10.0)
+    return Exponential(base_fitness * 10.0)
 end
 
 function reproduce!(pop::Population)

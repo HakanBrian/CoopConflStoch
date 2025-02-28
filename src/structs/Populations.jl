@@ -2,7 +2,10 @@ module Populations
 
 export Population, offspring!, truncation_bounds, population_construction
 
-using ..SimulationParameters, Distributions, Random
+using ..MainSimulation.SimulationParameters
+import ..MainSimulation.SimulationParameters: SimulationParameter
+
+using Distributions, Random
 
 mutable struct Population
     parameters::SimulationParameter

@@ -1,34 +1,8 @@
 module IOHandler
 
-export output!, save_simulation, read_simulation, add_suffix_to_filepath, process_simulation
+export save_simulation, read_simulation, add_suffix_to_filepath, process_simulation
 
-using ..Populations, CSV, FilePathsBase, DataFrames
-
-function output!(outputs::DataFrame, t::Int64, pop::Population)
-    N = pop.parameters.population_size
-
-    # Determine the base row for the current generation
-    if t == 1
-        output_row_base = 1
-    else
-        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * N + 1
-    end
-
-    # Calculate the range of rows to be updated
-    output_rows = output_row_base:(output_row_base+N-1)
-
-    # Update the DataFrame with batch assignment
-    outputs.generation[output_rows] = fill(t, N)
-    outputs.individual[output_rows] = 1:N
-    outputs.action[output_rows] = pop.action
-    outputs.a[output_rows] = pop.norm
-    outputs.p[output_rows] = pop.ext_pun
-    outputs.T_ext[output_rows] = pop.int_pun_ext
-    outputs.T_self[output_rows] = pop.int_pun_self
-    outputs.payoff[output_rows] = pop.payoff
-
-    nothing
-end
+using CSV, FilePathsBase, DataFrames
 
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension

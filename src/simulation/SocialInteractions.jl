@@ -1,8 +1,17 @@
-module SocialInteractions 
+module SocialInteractions
 
 export social_interactions!, total_payoff!, shuffle_and_group
 
-using ..Populations, ..Objectives, ..BehavEqs, Core.Intrinsics, Random
+using ..MainSimulation.Populations
+import ..MainSimulation.Populations: Population
+
+using ..MainSimulation.Objectives
+import ..MainSimulation.Objectives: payoff
+
+using ..MainSimulation.BehavEqs
+import ..MainSimulation.BehavEqs: behavioral_equilibrium!
+
+using Core.Intrinsics, Random
 
 function filter_out_val!(
     arr::AbstractVector{T},

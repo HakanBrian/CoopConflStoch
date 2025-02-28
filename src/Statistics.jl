@@ -1,8 +1,13 @@
 module Statistics
 
-export statistics_selection, sweep_statistics_r, sweep_statistics_rep, sweep_statistics_rip, sweep_statistics_rgs, statistics_all
+export statistics_selection,
+    sweep_statistics_r,
+    sweep_statistics_rep,
+    sweep_statistics_rip,
+    sweep_statistics_rgs,
+    statistics_all
 
-using DataFrames
+using DataFrames, StatsBase
 
 function calculate_statistics(df::DataFrame)
     # Group by generation

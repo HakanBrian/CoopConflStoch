@@ -2,7 +2,13 @@ module BehavEqs
 
 export behavioral_equilibrium!, best_response
 
-using ..Populations, ..Objectives, Core.Intrinsics
+using ..MainSimulation.Populations
+import ..MainSimulation.Populations: Population
+
+using ..MainSimulation.Objectives
+import ..MainSimulation.Objectives: objective
+
+using Core.Intrinsics
 
 @inline function best_response(
     focal_idx::Int64,
@@ -215,9 +221,9 @@ function behavioral_equilibrium!(
             if diff > action_change
                 action_change = diff
             end
-            temp_actions[i] = best_action
+            @inbounds temp_actions[i] = best_action
             @inbounds action_sqrt_sum -= action_sqrt_view[i]
-            action_sqrt_view[i] = best_action_sqrt
+            @inbounds action_sqrt_view[i] = best_action_sqrt
             action_sqrt_sum += best_action_sqrt
         end
 

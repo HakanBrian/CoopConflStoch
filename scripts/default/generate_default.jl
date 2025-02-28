@@ -5,14 +5,17 @@ using Distributed
 # Game
 ###############################
 
-@everywhere include(joinpath(pwd(), "src", "RunSimulations.jl"))
-@everywhere using .RunSimulations
+@everywhere include(joinpath(pwd(), "src", "Main.jl"))
+@everywhere using .MainSimulation
+@everywhere import .MainSimulation:
+    SimulationParameter, run_sim_r, run_sim_rep, run_sim_rip, run_sim_rgs
+
 
 ###############################
 # Run Simulation
 ###############################
 
-base_params = RunSimulations.SimulationParameter(
+base_params = SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,

@@ -2,29 +2,45 @@ module Simulations
 
 export simulation
 
-include("SimulationParameters.jl")
-include("Populations.jl")
-include("Exponentials.jl")
-include("Utilities.jl")
-include("Objectives.jl")
-include("BehavEqs.jl")
-include("SocialInteractions.jl")
-include("IOHandler.jl")
-include("Reproductions.jl")
-include("Mutations.jl")
+using ..MainSimulation.Populations
+import ..MainSimulation.Populations: Population, truncation_bounds
 
-using .SimulationParameters
-using .Populations
-using .Exponentials
-using .Utilities
-using .Objectives
-using .BehavEqs
-using .SocialInteractions
-using .IOHandler
-using .Reproductions
-using .Mutations
+using ..MainSimulation.SocialInteractions
+import ..MainSimulation.SocialInteractions: social_interactions!
 
-using Core.Intrinsics, StatsBase, Random, Distributions, DataFrames, Distributed
+using ..MainSimulation.Reproductions
+import ..MainSimulation.Reproductions: reproduce!
+
+using ..MainSimulation.Mutations
+import ..MainSimulation.Mutations: mutate!
+
+using DataFrames
+
+function output!(outputs::DataFrame, t::Int64, pop::Population)
+    N = pop.parameters.population_size
+
+    # Determine the base row for the current generation
+    if t == 1
+        output_row_base = 1
+    else
+        output_row_base = (floor(Int64, t / pop.parameters.output_save_tick) - 1) * N + 1
+    end
+
+    # Calculate the range of rows to be updated
+    output_rows = output_row_base:(output_row_base+N-1)
+
+    # Update the DataFrame with batch assignment
+    outputs.generation[output_rows] = fill(t, N)
+    outputs.individual[output_rows] = 1:N
+    outputs.action[output_rows] = pop.action
+    outputs.a[output_rows] = pop.norm
+    outputs.p[output_rows] = pop.ext_pun
+    outputs.T_ext[output_rows] = pop.int_pun_ext
+    outputs.T_self[output_rows] = pop.int_pun_self
+    outputs.payoff[output_rows] = pop.payoff
+
+    nothing
+end
 
 
 #############

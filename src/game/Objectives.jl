@@ -2,7 +2,15 @@ module Objectives
 
 export objective, payoff, fitness, fitness_exp, fitness_exp_norm
 
-using ..Utilities
+using ..MainSimulation.Utilities
+import ..MainSimulation.Utilities:
+    benefit,
+    benefit_sqrt,
+    cost,
+    external_punishment,
+    internal_punishment_I,
+    internal_punishment_ext,
+    internal_punishment_self
 
 # Normal version =================================
 @inline function payoff(

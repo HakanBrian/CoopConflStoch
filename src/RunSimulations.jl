@@ -2,13 +2,28 @@ module RunSimulations
 
 export run_sim_all, run_sim_r, run_sim_rep, run_sim_rip, run_sim_rgs
 
-include("Simulations.jl")
-include("SimulationParameters.jl")
+using ..MainSimulation.SimulationParameters
+import ..MainSimulation.SimulationParameters: SimulationParameter, update_params
 
-using .Simulations
-using .SimulationParameters
+using ..MainSimulation.Populations
+import ..MainSimulation.Populations: Population, population_construction
 
-using Distributed
+using ..MainSimulation.IOHandler
+import ..MainSimulation.IOHandler: save_simulation, add_suffix_to_filepath
+
+using ..MainSimulation.Simulations
+import ..MainSimulation.Simulations: simulation
+
+using ..MainSimulation.Statistics
+import ..MainSimulation.Statistics:
+    calculate_statistics,
+    sweep_statistics_r,
+    sweep_statistics_rep,
+    sweep_statistics_rip,
+    sweep_statistics_rgs,
+    statistics_all
+
+using Distributed, DataFrames, StatsBase
 
 
 ########################

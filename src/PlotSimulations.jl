@@ -1,6 +1,16 @@
 module PlotSimulations
 
-export plot_sim_Plots, plot_sweep_r_Plots, plot_sweep_rep_Plots, plot_sweep_rip_Plots, plot_sweep_rgs_Plots, compare_plot_lists, plot_sim_Plotly, plot_sweep_r_Plotly, plot_sweep_rep_Plotly, plot_sweep_rip_Plotly, plot_sweep_rgs_Plotly
+export plot_sim_Plots,
+    plot_sweep_r_Plots,
+    plot_sweep_rep_Plots,
+    plot_sweep_rip_Plots,
+    plot_sweep_rgs_Plots,
+    compare_plot_lists,
+    plot_sim_Plotly,
+    plot_sweep_r_Plotly,
+    plot_sweep_rep_Plotly,
+    plot_sweep_rip_Plotly,
+    plot_sweep_rgs_Plotly
 
 using Plots, PlotlyJS, DataFrames
 
