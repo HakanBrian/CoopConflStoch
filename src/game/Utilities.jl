@@ -1,13 +1,13 @@
 module Utilities
 
-export benefit
-export benefit_sqrt
-export cost
-export external_punishment
-export internal_punishment_I
-export internal_punishment_II
-export internal_punishment_ext
-export internal_punishment_self
+export benefit,
+    benefit_sqrt,
+    cost,
+    external_punishment,
+    internal_punishment_I,
+    internal_punishment_II,
+    internal_punishment_ext,
+    internal_punishment_self
 
 using Core.Intrinsics
 
