@@ -1,6 +1,7 @@
 module Statistics
 
 export statistics_selection,
+    calculate_statistics,
     sweep_statistics_r,
     sweep_statistics_rep,
     sweep_statistics_rip,
