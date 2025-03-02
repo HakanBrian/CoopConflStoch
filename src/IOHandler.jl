@@ -1,8 +1,8 @@
 module IOHandler
 
-export save_simulation, read_simulation, add_suffix_to_filepath, process_simulation
+export save_simulation, read_simulation, generate_filename_suffix, modify_filename, process_simulation
 
-using CSV, FilePathsBase, DataFrames
+using CSV, DataFrames
 
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension
@@ -10,15 +10,23 @@ function save_simulation(simulation::DataFrame, filepath::String)
         filepath *= ".csv"
     end
 
-    # Convert to an absolute path (in case it's not already)
+    # Convert to an absolute path
     filepath = abspath(filepath)
 
-    # Check if the file already exists, and print a warning if it does
-    if isfile(filepath)
-        println("Warning: File '$filepath' already exists and will be overwritten.")
+    # Extract the directory path from the filename
+    dir_path = dirname(filepath)
+
+    # Check if the directory exists
+    if !isdir(dir_path)
+        error("Error: Directory '$dir_path' does not exist. Please create it before saving.")
     end
 
-    # Save the dataframe, overwriting the file if it exists
+    # Check if the file already exists and warn the user
+    if isfile(filepath)
+        @warn "File '$filepath' already exists and will be overwritten."
+    end
+
+    # Save the DataFrame to a CSV file
     CSV.write(filepath, simulation)
     println("File saved as: $filepath")
 end
@@ -43,7 +51,29 @@ function read_simulation(filepath::String)
     end
 end
 
-function add_suffix_to_filepath(filepath::String, key::String)
+function generate_filename_suffix(param_dict::Dict{Symbol, <:Number}, condition::String="Filtered"; time_point::Union{Nothing, Int}=nothing)
+    # Lexicographic sorting
+    sorted_keys = sort(collect(keys(param_dict)))
+
+    # Convert parameters to key-value format
+    if condition == "Full"
+        param_str = join(["$(k)=$(param_dict[k])" for k in sorted_keys], "_")
+    elseif condition == "Filtered"
+        param_str = join(["$(k)" for k in sorted_keys], "_")
+    end
+
+    # Add condition
+    suffix = "$(param_str)_$(condition)"
+
+    # Append time point if applicable
+    if !isnothing(time_point)
+        suffix *= "_G$(time_point)"
+    end
+
+    return suffix
+end
+
+function modify_filename(filepath::String, key::String)
     dir, filename = splitdir(filepath)
     base, ext = splitext(filename)
 

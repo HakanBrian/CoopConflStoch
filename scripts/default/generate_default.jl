@@ -34,6 +34,6 @@ run_sim_r(base_params, "data/default/r2.csv")
 
 run_sim_rep(base_params, "data/default/rep2.csv")
 
-run_sim_rip(base_params, "data/default/rep2.csv")
+run_sim_rip(base_params, "data/default/rip2.csv")
 
 run_sim_rgs(base_params, "data/default/rgs2.csv")

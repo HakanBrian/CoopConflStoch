@@ -1,12 +1,12 @@
 module Statistics
 
-export statistics_selection,
-    calculate_statistics,
-    sweep_statistics_r,
-    sweep_statistics_rep,
-    sweep_statistics_rip,
-    sweep_statistics_rgs,
-    statistics_all
+export calculate_statistics,
+    statistics_filtered,
+    statistics_filtered_sweep,
+    statistics_full
+
+using ..MainSimulation.IOHandler
+import ..MainSimulation.IOHandler: generate_filename_suffix
 
 using DataFrames, StatsBase
 
@@ -34,41 +34,52 @@ function calculate_statistics(df::DataFrame)
     return stats
 end
 
-function statistics_selection(
+function statistics_filtered(
     df::DataFrame,
+    sweep_vars::Dict{Symbol,AbstractVector},
     output_save_tick::Int,
-    save_generations::Union{Nothing,Vector{Real}} = nothing,
+    save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
-    # Determine the number of params
+    # Determine the number of parameters in df
     num_params = maximum(df.param_id)
 
     # Determine total number of generations
     total_generations = maximum(df.generation)
 
-    # Initialize a dictionary to store DataFrames for each specified generation or percentage
-    selected_data = Dict{String,DataFrame}()
-
     # Handle empty save_generations by defaulting to the last generation
     save_generations = isnothing(save_generations) ? [total_generations] : save_generations
 
     # Extract absolute and percentage-based generations
-    abs_generations = filter(x -> x isa Int, save_generations)
+    abs_generations = Int64.(filter(x -> x isa Int, save_generations))
     pct_generations = filter(x -> x isa Float64, save_generations)
 
-    # Convert percentage-based values to specific generations
-    percent_generations = [
-        (p, round(Int, p * total_generations / output_save_tick) * output_save_tick) for
-        p in pct_generations
-    ]
+    # Convert percentage-based values to absolute generations (ensuring they are Int64)
+    percent_generations = Int64.([
+        round(Int64, p * total_generations / output_save_tick) * output_save_tick for p in pct_generations
+    ])
 
-    # Combine absolute and percentage-based generations, ensuring uniqueness
-    generations_to_select =
-        unique(vcat(abs_generations, map(x -> x[2], percent_generations)))
+    # Combine absolute and percentage-based generations, ensuring uniqueness and Int64 type
+    generations_to_select = unique(Int64.(vcat(abs_generations, percent_generations)))
 
-    # Preallocating keys in dictionary
-    for gen in generations_to_select
-        selected_data[string("gen_", gen)] = DataFrame()
+    # Initialize a dictionary to store results
+    filtered_data = Dict{String,DataFrame}()
+
+    # Sort the keys alphabetically
+    sorted_keys = sort(collect(keys(sweep_vars)))
+
+    # Generate all parameter combinations in a vector of dictionaries
+    param_combinations = vec([
+        Dict(k => v for (k, v) in zip(sorted_keys, values))
+        for values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+    ])
+
+    # Ensure we have enough parameter sets
+    if length(param_combinations) != num_params
+        @warn "Mismatch: Generated $(length(param_combinations)) parameter sets but found $num_params unique params in df."
     end
+
+    # Create a mapping from `param_id` to its parameter combination
+    param_id_to_params = Dict(i => param_combinations[i] for i in 1:num_params)
 
     for i in 1:num_params
         # Filter rows by `param_id`
@@ -77,123 +88,101 @@ function statistics_selection(
         # Calculate statistics for the current parameter set
         statistics = calculate_statistics(param_data)
 
-        # Collect rows corresponding to the specified generations
+        # Ensure this param_id exists in our mapping
+        if i ∉ keys(param_id_to_params)
+            @warn "No parameter combination found for param_id $i, skipping."
+            continue
+        end
+        param_dict = param_id_to_params[i]  # Correct mapping
+
+        # Collect data for each specified generation
         for gen in generations_to_select
-            # Retrieve the data associated with this generation
+            # Filter data for this generation
             gen_data = filter(row -> row.generation == gen, statistics)
 
             if !isempty(gen_data)
-                # Determine key and append data
-                key = string("gen_", gen)
-                append!(selected_data[key], gen_data)
+                # Generate the filename suffix correctly
+                key = generate_filename_suffix(param_dict, "Filtered", time_point=gen)
+
+                # Ensure the key exists
+                if !haskey(filtered_data, key)
+                    filtered_data[key] = DataFrame()
+                end
+
+                # Append data
+                append!(filtered_data[key], gen_data)
             else
                 @warn "Generation $gen not found in data"
             end
         end
     end
 
-    # Remove empty DataFrames from the dictionary efficiently
-    filter!(kv -> !isempty(kv.second), selected_data)
+    # Remove empty DataFrames
+    filter!(kv -> !isempty(kv.second), filtered_data)
 
-    return selected_data
+    return filtered_data
 end
 
-function sweep_statistics_r(
+function statistics_filtered_sweep(
     df::DataFrame,
-    r_values::Vector{Float64},
+    sweep_vars::Dict{Symbol,AbstractVector},
     output_save_tick::Int,
-    save_generations::Union{Nothing,Vector{Real}} = nothing,
+    save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
-    statistics_r = statistics_selection(df, output_save_tick, save_generations)
+    # Calculate statistics for each parameter combination
+    statistics_data = statistics_filtered(df, sweep_vars, output_save_tick, save_generations)
 
-    # Add relatedness columns to each DataFrame
-    for (key, df) in statistics_r
-        rename!(df, :generation => :relatedness)
-        df.relatedness = r_values
+    # Sort the keys alphabetically
+    sorted_keys = sort(collect(keys(sweep_vars)))
+
+    # Generate all parameter combinations in a vector of dictionaries
+    parameters = vec([
+        Dict(k => v for (k, v) in zip(sorted_keys, values))
+        for values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+    ])
+
+    # Extract column names in correct order
+    param_keys = collect(keys(sweep_vars))
+
+    # Convert `parameters` into a DataFrame
+    param_df = DataFrame()
+    for key in param_keys
+        param_df[!, key] = getindex.(parameters, key)
     end
 
-    return statistics_r
-end
+    # Process each DataFrame in the statistics dictionary
+    for (key, df) in statistics_data
+        # Remove `generation` column
+        select!(df, Not(:generation))
 
-function sweep_statistics_rep(
-    df::DataFrame,
-    r_values::Vector{Float64},
-    ep_values::Vector{Float32},
-    output_save_tick::Int,
-    save_generations::Union{Nothing,Vector{Real}} = nothing,
-)
-    statistics_rep = statistics_selection(df, output_save_tick, save_generations)
-
-    # Add relatedness and ext_pun columns to each DataFrame
-    for (key, df) in statistics_rep
-        rename!(df, :generation => :relatedness)
-        df.relatedness = repeat(r_values, inner = length(ep_values))
-
-        insertcols!(df, 2, :ext_pun => repeat(ep_values, length(r_values)))
-        select!(df, Not([:p_mean_mean, :p_mean_std]))
+        # Add parameter columns **before existing columns**
+        df = hcat(param_df, df)  # Concatenates param_df with df
+        statistics_data[key] = df  # Update the DataFrame in the dictionary
     end
 
-    return statistics_rep
+    return statistics_data
 end
 
-function sweep_statistics_rip(
-    df::DataFrame,
-    r_values::Vector{Float64},
-    ip_values::Vector{Float32},
-    output_save_tick::Int,
-    save_generations::Union{Nothing,Vector{Real}} = nothing,
-)
-    statistics_rip = statistics_selection(df, output_save_tick, save_generations)
-
-    # Add relatedness and int_pun columns to each DataFrame
-    for (key, df) in statistics_rip
-        rename!(df, :generation => :relatedness)
-        df.relatedness = repeat(r_values, inner = length(ip_values))
-
-        insertcols!(df, 2, :int_pun => repeat(ip_values, length(r_values)))
-        select!(
-            df,
-            Not([:T_ext_mean_mean, :T_ext_mean_std, :T_self_mean_mean, :T_self_mean_std]),
-        )
-    end
-
-    return statistics_rip
-end
-
-function sweep_statistics_rgs(
-    df::DataFrame,
-    r_values::Vector{Float64},
-    gs_values::Vector{Int64},
-    output_save_tick::Int,
-    save_generations::Union{Nothing,Vector{Real}} = nothing,
-)
-    statistics_rgs = statistics_selection(df, output_save_tick, save_generations)
-
-    # Add relatedness and group_size columns to each DataFrame
-    for (key, df) in statistics_rgs
-        rename!(df, :generation => :relatedness)
-        df.relatedness = repeat(r_values, inner = length(gs_values))
-
-        insertcols!(df, 2, :group_size => repeat(gs_values, length(r_values)))
-    end
-
-    return statistics_rgs
-end
-
-function statistics_all(df::DataFrame, sweep_var::Dict{Symbol,AbstractVector})
-    # Determine the number of params
+function statistics_full(df::DataFrame, sweep_vars::Dict{Symbol,AbstractVector})
+    # Determine the number of parameters
     num_params = maximum(df.param_id)
 
-    # Extract the independent variable
-    independent_var = only(keys(sweep_var))
+    # Initialize dictionary to store DataFrames for each parameter combination
+    independent_data = Dict{String, DataFrame}()
 
-    # Initialize a dictionary to store DataFrames for each independent value
-    independent_data = Dict{String,DataFrame}()
+    # Generate parameter combinations
+    param_combinations = [
+        Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) 
+        for values in Iterators.product(values(sweep_vars)...)
+    ]
 
-    # Iterate over the values of the independent variable
-    for value in sweep_var[independent_var]
-        independent_data[string(independent_var, "_", value)] = DataFrame()
-    end
+    # Ensure we have enough parameter sets
+    if length(param_combinations) != num_params
+        @warn "Mismatch: Generated $(length(param_combinations)) parameter sets but found $num_params unique params in df."
+    end  
+
+    # Create a mapping from `param_id` to its parameter combination
+    param_id_to_params = Dict(i => param_combinations[i] for i in 1:num_params)
 
     for i in 1:num_params
         # Filter rows by `param_id`
@@ -202,12 +191,21 @@ function statistics_all(df::DataFrame, sweep_var::Dict{Symbol,AbstractVector})
         # Calculate statistics for the current parameter set
         statistics = calculate_statistics(param_data)
 
-        # Collect data corresponding to the specified independent variable values
-        key = string(independent_var, "_", sweep_var[independent_var][i])
-        append!(independent_data[key], statistics)
+        # Ensure this param_id exists in our mapping
+        if i ∉ keys(param_id_to_params)
+            @warn "No parameter combination found for param_id $i, skipping."
+            continue
+        end
+        param_dict = param_id_to_params[i]  # Correct mapping
+
+        # Generate the suffix in the same format as `generate_filename_suffix`
+        key = generate_filename_suffix(param_dict, "Full")
+
+        # Add data
+        independent_data[key] = statistics
     end
 
-    # Remove empty DataFrames from the dictionary efficiently
+    # Remove empty DataFrames
     filter!(kv -> !isempty(kv.second), independent_data)
 
     return independent_data
