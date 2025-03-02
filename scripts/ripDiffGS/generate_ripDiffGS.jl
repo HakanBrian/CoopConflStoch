@@ -2,7 +2,7 @@ using Distributed
 
 
 ###############################
-# Game
+# Load MainSimulation
 ###############################
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
