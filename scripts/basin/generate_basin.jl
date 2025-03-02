@@ -14,9 +14,9 @@ using Distributed
 # Run Simulation
 ###############################
 
-sweep_r = Dict{Symbol,AbstractVector}(:relatedness => collect(range(0, 1.0, step = 0.25)));
+sweep_rgs = Dict{Symbol,AbstractVector}(:relatedness => collect(range(0, 1.0, step = 0.25)), :group_size => [5, 50, 500]);
 
-base_param = SimulationParameters(
+base_param = SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.0f0,
@@ -31,27 +31,10 @@ base_param = SimulationParameters(
     int_pun_self_mutation_enabled = true,
     output_save_tick = 20,
 )
+
 run_sim_all(
     base_param,
-    filename = "data/basin/basin_5",
+    filepath = "data/basin/basin",
     sweep_full = true,
-    sweep_vars = sweep_r,
-)
-
-
-base_param_50 = update_params(base_param, group_size = 50)
-run_sim_all(
-    base_param_50,
-    filename = "data/basin/basin_50",
-    sweep_full = true,
-    sweep_vars = sweep_r,
-)
-
-
-base_param_500 = update_params(base_param, group_size = 500)
-run_sim_all(
-    base_param_500,
-    filename = "data/basin/basin_500",
-    sweep_full = true,
-    sweep_vars = sweep_r,
+    sweep_vars = sweep_rgs,
 )

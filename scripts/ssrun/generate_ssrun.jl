@@ -14,7 +14,7 @@ using Distributed
 # Run Simulation
 ###############################
 
-base_param = SimulationParameters(
+base_param = SimulationParameter(
     action0 = 0.0f0,
     norm0 = 0.0f0,
     ext_pun0 = 0.0f0,
