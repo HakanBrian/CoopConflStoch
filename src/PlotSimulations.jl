@@ -28,25 +28,25 @@ function plot_simulation_data_Plots(
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
-        "a" => :red,
-        "p" => :green,
-        "T_ext" => :purple,
-        "T_self" => :yellow,
+        "norm" => :red,
+        "ext_pun" => :green,
+        "int_pun_ext" => :purple,
+        "int_pun_self" => :yellow,
         "payoff" => :orange,
         "action mean" => :blue4,
-        "a mean" => :red4,
-        "p mean" => :green4,
-        "T_ext mean" => :purple4,
-        "T_self mean" => :yellow4,
+        "norm mean" => :red4,
+        "ext_pun mean" => :green4,
+        "int_pun_ext mean" => :purple4,
+        "int_pun_self mean" => :yellow4,
         "payoff mean" => :orange4,
     )
 
     # Define dependent variables to plot
     plot_var_set = [
-        ["action", "a", "p", "T_ext", "T_self", "payoff"],
-        ["p", "T_ext", "T_self"],
-        ["p"],
-        ["action", "a"],
+        ["action", "norm", "ext_pun", "int_pun_ext", "int_pun_self", "payoff"],
+        ["ext_pun", "int_pun_ext", "int_pun_self"],
+        ["ext_pun"],
+        ["action", "norm"],
     ]
 
     plots_array = []
@@ -138,26 +138,26 @@ end
 function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
     dependent_vars = [
         :action_mean_mean,
-        :a_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
+        :norm_mean_mean,
+        :int_pun_ext_mean_mean,
+        :int_pun_self_mean_mean,
         :payoff_mean_mean,
     ]
     plot_sweep_heatmap_Plots(
         statistics,
         :relatedness,
-        :ext_pun,
+        :ext_pun0,
         dependent_vars,
         display_plot = display_plot,
     )
 end
 
 function plot_sweep_rip_Plots(statistics::DataFrame; display_plot::Bool = false)
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
+    dependent_vars = [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
     plot_sweep_heatmap_Plots(
         statistics,
         :relatedness,
-        :int_pun,
+        :int_pun_ext0,
         dependent_vars,
         display_plot = display_plot,
     )
@@ -166,10 +166,10 @@ end
 function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
     dependent_vars = [
         :action_mean_mean,
-        :a_mean_mean,
-        :p_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
+        :norm_mean_mean,
+        :ext_pun_mean_mean,
+        :int_pun_ext_mean_mean,
+        :int_pun_self_mean_mean,
         :payoff_mean_mean,
     ]
     plot_sweep_heatmap_Plots(
@@ -243,21 +243,21 @@ function plot_simulation_data_Plotly(
     # Define color palette for each trait type
     colors = Dict(
         "action" => :blue,
-        "a" => :red,
-        "p" => :green,
-        "T_ext" => :purple,
-        "T_self" => :yellow,
+        "norm" => :red,
+        "ext_pun" => :green,
+        "int_pun_ext" => :purple,
+        "int_pun_self" => :yellow,
         "payoff" => :orange,
         "action_stdev" => "rgba(0,0,255,0.2)",
-        "a_stdev" => "rgba(255,0,0,0.2)",
-        "p_stdev" => "rgba(0,255,0,0.2)",
-        "T_ext_stdev" => "rgba(128,0,128,0.2)",
-        "T_self_stdev" => "rgba(255,255,0,0.2)",
+        "norm_stdev" => "rgba(255,0,0,0.2)",
+        "ext_pun_stdev" => "rgba(0,255,0,0.2)",
+        "int_pun_ext_stdev" => "rgba(128,0,128,0.2)",
+        "int_pun_self_stdev" => "rgba(255,255,0,0.2)",
         "payoff_stdev" => "rgba(255,165,0,0.2)",
     )
 
     # Generate hover text dynamically
-    for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
+    for trait in ["action", "norm", "ext_pun", "int_pun_ext", "int_pun_self", "payoff"]
         hover_col = Symbol(trait * "_mean_hover")
         mean_col = Symbol(trait * "_mean_mean")
         std_col = Symbol(trait * "_mean_std")
@@ -269,7 +269,7 @@ function plot_simulation_data_Plotly(
     end
 
     # Plot replicate means with ribbons for standard deviation
-    for trait in ["action", "a", "p", "T_ext", "T_self", "payoff"]
+    for trait in ["action", "norm", "ext_pun", "int_pun_ext", "int_pun_self", "payoff"]
         mean_col = Symbol(trait * "_mean_mean")
         std_col = Symbol(trait * "_mean_std")
         hover_col = Symbol(trait * "_mean_hover")
@@ -391,26 +391,26 @@ end
 function plot_sweep_rep_Plotly(statistics::DataFrame)
     dependent_vars = [
         :action_mean_mean,
-        :a_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
+        :norm_mean_mean,
+        :int_pun_ext_mean_mean,
+        :int_pun_self_mean_mean,
         :payoff_mean_mean,
     ]
-    plot_sweep_heatmap_Plotly(statistics, :relatedness, :ext_pun, dependent_vars)
+    plot_sweep_heatmap_Plotly(statistics, :relatedness, :ext_pun0, dependent_vars)
 end
 
 function plot_sweep_rip_Plotly(statistics::DataFrame)
-    dependent_vars = [:action_mean_mean, :a_mean_mean, :p_mean_mean, :payoff_mean_mean]
-    plot_sweep_heatmap_Plotly(statistics, :relatedness, :int_pun, dependent_vars)
+    dependent_vars = [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
+    plot_sweep_heatmap_Plotly(statistics, :relatedness, :int_pun_ext0, dependent_vars)
 end
 
 function plot_sweep_rgs_Plotly(statistics::DataFrame)
     dependent_vars = [
         :action_mean_mean,
-        :a_mean_mean,
-        :p_mean_mean,
-        :T_ext_mean_mean,
-        :T_self_mean_mean,
+        :norm_mean_mean,
+        :ext_pun_mean_mean,
+        :int_pun_ext_mean_mean,
+        :int_pun_self_mean_mean,
         :payoff_mean_mean,
     ]
     plot_sweep_heatmap_Plotly(statistics, :relatedness, :group_size, dependent_vars)

@@ -33,10 +33,10 @@ function output!(outputs::DataFrame, t::Int64, pop::Population)
     outputs.generation[output_rows] = fill(t, N)
     outputs.individual[output_rows] = 1:N
     outputs.action[output_rows] = pop.action
-    outputs.a[output_rows] = pop.norm
-    outputs.p[output_rows] = pop.ext_pun
-    outputs.T_ext[output_rows] = pop.int_pun_ext
-    outputs.T_self[output_rows] = pop.int_pun_self
+    outputs.norm[output_rows] = pop.norm
+    outputs.ext_pun[output_rows] = pop.ext_pun
+    outputs.int_pun_ext[output_rows] = pop.int_pun_ext
+    outputs.int_pun_self[output_rows] = pop.int_pun_self
     outputs.payoff[output_rows] = pop.payoff
 
     nothing
@@ -60,10 +60,10 @@ function simulation(pop::Population)
         generation = Vector{Int64}(undef, output_length),
         individual = Vector{Int64}(undef, output_length),
         action = Vector{Float64}(undef, output_length),
-        a = Vector{Float64}(undef, output_length),
-        p = Vector{Float64}(undef, output_length),
-        T_ext = Vector{Float64}(undef, output_length),
-        T_self = Vector{Float64}(undef, output_length),
+        norm = Vector{Float64}(undef, output_length),
+        ext_pun = Vector{Float64}(undef, output_length),
+        int_pun_ext = Vector{Float64}(undef, output_length),
+        int_pun_self = Vector{Float64}(undef, output_length),
         payoff = Vector{Float64}(undef, output_length),
     )
 

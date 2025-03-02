@@ -43,10 +43,10 @@ function run_simulation(
     simulation_mean = combine(
         simulation_gdf,
         :action => mean,
-        :a => mean,
-        :p => mean,
-        :T_ext => mean,
-        :T_self => mean,
+        :norm => mean,
+        :ext_pun => mean,
+        :int_pun_ext => mean,
+        :int_pun_self => mean,
         :payoff => mean,
     )
 
