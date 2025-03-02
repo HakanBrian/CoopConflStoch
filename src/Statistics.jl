@@ -141,12 +141,9 @@ function statistics_filtered_sweep(
         for values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
     ])
 
-    # Extract column names in correct order
-    param_keys = collect(keys(sweep_vars))
-
     # Convert `parameters` into a DataFrame
     param_df = DataFrame()
-    for key in param_keys
+    for key in sorted_keys
         param_df[!, key] = getindex.(parameters, key)
     end
 
