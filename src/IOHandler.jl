@@ -96,7 +96,7 @@ function update_dataset_params!(df::DataFrame)
     rename!(df, :p_mean_std => :ext_pun_mean_std)
     rename!(df, :T_ext_mean_mean => :int_pun_ext_mean_mean)
     rename!(df, :T_ext_mean_std => :int_pun_ext_mean_std)
-    rename!(df, :T_self_mean_mean => :int_pun_self_mean)
+    rename!(df, :T_self_mean_mean => :int_pun_self_mean_mean)
     rename!(df, :T_self_mean_std => :int_pun_self_mean_std)
 end
 
