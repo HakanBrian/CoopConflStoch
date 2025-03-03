@@ -22,4 +22,4 @@ NODEINFO=$(while read -r node; do
 done <<< "$NODELIST" | paste -sd "," -)
 
 # Run Julia with distributed processing using allocated CPU counts
-julia -e "using Distributed; addprocs([$NODEINFO]); include(\"generate_default.jl\")"
+julia -e "using Distributed; addprocs([$NODEINFO]); include(\"generate_rDiffGS.jl\")"
