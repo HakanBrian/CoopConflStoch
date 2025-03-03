@@ -32,7 +32,7 @@ base_param = SimulationParameter(
 
 run_sim_all(
     base_param,
-    filename = "data/ssrun/ssbase",
+    filename = "data/ssrun/ssrun2",
     sweep_full = true,
     sweep_vars = Dict{Symbol,AbstractVector}(
         :norm0 => Float32[0.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 7.0],

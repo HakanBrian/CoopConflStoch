@@ -4,10 +4,14 @@ export save_simulation,
     read_simulation,
     generate_filename_suffix,
     modify_filename,
+    log_metadata,
     update_dataset_params!,
     process_simulation
 
-using CSV, DataFrames
+using ..MainSimulation.SimulationParameters
+import ..MainSimulation.SimulationParameters: SimulationParameter
+
+using CSV, JSON3, Dates, DataFrames
 
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension
@@ -98,6 +102,133 @@ function modify_filename(filepath::String, key::String)
 
     # Ensure forward slashes for consistency
     return replace(new_filepath, "\\" => "/")
+end
+
+function log_metadata(
+    filename::String,
+    sweep_vars::Dict{Symbol,AbstractVector},
+    parameters::SimulationParameter,  # Actual simulation parameters
+    condition::String;
+    save_generations::Union{Nothing, Vector{Real}}=nothing,
+    metadata_file::String="$(filename)_metadata.json",
+    notes::String=""  # Optional notes field
+)
+    # Function to format parameter values while preserving step size
+    function format_param_value(values)
+        if isa(values, AbstractVector) && length(values) > 1 && eltype(values) <: Real
+            steps = diff(values)  # Compute step differences
+
+            if length(unique(steps)) == 1  # Uniform step size
+                step_size = steps[1]
+                return "$(minimum(values)):$(maximum(values)):$(step_size)"
+            else
+                # Detect step segments
+                segments = []
+                start_idx = 1
+
+                while start_idx <= length(values)
+                    if start_idx == length(values)  # Single value case
+                        push!(segments, string(values[start_idx]))
+                        break
+                    end
+
+                    step = values[start_idx + 1] - values[start_idx]
+                    segment = [values[start_idx]]
+
+                    # Extend segment while step size remains constant
+                    for i in start_idx+1:length(values)-1
+                        if values[i+1] - values[i] == step
+                            push!(segment, values[i])
+                        else
+                            break
+                        end
+                    end
+                    push!(segment, values[start_idx + length(segment) - 1])
+
+                    # Store segment as "min:max:step" if >2 elements
+                    if length(segment) > 2
+                        push!(segments, "$(segment[1]):$(segment[end]):$(step)")
+                    else
+                        push!(segments, join(segment, ", "))  # List values if short
+                    end
+
+                    start_idx += length(segment)  # Move to next section
+                end
+
+                return join(segments, ", ")  # Format mixed step description
+            end
+        else
+            return string(values)  # Single value
+        end
+    end
+
+    # Function to classify traits based on mutation status and initial value
+    function classify_trait(initial_value, mutation_enabled)
+        if mutation_enabled
+            return "Mutable"
+        elseif initial_value == 0
+            return "Turned Off"
+        else
+            return "Fixed"
+        end
+    end
+
+    # Store all sweep_vars in "parameters" while keeping step size format
+    formatted_parameters = Dict(string(k) => format_param_value(v) for (k, v) in sweep_vars)
+
+    # Track mutation-based treatment classification
+    mutation_treatment = Dict()
+
+    # Check mutation settings - using actual `parameters`
+    for (trait, mutation_flag) in [
+        (:norm0, :norm_mutation_enabled),
+        (:ext_pun0, :ext_pun_mutation_enabled),
+        (:int_pun_ext0, :int_pun_ext_mutation_enabled),
+        (:int_pun_self0, :int_pun_self_mutation_enabled)
+    ]
+        initial_value = getfield(parameters, trait)
+        mutation_status = getfield(parameters, mutation_flag)
+
+        if haskey(sweep_vars, trait) || haskey(sweep_vars, mutation_flag)
+            mutation_treatment[string(trait)] = classify_trait(initial_value, mutation_status)
+        end
+    end
+
+    # Construct formatted treatment description
+    treatment_desc = if isempty(mutation_treatment)
+        "Default"
+    else
+        "{" * join(["$k: $(v)" for (k, v) in mutation_treatment], ", ") * "}"
+    end
+
+    # Convert time points
+    time_str = isnothing(save_generations) ? "All" : save_generations
+
+    # Create metadata entry
+    entry = Dict(
+        "filename" => filename,
+        "parameters" => formatted_parameters,  # Keeps step size formatting
+        "condition" => condition,
+        "saved_time_points" => time_str,
+        "treatment" => treatment_desc,  # Auto-generated treatment label
+        "date" => string(Dates.today()),
+        "notes" => notes  # Include optional notes field
+    )
+
+    # Load existing metadata if the file exists
+    if isfile(metadata_file)
+        metadata = JSON3.read(read(metadata_file, String))
+    else
+        metadata = Dict("datasets" => [])
+    end
+
+    # Append new metadata entry
+    push!(metadata["datasets"], entry)
+
+    # Save updated metadata
+    open(metadata_file, "w") do f
+        write(f, JSON3.write(metadata, indent=4))  # Pretty-print JSON
+    end
 end
 
 function update_dataset_params!(df::DataFrame)

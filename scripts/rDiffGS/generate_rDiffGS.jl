@@ -36,6 +36,5 @@ run_sim_all(
     sweep_vars = Dict{Symbol,AbstractVector}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
         :group_size => [5, 50, 500],
-    ),
-    save_generations = [0.25, 0.5, 0.75, 1.0],
+    )
 )

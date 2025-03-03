@@ -37,6 +37,5 @@ run_sim_all(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
         :ext_pun0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
         :group_size => [5, 50, 500],
-    ),
-    save_generations = [0.25, 0.5, 0.75, 1.0],
+    )
 )
