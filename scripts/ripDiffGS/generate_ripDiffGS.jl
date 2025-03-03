@@ -28,24 +28,16 @@ base_params_rdgs = SimulationParameter(
     int_pun_self_mutation_enabled = false,
     output_save_tick = 10,
 )
-run_sim_rip(
-    base_params_rdgs,
-    "data/ripDiffGS/rep1_rdgs_5",
-    save_generations = [0.25, 0.5, 0.75, 1.0],
-)
 
-
-base_params_rdgs_50 = update_params(base_params_rdgs, group_size = 50)
-run_sim_rip(
-    base_params_rdgs_50,
-    "data/ripDiffGS/rep1_rdgs_50",
-    save_generations = [0.25, 0.5, 0.75, 1.0],
-)
-
-
-base_params_rdgs_500 = update_params(base_params_rdgs, group_size = 500)
-run_sim_rip(
-    base_params_rdgs_500,
-    "data/ripDiffGS/rep1_rdgs_500",
+run_sim_all(
+    base_params,
+    filepath = "data/ripDiffGS/rip2",
+    save_file = true,
+    sweep_vars = Dict{Symbol,AbstractVector}(
+        :relatedness => collect(range(0, 1.0, step = 0.05)),
+        :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
+        :group_size => [5, 50, 500]
+    ),
+    linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
     save_generations = [0.25, 0.5, 0.75, 1.0],
 )

@@ -25,7 +25,7 @@ function calculate_statistics(df::DataFrame)
         :ext_pun_mean => std => :ext_pun_mean_std,
         :int_pun_ext_mean => mean => :int_pun_ext_mean_mean,
         :int_pun_ext_mean => std => :int_pun_ext_mean_std,
-        :int_pun_self_mean => mean => :int_pun_self_mean,
+        :int_pun_self_mean => mean => :int_pun_self_mean_mean,
         :int_pun_self_mean => std => :int_pun_self_mean_std,
         :payoff_mean => mean => :payoff_mean_mean,
         :payoff_mean => std => :payoff_mean_std,

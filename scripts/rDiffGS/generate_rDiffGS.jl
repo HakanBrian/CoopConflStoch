@@ -7,14 +7,14 @@ using Distributed
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
-@everywhere import .MainSimulation: SimulationParameter, run_sim_r
+@everywhere import .MainSimulation: SimulationParameter, run_sim_all
 
 
 ###############################
 # Run Simulation
 ###############################
 
-base_params_gs_5 = SimulationParameter(
+base_params = SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,
@@ -28,24 +28,14 @@ base_params_gs_5 = SimulationParameter(
     int_pun_self_mutation_enabled = true,
     output_save_tick = 10,
 )
-run_sim_r(
-    base_params_gs_5,
-    "data/rDiffGS/r2_gs_5",
-    save_generations = [0.25, 0.5, 0.75, 1.0],
-)
 
-
-base_params_gs_50 = update_params(base_params_gs_5, group_size = 50);
-run_sim_r(
-    base_params_gs_50,
-    "data/rDiffGS/r2_gs_50",
-    save_generations = [0.25, 0.5, 0.75, 1.0],
-)
-
-
-base_params_gs_500 = update_params(base_params_gs_5, group_size = 500);
-run_sim_r(
-    base_params_gs_500,
-    "data/rDiffGS/r1_gs_500",
+run_sim_all(
+    base_params,
+    filepath = "data/rDiffGS/rDiffGS2",
+    save_file = true,
+    sweep_vars = Dict{Symbol,AbstractVector}(
+        :relatedness => collect(range(0, 1.0, step = 0.01)),
+        :group_size => [5, 50, 500]
+    ),
     save_generations = [0.25, 0.5, 0.75, 1.0],
 )

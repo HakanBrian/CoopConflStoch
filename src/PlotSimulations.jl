@@ -21,8 +21,9 @@ using Plots, PlotlyJS, DataFrames
 
 function plot_simulation_data_Plots(
     df::DataFrame,
-    x_axis_variable::Symbol,
+    x_var::Symbol,
     xlabel_text::String,
+    z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
     # Define color palette for each trait type
@@ -49,93 +50,132 @@ function plot_simulation_data_Plots(
         ["action", "norm"],
     ]
 
-    plots_array = []
+    # Determine unique z values (or use a single group if z_var is nothing)
+    z_values = z_var !== nothing ? sort(unique(df[!, z_var])) : [nothing]
 
-    for plot_var in plot_var_set
-        # Initialize plot
-        p = Plots.plot(legend = true, fmt = :pdf)
+    # Dictionary to store plots for each z_val
+    plots_by_z = Dict{Any, Vector{Plots.Plot}}()
 
-        # Create mean and ribbons for each trait
-        for trait in plot_var
-            mean_col = Symbol(trait * "_mean_mean")
-            std_col = Symbol(trait * "_mean_std")
+    for z_val in z_values
+        # Filter dataframe if z_var is provided
+        df_subset = z_var !== nothing ? filter(row -> row[z_var] == z_val, df) : df
 
-            Plots.plot!(
-                p,
-                df[!, x_axis_variable],
-                df[!, mean_col],
-                ribbon = (df[!, std_col], df[!, std_col]),
-                label = trait,
-                color = colors[trait*" mean"],
-            )
+        # Store plots for this z_value
+        plots_array = []
+
+        for plot_var in plot_var_set
+            # Initialize plot
+            title_text = z_var !== nothing ? "$z_var = $z_val" : "Simulation Data"
+            p = Plots.plot(title = title_text, legend = true, fmt = :pdf)
+
+            # Create mean and ribbons for each trait
+            for trait in plot_var
+                mean_col = Symbol(trait * "_mean_mean")
+                std_col = Symbol(trait * "_mean_std")
+
+                Plots.plot!(
+                    p,
+                    df_subset[!, x_var],
+                    df_subset[!, mean_col],
+                    ribbon = (df_subset[!, std_col], df_subset[!, std_col]),
+                    label = trait,
+                    color = colors[trait * " mean"],
+                )
+            end
+
+            xlabel!(p, xlabel_text)
+            ylabel!(p, "Traits")
+
+            push!(plots_array, p)
+
+            if display_plot
+                display(p)
+            end
         end
 
-        push!(plots_array, p)  # Store plot in array
-
-        xlabel!(xlabel_text)
-        ylabel!("Traits")
-
-        if display_plot
-            display(p)
-        end
+        # Store plots for this z_value
+        plots_by_z[z_val] = plots_array
     end
 
-    return plots_array
+    # Return a sorted vector of vectors of plots
+    sorted_keys = sort(collect(keys(plots_by_z)))  # Sort keys numerically
+    vector_plots = [plots_by_z[k] for k in sorted_keys]  # Extract in sorted order
+
+    return vector_plots
 end
 
-plot_sim_Plots(df::DataFrame; display_plot = false) =
-    plot_simulation_data_Plots(df, :generation, "Generation", display_plot)
+plot_sim_Plots(df::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot = false) =
+    plot_simulation_data_Plots(df, :generation, "Generation", z_var, display_plot)
 
-plot_sweep_r_Plots(df::DataFrame; display_plot = false) =
-    plot_simulation_data_Plots(df, :relatedness, "Relatedness", display_plot)
+plot_sweep_r_Plots(df::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot = false) =
+    plot_simulation_data_Plots(df, :relatedness, "Relatedness", z_var, display_plot)
 
 function plot_sweep_heatmap_Plots(
     statistics::DataFrame,
     x_var::Symbol,
     y_var::Symbol,
     dependent_vars::Vector{Symbol};
+    z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
-    # Get unique sorted values for x and y axes
-    x_values = sort(unique(statistics[!, x_var]))
-    y_values = sort(unique(statistics[!, y_var]))
+    # Determine unique z values (or use a single group if z_var is nothing)
+    z_values = z_var !== nothing ? sort(unique(statistics[!, z_var])) : [nothing]
 
-    # Store plots in an array
-    plots_array = []
+    # Dictionary to store plots for each z_val
+    plots_by_z = Dict{Any, Vector{Plots.Plot}}()
 
-    # Plot each dependent variable as a separate heatmap
-    for var in dependent_vars
-        # Pivot the data for the current dependent variable
-        heatmap_data = unstack(statistics, y_var, x_var, var)
+    for z_val in z_values
+        # Filter dataframe if z_var is provided
+        df_subset = z_var !== nothing ? filter(row -> row[z_var] == z_val, statistics) : statistics
 
-        # Convert DataFrame to a matrix (remove `y_var` column)
-        heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(y_var)])
+        # Get unique sorted values for x and y axes
+        x_values = sort(unique(df_subset[!, x_var]))
+        y_values = sort(unique(df_subset[!, y_var]))
 
-        # Create heatmap plot
-        p = Plots.heatmap(
-            x_values,
-            y_values,
-            heatmap_matrix,
-            color = :viridis,
-            xlabel = string(x_var),
-            ylabel = string(y_var),
-            title = "Heatmap of $var",
-            colorbar_title = "Value",
-            fmt = :pdf,
-        )
+        # Store plots in an array for this z_value
+        plots_array = []
 
-        push!(plots_array, p)  # Store plot in array
+        for var in dependent_vars
+            # Pivot the data for the current dependent variable
+            heatmap_data = unstack(df_subset, y_var, x_var, var)
 
-        # Conditionally display plot
-        if display_plot
-            display(p)
+            # Convert DataFrame to a matrix (remove `y_var` column)
+            heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(y_var)])
+
+            # Create heatmap plot
+            title_text = z_var !== nothing ? "$z_var = $z_val" : "Heatmap of $var"
+            p = Plots.heatmap(
+                x_values,
+                y_values,
+                heatmap_matrix,
+                color = :viridis,
+                xlabel = string(x_var),
+                ylabel = string(y_var),
+                title = title_text,
+                colorbar_title = "Value",
+                fmt = :pdf,
+            )
+
+            push!(plots_array, p)  # Store plot in array
+
+            # Conditionally display plot
+            if display_plot
+                display(p)
+            end
         end
+
+        # Store plots for this z_value
+        plots_by_z[z_val] = plots_array
     end
 
-    return plots_array  # Return all plots
-end
+    # Return a sorted vector of vectors of plots
+    sorted_keys = sort(collect(keys(plots_by_z)))  # Sort z_values numerically
+    vector_plots = [plots_by_z[k] for k in sorted_keys]  # Extract in sorted order
 
-function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
+    return vector_plots
+end    
+
+function plot_sweep_rep_Plots(statistics::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot::Bool = false)
     dependent_vars = [
         :action_mean_mean,
         :norm_mean_mean,
@@ -148,17 +188,19 @@ function plot_sweep_rep_Plots(statistics::DataFrame; display_plot::Bool = false)
         :relatedness,
         :ext_pun0,
         dependent_vars,
+        z_var = z_var,
         display_plot = display_plot,
     )
 end
 
-function plot_sweep_rip_Plots(statistics::DataFrame; display_plot::Bool = false)
+function plot_sweep_rip_Plots(statistics::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot::Bool = false)
     dependent_vars = [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
     plot_sweep_heatmap_Plots(
         statistics,
         :relatedness,
         :int_pun_ext0,
         dependent_vars,
+        z_var = z_var,
         display_plot = display_plot,
     )
 end
@@ -186,7 +228,7 @@ end
 # Compare Plots #################################################################################################################
 ################
 
-function compare_plot_lists(plot_lists::Vector{Vector{Any}})
+function compare_plot_lists(plot_lists::Vector{Vector{Plots.Plot}})
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
 
