@@ -14,7 +14,10 @@ using Distributed
 # Run Simulation
 ###############################
 
-sweep_rgs = Dict{Symbol,AbstractVector}(:relatedness => collect(range(0, 1.0, step = 0.25)), :group_size => [5, 50, 500]);
+sweep_rgs = Dict{Symbol,AbstractVector}(
+    :relatedness => collect(range(0, 1.0, step = 0.25)),
+    :group_size => [5, 50, 500],
+);
 
 base_param = SimulationParameter(
     action0 = 0.1f0,

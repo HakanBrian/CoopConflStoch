@@ -1,6 +1,11 @@
 module IOHandler
 
-export save_simulation, read_simulation, generate_filename_suffix, modify_filename, update_dataset_params!, process_simulation
+export save_simulation,
+    read_simulation,
+    generate_filename_suffix,
+    modify_filename,
+    update_dataset_params!,
+    process_simulation
 
 using CSV, DataFrames
 
@@ -18,7 +23,9 @@ function save_simulation(simulation::DataFrame, filepath::String)
 
     # Check if the directory exists
     if !isdir(dir_path)
-        error("Error: Directory '$dir_path' does not exist. Please create it before saving.")
+        error(
+            "Error: Directory '$dir_path' does not exist. Please create it before saving.",
+        )
     end
 
     # Check if the file already exists and warn the user
@@ -51,7 +58,11 @@ function read_simulation(filepath::String)
     end
 end
 
-function generate_filename_suffix(param_dict::Dict{Symbol, <:Number}, condition::String="Filtered"; time_point::Union{Nothing, Int}=nothing)
+function generate_filename_suffix(
+    param_dict::Dict{Symbol,<:Number},
+    condition::String = "Filtered";
+    time_point::Union{Nothing,Int} = nothing,
+)
     # Lexicographic sorting
     sorted_keys = sort(collect(keys(param_dict)))
 

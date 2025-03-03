@@ -16,9 +16,7 @@ import ..MainSimulation.Simulations: simulation
 
 using ..MainSimulation.Statistics
 import ..MainSimulation.Statistics:
-    calculate_statistics,
-    statistics_filtered_sweep,
-    statistics_full
+    calculate_statistics, statistics_filtered_sweep, statistics_full
 
 using Distributed, DataFrames, StatsBase
 

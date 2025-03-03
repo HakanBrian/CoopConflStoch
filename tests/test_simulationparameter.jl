@@ -13,19 +13,19 @@ base_params = MainSimulation.SimulationParameter()
 sweep_vars = Dict(
     :relatedness => [0.0, 1.0],
     :int_pun_ext0 => Float32[0.0, 3.0],
-    :group_size => [5, 50, 500]
+    :group_size => [5, 50, 500],
 )
 
 parameters = vec([
-    MainSimulation.update_params(base_params; NamedTuple{Tuple(keys(sweep_vars))}(values)...)
-    for values in Iterators.product(values(sweep_vars)...)
+    MainSimulation.update_params(
+        base_params;
+        NamedTuple{Tuple(keys(sweep_vars))}(values)...,
+    ) for values in Iterators.product(values(sweep_vars)...)
 ])
 
 linked_params = Dict(:int_pun_self0 => :int_pun_ext0)
 
-valid_linked_parameters = Dict(
-    k => v for (k, v) in linked_params if v in keys(sweep_vars)
-)
+valid_linked_parameters = Dict(k => v for (k, v) in linked_params if v in keys(sweep_vars))
 
 # Store only primary parameters for iteration
 primary_keys = collect(setdiff(keys(sweep_vars), keys(valid_linked_parameters)))
@@ -34,21 +34,22 @@ MainSimulation.generate_params(base_params, sweep_vars, linked_params)
 
 # param gen logic
 parameters = vec([
-    MainSimulation.update_params(base_params;
+    MainSimulation.update_params(
+        base_params;
         NamedTuple{Tuple(primary_keys)}(values)...,
         Dict(
-            k => values[findfirst(==(v), primary_keys)] for (k, v) in valid_linked_parameters
-            if findfirst(==(v), primary_keys) !== nothing
-        )...
-    )
-    for values in Iterators.product((sweep_vars[k] for k in primary_keys)...)
+            k => values[findfirst(==(v), primary_keys)] for
+            (k, v) in valid_linked_parameters if findfirst(==(v), primary_keys) !== nothing
+        )...,
+    ) for values in Iterators.product((sweep_vars[k] for k in primary_keys)...)
 ])
 
 #suffix generation
 for values in Iterators.product(values(sweep_vars)...)
     param_dict = Dict(k => v for (k, v) in zip(keys(sweep_vars), values))
     println(param_dict)
-    suffix = MainSimulation.generate_filename_suffix(param_dict, "Filtered", time_point=10)
+    suffix =
+        MainSimulation.generate_filename_suffix(param_dict, "Filtered", time_point = 10)
     println(suffix)
 end
 
@@ -60,21 +61,24 @@ sweep_vars = Dict{Symbol,AbstractVector}(
 )
 
 parameters_sweep = vec([
-    MainSimulation.update_params(base_params; NamedTuple{Tuple(keys(sweep_vars))}(values)...)
-    for values in Iterators.product(values(sweep_vars)...)
+    MainSimulation.update_params(
+        base_params;
+        NamedTuple{Tuple(keys(sweep_vars))}(values)...,
+    ) for values in Iterators.product(values(sweep_vars)...)
 ])
 
 tasks = [
-    (idx, parameters, replicate) for (idx, parameters) in enumerate(parameters_sweep) for
-    replicate in 1:40
+    (idx, parameters, replicate) for (idx, parameters) in enumerate(parameters_sweep)
+    for replicate in 1:40
 ]
 
 
-sweep_vars = Dict{Symbol,AbstractVector}(:relatedness => collect(range(0, 1.0, step = 0.25)));
+sweep_vars =
+    Dict{Symbol,AbstractVector}(:relatedness => collect(range(0, 1.0, step = 0.25)));
 
 param_combinations = vec([
-    Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) 
-    for values in Iterators.product(values(sweep_vars)...)
+    Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) for
+    values in Iterators.product(values(sweep_vars)...)
 ])
 param_id_to_params = Dict(i => param_combinations[i] for i in 1:5)
 
@@ -99,8 +103,8 @@ end
 
 # Generate all parameter combinations in a vector of dictionaries
 parameters = vec([
-    Dict(k => v for (k, v) in zip(keys(sweep_vars), values))
-    for values in Iterators.product(values(sweep_vars)...)
+    Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) for
+    values in Iterators.product(values(sweep_vars)...)
 ])
 
 # Extract column names (keys of the dictionaries)
@@ -127,8 +131,8 @@ sorted_keys = sort(collect(keys(sweep_vars)))
 
 # Generate all parameter combinations in a vector of dictionaries
 param_combinations = vec([
-    Dict(k => v for (k, v) in zip(sorted_keys, values))
-    for values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+    Dict(k => v for (k, v) in zip(sorted_keys, values)) for
+    values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
 ])
 
 

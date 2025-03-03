@@ -54,7 +54,7 @@ function plot_simulation_data_Plots(
     z_values = z_var !== nothing ? sort(unique(df[!, z_var])) : [nothing]
 
     # Dictionary to store plots for each z_val
-    plots_by_z = Dict{Any, Vector{Plots.Plot}}()
+    plots_by_z = Dict{Any,Vector{Plots.Plot}}()
 
     for z_val in z_values
         # Filter dataframe if z_var is provided
@@ -79,7 +79,7 @@ function plot_simulation_data_Plots(
                     df_subset[!, mean_col],
                     ribbon = (df_subset[!, std_col], df_subset[!, std_col]),
                     label = trait,
-                    color = colors[trait * " mean"],
+                    color = colors[trait*" mean"],
                 )
             end
 
@@ -104,11 +104,17 @@ function plot_simulation_data_Plots(
     return vector_plots
 end
 
-plot_sim_Plots(df::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot = false) =
-    plot_simulation_data_Plots(df, :generation, "Generation", z_var, display_plot)
+plot_sim_Plots(
+    df::DataFrame;
+    z_var::Union{Symbol,Nothing} = nothing,
+    display_plot = false,
+) = plot_simulation_data_Plots(df, :generation, "Generation", z_var, display_plot)
 
-plot_sweep_r_Plots(df::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot = false) =
-    plot_simulation_data_Plots(df, :relatedness, "Relatedness", z_var, display_plot)
+plot_sweep_r_Plots(
+    df::DataFrame;
+    z_var::Union{Symbol,Nothing} = nothing,
+    display_plot = false,
+) = plot_simulation_data_Plots(df, :relatedness, "Relatedness", z_var, display_plot)
 
 function plot_sweep_heatmap_Plots(
     statistics::DataFrame,
@@ -122,11 +128,12 @@ function plot_sweep_heatmap_Plots(
     z_values = z_var !== nothing ? sort(unique(statistics[!, z_var])) : [nothing]
 
     # Dictionary to store plots for each z_val
-    plots_by_z = Dict{Any, Vector{Plots.Plot}}()
+    plots_by_z = Dict{Any,Vector{Plots.Plot}}()
 
     for z_val in z_values
         # Filter dataframe if z_var is provided
-        df_subset = z_var !== nothing ? filter(row -> row[z_var] == z_val, statistics) : statistics
+        df_subset =
+            z_var !== nothing ? filter(row -> row[z_var] == z_val, statistics) : statistics
 
         # Get unique sorted values for x and y axes
         x_values = sort(unique(df_subset[!, x_var]))
@@ -173,9 +180,13 @@ function plot_sweep_heatmap_Plots(
     vector_plots = [plots_by_z[k] for k in sorted_keys]  # Extract in sorted order
 
     return vector_plots
-end    
+end
 
-function plot_sweep_rep_Plots(statistics::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot::Bool = false)
+function plot_sweep_rep_Plots(
+    statistics::DataFrame;
+    z_var::Union{Symbol,Nothing} = nothing,
+    display_plot::Bool = false,
+)
     dependent_vars = [
         :action_mean_mean,
         :norm_mean_mean,
@@ -193,8 +204,13 @@ function plot_sweep_rep_Plots(statistics::DataFrame; z_var::Union{Symbol,Nothing
     )
 end
 
-function plot_sweep_rip_Plots(statistics::DataFrame; z_var::Union{Symbol,Nothing} = nothing, display_plot::Bool = false)
-    dependent_vars = [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
+function plot_sweep_rip_Plots(
+    statistics::DataFrame;
+    z_var::Union{Symbol,Nothing} = nothing,
+    display_plot::Bool = false,
+)
+    dependent_vars =
+        [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
     plot_sweep_heatmap_Plots(
         statistics,
         :relatedness,
@@ -442,7 +458,8 @@ function plot_sweep_rep_Plotly(statistics::DataFrame)
 end
 
 function plot_sweep_rip_Plotly(statistics::DataFrame)
-    dependent_vars = [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
+    dependent_vars =
+        [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
     plot_sweep_heatmap_Plotly(statistics, :relatedness, :int_pun_ext0, dependent_vars)
 end
 

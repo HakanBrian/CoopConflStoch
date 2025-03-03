@@ -1,9 +1,6 @@
 module Statistics
 
-export calculate_statistics,
-    statistics_filtered,
-    statistics_filtered_sweep,
-    statistics_full
+export calculate_statistics, statistics_filtered, statistics_filtered_sweep, statistics_full
 
 using ..MainSimulation.IOHandler
 import ..MainSimulation.IOHandler: generate_filename_suffix
@@ -54,9 +51,11 @@ function statistics_filtered(
     pct_generations = filter(x -> x isa Float64, save_generations)
 
     # Convert percentage-based values to absolute generations (ensuring they are Int64)
-    percent_generations = Int64.([
-        round(Int64, p * total_generations / output_save_tick) * output_save_tick for p in pct_generations
-    ])
+    percent_generations =
+        Int64.([
+            round(Int64, p * total_generations / output_save_tick) * output_save_tick for
+            p in pct_generations
+        ])
 
     # Combine absolute and percentage-based generations, ensuring uniqueness and Int64 type
     generations_to_select = unique(Int64.(vcat(abs_generations, percent_generations)))
@@ -69,8 +68,8 @@ function statistics_filtered(
 
     # Generate all parameter combinations in a vector of dictionaries
     param_combinations = vec([
-        Dict(k => v for (k, v) in zip(sorted_keys, values))
-        for values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
+        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
     ])
 
     # Ensure we have enough parameter sets
@@ -102,7 +101,7 @@ function statistics_filtered(
 
             if !isempty(gen_data)
                 # Generate the filename suffix correctly
-                key = generate_filename_suffix(param_dict, "Filtered", time_point=gen)
+                key = generate_filename_suffix(param_dict, "Filtered", time_point = gen)
 
                 # Ensure the key exists
                 if !haskey(filtered_data, key)
@@ -130,15 +129,16 @@ function statistics_filtered_sweep(
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
     # Calculate statistics for each parameter combination
-    statistics_data = statistics_filtered(df, sweep_vars, output_save_tick, save_generations)
+    statistics_data =
+        statistics_filtered(df, sweep_vars, output_save_tick, save_generations)
 
     # Sort the keys alphabetically
     sorted_keys = sort(collect(keys(sweep_vars)))
 
     # Generate all parameter combinations in a vector of dictionaries
     parameters = vec([
-        Dict(k => v for (k, v) in zip(sorted_keys, values))
-        for values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
+        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
     ])
 
     # Convert `parameters` into a DataFrame
@@ -165,18 +165,18 @@ function statistics_full(df::DataFrame, sweep_vars::Dict{Symbol,AbstractVector})
     num_params = maximum(df.param_id)
 
     # Initialize dictionary to store DataFrames for each parameter combination
-    independent_data = Dict{String, DataFrame}()
+    independent_data = Dict{String,DataFrame}()
 
     # Generate parameter combinations
     param_combinations = [
-        Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) 
-        for values in Iterators.product(values(sweep_vars)...)
+        Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) for
+        values in Iterators.product(values(sweep_vars)...)
     ]
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params
         @warn "Mismatch: Generated $(length(param_combinations)) parameter sets but found $num_params unique params in df."
-    end  
+    end
 
     # Create a mapping from `param_id` to its parameter combination
     param_id_to_params = Dict(i => param_combinations[i] for i in 1:num_params)

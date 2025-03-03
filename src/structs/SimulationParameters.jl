@@ -95,28 +95,28 @@ function update_params(base_params::SimulationParameter; kwargs...)
 end
 
 function generate_params(
-    base_params::SimulationParameter, 
-    sweep_vars::Dict{Symbol, <:AbstractVector}, 
-    linked_params=Dict{Symbol,Symbol}()
+    base_params::SimulationParameter,
+    sweep_vars::Dict{Symbol,<:AbstractVector},
+    linked_params = Dict{Symbol,Symbol}(),
 )
     # Filter out linked parameters whose source is NOT in `sweep_vars`
-    valid_linked_parameters = Dict(
-        k => v for (k, v) in linked_params if v in keys(sweep_vars)
-    )
+    valid_linked_parameters =
+        Dict(k => v for (k, v) in linked_params if v in keys(sweep_vars))
 
     # Sort primary keys alphabetically (excluding linked parameters)
     primary_keys = sort(collect(setdiff(keys(sweep_vars), keys(valid_linked_parameters))))
 
     # Generate parameter list with ordered combinations
     parameters = vec([
-        update_params(base_params;
+        update_params(
+            base_params;
             NamedTuple{Tuple(primary_keys)}(values)...,
             Dict(
-                k => values[findfirst(==(v), primary_keys)] for (k, v) in valid_linked_parameters
-                if findfirst(==(v), primary_keys) !== nothing
-            )...
-        )
-        for values in Iterators.product((sweep_vars[k] for k in primary_keys)...)
+                k => values[findfirst(==(v), primary_keys)] for
+                (k, v) in valid_linked_parameters if
+                findfirst(==(v), primary_keys) !== nothing
+            )...,
+        ) for values in Iterators.product((sweep_vars[k] for k in primary_keys)...)
     ])
 
     return parameters
