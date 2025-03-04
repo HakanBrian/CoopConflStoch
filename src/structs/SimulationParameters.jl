@@ -17,8 +17,7 @@ mutable struct SimulationParameter
     group_size::Int64
     synergy::Float32
     relatedness::Float64
-    fitness_scaling_factor_a::Float32
-    fitness_scaling_factor_b::Float32
+    fitness_scaling_factor::Float64
     mutation_rate::Float64
     mutation_variance::Float64
     trait_variance::Float64
@@ -46,8 +45,7 @@ function SimulationParameter(;
     group_size::Int64 = 10,
     synergy::Float32 = 0.0f0,
     relatedness::Float64 = 0.5,
-    fitness_scaling_factor_a::Float32 = 50.0f0,
-    fitness_scaling_factor_b::Float32 = 68.0f0,
+    fitness_scaling_factor::Float64 = 10.0,
     mutation_rate::Float64 = 0.05,
     mutation_variance::Float64 = 0.005,
     trait_variance::Float64 = 0.0,
@@ -71,8 +69,7 @@ function SimulationParameter(;
         group_size,
         synergy,
         relatedness,
-        fitness_scaling_factor_a,
-        fitness_scaling_factor_b,
+        fitness_scaling_factor,
         mutation_rate,
         mutation_variance,
         trait_variance,
@@ -140,8 +137,7 @@ function Base.copy(parameters::SimulationParameter)
         group_size = getfield(parameters, :group_size),
         synergy = getfield(parameters, :synergy),
         relatedness = getfield(parameters, :relatedness),
-        fitness_scaling_factor_a = getfield(parameters, :fitness_scaling_factor_a),
-        fitness_scaling_factor_b = getfield(parameters, :fitness_scaling_factor_b),
+        fitness_scaling_factor = getfield(parameters, :fitness_scaling_factor),
         mutation_rate = getfield(parameters, :mutation_rate),
         mutation_variance = getfield(parameters, :mutation_variance),
         trait_variance = getfield(parameters, :trait_variance),
@@ -172,13 +168,8 @@ function Base.copy!(old_params::SimulationParameter, new_params::SimulationParam
     setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
     setfield!(
         old_params,
-        :fitness_scaling_factor_a,
-        getfield(new_params, :fitness_scaling_factor_a),
-    )
-    setfield!(
-        old_params,
-        :fitness_scaling_factor_b,
-        getfield(new_params, :fitness_scaling_factor_b),
+        :fitness_scaling_factor,
+        getfield(new_params, :fitness_scaling_factor),
     )
     setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
     setfield!(old_params, :mutation_variance, getfield(new_params, :mutation_variance))

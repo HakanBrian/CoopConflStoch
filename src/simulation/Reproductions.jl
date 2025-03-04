@@ -16,12 +16,12 @@ end
 
 function fitness_exp(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return exp(base_fitness * 10.0)
+    return exp(base_fitness * pop.parameters.fitness_scaling_factor)
 end
 
 function fitness_exp_norm(pop::Population, idx::Int64)
     base_fitness = fitness(pop, idx)
-    return Exponential(base_fitness * 10.0)
+    return Exponential(base_fitness * pop.parameters.fitness_scaling_factor)
 end
 
 function reproduce!(pop::Population)
