@@ -37,7 +37,7 @@ base_param = SimulationParameter(
 
 run_sim_all(
     base_param,
-    filepath = "data/basin/basin2",
+    filepath = "data/basin/basin",
     sweep_full = true,
     sweep_vars = sweep_rgs,
 )

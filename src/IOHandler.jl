@@ -109,9 +109,9 @@ function log_metadata(
     sweep_vars::Dict{Symbol,AbstractVector},
     parameters::SimulationParameter,  # Actual simulation parameters
     condition::String;
-    save_generations::Union{Nothing, Vector{Real}}=nothing,
-    metadata_file::String="$(filename)_metadata.json",
-    notes::String=""  # Optional notes field
+    save_generations::Union{Nothing,Vector{Real}} = nothing,
+    metadata_file::String = "$(filename)_metadata.json",
+    notes::String = "",  # Optional notes field
 )
     # Function to format parameter values while preserving step size
     function format_param_value(values)
@@ -132,7 +132,7 @@ function log_metadata(
                         break
                     end
 
-                    step = values[start_idx + 1] - values[start_idx]
+                    step = values[start_idx+1] - values[start_idx]
                     segment = [values[start_idx]]
 
                     # Extend segment while step size remains constant
@@ -143,7 +143,7 @@ function log_metadata(
                             break
                         end
                     end
-                    push!(segment, values[start_idx + length(segment) - 1])
+                    push!(segment, values[start_idx+length(segment)-1])
 
                     # Store segment as "min:max:step" if >2 elements
                     if length(segment) > 2
@@ -184,13 +184,14 @@ function log_metadata(
         (:norm0, :norm_mutation_enabled),
         (:ext_pun0, :ext_pun_mutation_enabled),
         (:int_pun_ext0, :int_pun_ext_mutation_enabled),
-        (:int_pun_self0, :int_pun_self_mutation_enabled)
+        (:int_pun_self0, :int_pun_self_mutation_enabled),
     ]
         initial_value = getfield(parameters, trait)
         mutation_status = getfield(parameters, mutation_flag)
 
         if haskey(sweep_vars, trait) || haskey(sweep_vars, mutation_flag)
-            mutation_treatment[string(trait)] = classify_trait(initial_value, mutation_status)
+            mutation_treatment[string(trait)] =
+                classify_trait(initial_value, mutation_status)
         end
     end
 
@@ -212,7 +213,7 @@ function log_metadata(
         "saved_time_points" => time_str,
         "treatment" => treatment_desc,  # Auto-generated treatment label
         "date" => string(Dates.today()),
-        "notes" => notes  # Include optional notes field
+        "notes" => notes,  # Include optional notes field
     )
 
     # Load existing metadata if the file exists
@@ -227,7 +228,7 @@ function log_metadata(
 
     # Save updated metadata
     open(metadata_file, "w") do f
-        write(f, JSON3.write(metadata, indent=4))  # Pretty-print JSON
+        write(f, JSON3.write(metadata, indent = 4))  # Pretty-print JSON
     end
 end
 

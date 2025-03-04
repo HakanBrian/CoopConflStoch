@@ -29,4 +29,4 @@ base_params_iz = SimulationParameter(
     output_save_tick = 10,
 )
 
-run_sim_r(base_params_iz, "data/iZero/iZero2")
+run_sim_r(base_params_iz, "data/iZero/iZero")

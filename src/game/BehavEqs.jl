@@ -1,6 +1,6 @@
 module BehavEqs
 
-export behavioral_equilibrium!, best_response
+export best_response_bipenal, best_response_unipenal, behavioral_equilibrium!
 
 using ..MainSimulation.Populations
 import ..MainSimulation.Populations: Population
@@ -10,7 +10,7 @@ import ..MainSimulation.Objectives: objective
 
 using Core.Intrinsics
 
-@inline function best_response(
+@inline function best_response_bipenal(
     focal_idx::Int64,
     group::AbstractVector{Int64},
     action_sqrt_view::AbstractVector{Float32},
@@ -96,8 +96,7 @@ using Core.Intrinsics
     return action_i, action_i_sqrt
 end
 
-#=
-@inline function best_response(
+@inline function best_response_unipenal(
     focal_idx::Int64,
     group::AbstractVector{Int64},
     action_sqrt_view::AbstractVector{Float32},
@@ -167,7 +166,6 @@ end
 
     return action_i, action_i_sqrt
 end
-=#
 
 function behavioral_equilibrium!(
     group::AbstractVector{Int64},
@@ -176,6 +174,7 @@ function behavioral_equilibrium!(
     norm_pool::Float32,
     pun_pool::Float32,
     pop::Population,
+    best_response_fn::Function,
 )
     # Collect parameters
     tolerance = pop.parameters.tolerance
@@ -207,7 +206,7 @@ function behavioral_equilibrium!(
 
         # Calculate the relatively best action of each individual in the group
         for i in eachindex(group)
-            best_action, best_action_sqrt = best_response(
+            best_action, best_action_sqrt = best_response_fn(
                 i,
                 group,
                 action_sqrt_view,

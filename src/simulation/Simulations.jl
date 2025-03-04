@@ -5,6 +5,9 @@ export simulation
 using ..MainSimulation.Populations
 import ..MainSimulation.Populations: Population, truncation_bounds
 
+using ..MainSimulation.BehavEqs
+import ..MainSimulation.BehavEqs: best_response_bipenal, best_response_unipenal
+
 using ..MainSimulation.SocialInteractions
 import ..MainSimulation.SocialInteractions: social_interactions!
 
@@ -68,6 +71,8 @@ function simulation(pop::Population)
     )
 
     truncate_bounds = truncation_bounds(pop.parameters.mutation_variance, 0.99)
+    best_response_fn =
+        pop.parameters.use_bipenal ? best_response_bipenal : best_response_unipenal
 
     ############
     # Sim Loop #
@@ -75,7 +80,7 @@ function simulation(pop::Population)
 
     for t in 1:pop.parameters.generations
         # Execute social interactions and calculate payoffs
-        social_interactions!(pop)
+        social_interactions!(pop, best_response_fn)
 
         # Per-timestep counters, outputs going to disk
         if t % pop.parameters.output_save_tick == 0

@@ -142,8 +142,14 @@ function run_sim_all(
 
     # Save results if needed
     if save_file
+        if base_params.use_bipenal
+            filename = modify_filename(filepath, "bipenal")
+        else
+            filename = modify_filename(filepath, "unipenal")
+        end
+
         for (key, df) in simulation_sweep_stats
-            filename = modify_filename(filepath, key)
+            filename = modify_filename(filename, key)
             save_simulation(df, filename)
         end
     else

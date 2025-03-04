@@ -27,6 +27,8 @@ mutable struct SimulationParameter
     ext_pun_mutation_enabled::Bool
     int_pun_ext_mutation_enabled::Bool
     int_pun_self_mutation_enabled::Bool
+    # Function toggles
+    use_bipenal::Bool
     # File/simulation parameters
     output_save_tick::Int64
 end
@@ -53,6 +55,7 @@ function SimulationParameter(;
     ext_pun_mutation_enabled::Bool = true,
     int_pun_ext_mutation_enabled::Bool = true,
     int_pun_self_mutation_enabled::Bool = true,
+    use_bipenal::Bool = true,
     output_save_tick::Int64 = 10,
 )
     return SimulationParameter(
@@ -77,6 +80,7 @@ function SimulationParameter(;
         ext_pun_mutation_enabled,
         int_pun_ext_mutation_enabled,
         int_pun_self_mutation_enabled,
+        use_bipenal,
         output_save_tick,
     )
 end
@@ -148,6 +152,7 @@ function Base.copy(parameters::SimulationParameter)
             parameters,
             :int_pun_self_mutation_enabled,
         ),
+        use_bipenal = getfield(parameters, :use_bipenal),
         output_save_tick = getfield(parameters, :output_save_tick),
     )
 end
@@ -198,6 +203,7 @@ function Base.copy!(old_params::SimulationParameter, new_params::SimulationParam
         :int_pun_self_mutation_enabled,
         getfield(new_params, :int_pun_self_mutation_enabled),
     )
+    setfield!(old_params, :use_bipenal, getfield(new_params, :use_bipenal))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
     nothing

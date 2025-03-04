@@ -113,6 +113,7 @@ function find_actions_payoffs!(
     action_sqrt::Vector{Float32},
     groups::Matrix{Int64},
     pop::Population,
+    best_response_fn::Function,
 )
     # Iterate over each group to find actions, sqrt of actions, and payoffs
     for i in axes(groups, 1)
@@ -137,6 +138,7 @@ function find_actions_payoffs!(
             norm_pool,
             pun_pool,
             pop,
+            best_response_fn,
         )
         total_payoff!(group, norm_pool, pun_pool, pop)
 
@@ -145,7 +147,7 @@ function find_actions_payoffs!(
     end
 end
 
-function social_interactions!(pop::Population)
+function social_interactions!(pop::Population, best_response_fn::Function)
     # Pre-allocate vectors
     final_actions = Vector{Float32}(undef, pop.parameters.population_size)
     action_sqrt = Vector{Float32}(undef, pop.parameters.population_size)
@@ -162,7 +164,7 @@ function social_interactions!(pop::Population)
     )
 
     # Get actions while updating payoff
-    find_actions_payoffs!(final_actions, action_sqrt, groups, pop)
+    find_actions_payoffs!(final_actions, action_sqrt, groups, pop, best_response_fn)
 
     # Update the population values with the equilibrium actions
     pop.action = final_actions

@@ -31,10 +31,10 @@ base_params = SimulationParameter(
 
 run_sim_all(
     base_params,
-    filepath = "data/rDiffGS/rDiffGS2",
+    filepath = "data/rDiffGS/rDiffGS",
     save_file = true,
     sweep_vars = Dict{Symbol,AbstractVector}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
         :group_size => [5, 50, 500],
-    )
+    ),
 )
