@@ -22,7 +22,7 @@ using Plots, PlotlyJS, DataFrames
 function plot_simulation_data_Plots(
     df::DataFrame,
     x_var::Symbol,
-    xlabel_text::String,
+    xlabel_text::String;
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -108,13 +108,13 @@ plot_sim_Plots(
     df::DataFrame;
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot = false,
-) = plot_simulation_data_Plots(df, :generation, "Generation", z_var, display_plot)
+) = plot_simulation_data_Plots(df, :generation, "Generation", z_var = z_var, display_plot = display_plot)
 
 plot_sweep_r_Plots(
     df::DataFrame;
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot = false,
-) = plot_simulation_data_Plots(df, :relatedness, "Relatedness", z_var, display_plot)
+) = plot_simulation_data_Plots(df, :relatedness, "Relatedness", z_var = z_var, display_plot = display_plot)
 
 function plot_sweep_heatmap_Plots(
     statistics::DataFrame,
