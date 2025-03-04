@@ -1,6 +1,6 @@
 module Statistics
 
-export calculate_statistics, statistics_filtered, statistics_filtered_sweep, statistics_full
+export calculate_statistics, statistics_filtered_processed, statistics_full
 
 using ..MainSimulation.IOHandler
 import ..MainSimulation.IOHandler: generate_filename_suffix
@@ -122,7 +122,7 @@ function statistics_filtered(
     return filtered_data
 end
 
-function statistics_filtered_sweep(
+function statistics_filtered_processed(
     df::DataFrame,
     sweep_vars::Dict{Symbol,AbstractVector},
     output_save_tick::Int,

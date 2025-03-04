@@ -1,6 +1,6 @@
 module RunSimulations
 
-export run_sim_all, run_sim_r, run_sim_rep, run_sim_rip, run_sim_rgs
+export run_simulation
 
 using ..MainSimulation.SimulationParameters
 import ..MainSimulation.SimulationParameters: SimulationParameter, generate_params
@@ -16,7 +16,7 @@ import ..MainSimulation.Simulations: simulation
 
 using ..MainSimulation.Statistics
 import ..MainSimulation.Statistics:
-    calculate_statistics, statistics_filtered_sweep, statistics_full
+    calculate_statistics, statistics_filtered_processed, statistics_full
 
 using Distributed, DataFrames, StatsBase
 
@@ -25,7 +25,7 @@ using Distributed, DataFrames, StatsBase
 # Simulation Replication ########################################################################################################
 ########################
 
-function run_simulation(
+function run_replicate(
     parameters::SimulationParameter,
     param_id::Int64,
     replicate_id::Int64,
@@ -59,7 +59,7 @@ end
 function simulation_replicate(parameters::SimulationParameter, num_replicates::Int64)
     # Use pmap to parallelize the simulation
     results = pmap(1:num_replicates) do i
-        run_simulation(parameters, 1, i)
+        run_replicate(parameters, 1, i)
     end
 
     # Concatenate all the simulation means returned by each worker
@@ -82,7 +82,7 @@ function simulation_replicate(
     results = pmap(tasks) do task
         param_idx, parameters, replicate = task
         # Run simulation and store the result with the parameter set index
-        run_simulation(parameters, param_idx, replicate)
+        run_replicate(parameters, param_idx, replicate)
     end
 
     # Concatenate all results into a single DataFrame
@@ -96,7 +96,7 @@ end
 # SLURM #########################################################################################################################
 ########
 
-function run_sim_all(
+function run_simulation(
     base_params::SimulationParameter;
     num_replicates::Int = 40,
     save_file::Bool = true,
@@ -159,67 +159,5 @@ function run_sim_all(
     # Clear memory
     GC.gc()
 end
-
-run_sim_r(
-    base_params::SimulationParameter,
-    filepath::String;
-    save_generations::Union{Nothing,Vector{<:Real}} = nothing,
-) = run_sim_all(
-    base_params,
-    filepath = filepath,
-    save_file = true,
-    sweep_vars = Dict{Symbol,AbstractVector}(
-        :relatedness => collect(range(0, 1.0, step = 0.01)),
-    ),
-    save_generations = save_generations,
-)
-
-run_sim_rep(
-    base_params::SimulationParameter,
-    filepath::String;
-    save_generations::Union{Nothing,Vector{<:Real}} = nothing,
-) = run_sim_all(
-    base_params,
-    filepath = filepath,
-    save_file = true,
-    sweep_vars = Dict{Symbol,AbstractVector}(
-        :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :ext_pun0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
-    ),
-    save_generations = save_generations,
-)
-
-run_sim_rip(
-    base_params::SimulationParameter,
-    filepath::String;
-    save_generations::Union{Nothing,Vector{<:Real}} = nothing,
-) = run_sim_all(
-    base_params,
-    filepath = filepath,
-    save_file = true,
-    sweep_vars = Dict{Symbol,AbstractVector}(
-        :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
-    ),
-    linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
-    save_generations = save_generations,
-)
-
-run_sim_rgs(
-    base_params::SimulationParameter,
-    filepath::String;
-    save_generations::Union{Nothing,Vector{<:Real}} = nothing,
-) = run_sim_all(
-    base_params,
-    num_replicates = 20,
-    save_file = true,
-    filepath = filepath,
-    sweep_vars = Dict{Symbol,AbstractVector}(
-        :relatedness => collect(range(0, 1.0, step = 0.1)),
-        :group_size =>
-            [collect(range(5, 50, step = 5))..., collect(range(50, 500, step = 50))...],
-    ),
-    save_generations = save_generations,
-)
 
 end # module RunSimulations

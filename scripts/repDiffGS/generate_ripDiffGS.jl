@@ -29,7 +29,7 @@ base_params_rdgs_base = SimulationParameter(
     output_save_tick = 10,
 )
 
-run_sim_all(
+run_simulation(
     base_params,
     filepath = "data/repDiffGS/repDiffGS",
     save_file = true,

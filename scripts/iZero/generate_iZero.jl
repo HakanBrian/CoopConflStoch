@@ -29,4 +29,11 @@ base_params_iz = SimulationParameter(
     output_save_tick = 10,
 )
 
-run_sim_r(base_params_iz, "data/iZero/iZero")
+run_simulation(
+    base_params_iz,
+    save_file = true,
+    filepath = "data/iZero/iZero",
+    sweep_vars = Dict{Symbol,AbstractVector}(
+        :relatedness => collect(range(0, 1.0, step = 0.01)),
+    ),
+)

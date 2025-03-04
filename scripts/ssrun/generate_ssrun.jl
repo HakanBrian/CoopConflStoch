@@ -30,7 +30,7 @@ base_param = SimulationParameter(
     output_save_tick = 20,
 )
 
-run_sim_all(
+run_simulation(
     base_param,
     filename = "data/ssrun/ssrun2",
     sweep_full = true,
