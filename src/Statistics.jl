@@ -2,6 +2,9 @@ module Statistics
 
 export calculate_statistics, statistics_filtered_processed, statistics_full
 
+using ..MainSimulation.SimulationParameters
+import ..MainSimulation.SimulationParameters: get_param_combinations
+
 using ..MainSimulation.IOHandler
 import ..MainSimulation.IOHandler: generate_filename_suffix
 
@@ -33,7 +36,7 @@ end
 
 function statistics_filtered(
     df::DataFrame,
-    sweep_vars::Dict{Symbol,AbstractVector},
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
@@ -63,14 +66,8 @@ function statistics_filtered(
     # Initialize a dictionary to store results
     filtered_data = Dict{String,DataFrame}()
 
-    # Sort the keys alphabetically
-    sorted_keys = sort(collect(keys(sweep_vars)))
-
-    # Generate all parameter combinations in a vector of dictionaries
-    param_combinations = vec([
-        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
-        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
-    ])
+    # Get all parameter combinations
+    param_combinations = get_param_combinations(sweep_vars)
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params
@@ -124,7 +121,7 @@ end
 
 function statistics_filtered_processed(
     df::DataFrame,
-    sweep_vars::Dict{Symbol,AbstractVector},
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
     output_save_tick::Int,
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
@@ -132,19 +129,14 @@ function statistics_filtered_processed(
     statistics_data =
         statistics_filtered(df, sweep_vars, output_save_tick, save_generations)
 
-    # Sort the keys alphabetically
+    # Generate all parameter combinations
     sorted_keys = sort(collect(keys(sweep_vars)))
+    param_combinations = get_param_combinations(sweep_vars)
 
-    # Generate all parameter combinations in a vector of dictionaries
-    parameters = vec([
-        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
-        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
-    ])
-
-    # Convert `parameters` into a DataFrame
+    # Convert `param_combinations` into a DataFrame
     param_df = DataFrame()
     for key in sorted_keys
-        param_df[!, key] = getindex.(parameters, key)
+        param_df[!, key] = getindex.(param_combinations, key)
     end
 
     # Process each DataFrame in the statistics dictionary
@@ -160,18 +152,15 @@ function statistics_filtered_processed(
     return statistics_data
 end
 
-function statistics_full(df::DataFrame, sweep_vars::Dict{Symbol,AbstractVector})
+function statistics_full(df::DataFrame, sweep_vars::Dict{Symbol,Vector{<:Real}})
     # Determine the number of parameters
     num_params = maximum(df.param_id)
 
     # Initialize dictionary to store DataFrames for each parameter combination
     independent_data = Dict{String,DataFrame}()
 
-    # Generate parameter combinations
-    param_combinations = [
-        Dict(k => v for (k, v) in zip(keys(sweep_vars), values)) for
-        values in Iterators.product(values(sweep_vars)...)
-    ]
+    # Generate all parameter combinations
+    param_combinations = get_param_combinations(sweep_vars)
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params

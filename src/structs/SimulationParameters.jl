@@ -1,6 +1,6 @@
 module SimulationParameters
 
-export SimulationParameter, update_params, generate_params
+export SimulationParameter, update_params, generate_params, get_param_combinations
 
 mutable struct SimulationParameter
     # Game parameters
@@ -97,7 +97,7 @@ end
 
 function generate_params(
     base_params::SimulationParameter,
-    sweep_vars::Dict{Symbol,<:AbstractVector},
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
     linked_params = Dict{Symbol,Symbol}(),
 )
     # Filter out linked parameters whose source is NOT in `sweep_vars`
@@ -121,6 +121,19 @@ function generate_params(
     ])
 
     return parameters
+end
+
+function get_param_combinations(sweep_vars::Dict{Symbol,Vector{<:Real}})
+    # Sort the keys alphabetically
+    sorted_keys = sort(collect(keys(sweep_vars)))
+
+    # Generate all parameter combinations in a vector of dictionaries
+    param_combinations = vec([
+        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
+        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+    ])
+
+    return param_combinations
 end
 
 function Base.copy(parameters::SimulationParameter)

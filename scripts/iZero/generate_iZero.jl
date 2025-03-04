@@ -7,7 +7,7 @@ using Distributed
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
-@everywhere import .MainSimulation: SimulationParameter, run_sim_r
+@everywhere import .MainSimulation: SimulationParameter, run_simulation
 
 
 ###############################
@@ -33,7 +33,7 @@ run_simulation(
     base_params_iz,
     save_file = true,
     filepath = "data/iZero/iZero",
-    sweep_vars = Dict{Symbol,AbstractVector}(
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
     ),
 )

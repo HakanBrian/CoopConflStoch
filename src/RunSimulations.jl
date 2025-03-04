@@ -102,7 +102,7 @@ function run_simulation(
     save_file::Bool = true,
     filepath::Union{String,Nothing} = nothing,
     sweep_full::Bool = false,
-    sweep_vars::Union{Dict{Symbol,AbstractVector},Nothing} = nothing,
+    sweep_vars::Union{Dict{Symbol,Vector{<:Real}},Nothing} = nothing,
     linked_params::Dict{Symbol,Symbol} = Dict{Symbol,Symbol}(),
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
@@ -128,7 +128,7 @@ function run_simulation(
 
     # Compute statistics dynamically
     simulation_sweep_stats = if is_sweep && !sweep_full
-        statistics_filtered_sweep(
+        statistics_filtered_processed(
             simulation_sweep,
             sweep_vars,
             base_params.output_save_tick,
@@ -143,14 +143,14 @@ function run_simulation(
     # Save results if needed
     if save_file
         if base_params.use_bipenal
-            filename = modify_filename(filepath, "bipenal")
+            filename_pun = modify_filename(filepath, "bipenal")
         else
-            filename = modify_filename(filepath, "unipenal")
+            filename_pun = modify_filename(filepath, "unipenal")
         end
 
         for (key, df) in simulation_sweep_stats
-            filename = modify_filename(filename, key)
-            save_simulation(df, filename)
+            filename_full = modify_filename(filename_pun, key)
+            save_simulation(df, filename_full)
         end
     else
         return simulation_sweep_stats
