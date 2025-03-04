@@ -2,10 +2,12 @@ using Distributed
 
 
 ###############################
-# Game
+# Load MainSimulation
 ###############################
 
-@everywhere include("../../src/processing.jl");
+@everywhere include(joinpath(pwd(), "src", "Main.jl"))
+@everywhere using .MainSimulation
+@everywhere import .MainSimulation: SimulationParameter, run_simulation
 
 
 ###############################
@@ -27,10 +29,44 @@ base_params = SimulationParameter(
     output_save_tick = 10,
 )
 
-run_sim_r(base_params, "data/default/r2.csv")
+run_simulation(
+    base_params,
+    save_file = true,
+    filepath = "data/default/default.csv",
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.01)),
+    ),
+)
 
-run_sim_rep(base_params, "data/default/rep2.csv")
+run_simulation(
+    base_params,
+    save_file = true,
+    filepath = "data/default/default.csv",
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.05)),
+        :ext_pun0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
+    ),
+)
 
-run_sim_rip(base_params, "data/default/rep2.csv")
+run_simulation(
+    base_params,
+    save_file = true,
+    filepath = "data/default/default.csv",
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.05)),
+        :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
+    ),
+    linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
+)
 
-run_sim_rgs(base_params, "data/default/rgs2.csv")
+run_simulation(
+    base_params,
+    num_replicates = 20,
+    save_file = true,
+    filepath = "data/default/default.csv",
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.1)),
+        :group_size =>
+            [collect(range(5, 50, step = 5))..., collect(range(50, 500, step = 50))...],
+    ),
+)
