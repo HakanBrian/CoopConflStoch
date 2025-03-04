@@ -9,7 +9,8 @@ using ..MainSimulation.Populations
 import ..MainSimulation.Populations: Population, population_construction
 
 using ..MainSimulation.IOHandler
-import ..MainSimulation.IOHandler: save_simulation, generate_filename_suffix, modify_filename
+import ..MainSimulation.IOHandler:
+    save_simulation, generate_filename_suffix, modify_filename
 
 using ..MainSimulation.Simulations
 import ..MainSimulation.Simulations: simulation

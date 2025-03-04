@@ -7,8 +7,7 @@ using Distributed
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
-@everywhere import .MainSimulation:
-    SimulationParameter, run_simulation
+@everywhere import .MainSimulation: SimulationParameter, run_simulation
 
 
 ###############################

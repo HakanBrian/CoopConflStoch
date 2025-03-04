@@ -3,7 +3,8 @@ module Statistics
 export statistics_processed, statistics_filtered_processed, statistics_full
 
 using ..MainSimulation.SimulationParameters
-import ..MainSimulation.SimulationParameters: SimulationParameter, diff_from_default, get_param_combinations
+import ..MainSimulation.SimulationParameters:
+    SimulationParameter, diff_from_default, get_param_combinations
 
 using ..MainSimulation.IOHandler
 import ..MainSimulation.IOHandler: generate_filename_suffix

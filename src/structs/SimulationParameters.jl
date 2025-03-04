@@ -1,6 +1,7 @@
 module SimulationParameters
 
-export SimulationParameter, diff_from_default, update_params, generate_params, get_param_combinations
+export SimulationParameter,
+    diff_from_default, update_params, generate_params, get_param_combinations
 
 mutable struct SimulationParameter
     # Game parameters
@@ -82,11 +83,23 @@ function SimulationParameter(;
     )
 end
 
-function diff_from_default(instance::SimulationParameter; ignore_fields::Set{Symbol} = Set([:norm_mutation_enabled, :ext_pun_mutation_enabled, :int_pun_ext_mutation_enabled, :use_bipenal, :output_save_tick, :generations, :population_size]))
+function diff_from_default(
+    instance::SimulationParameter;
+    ignore_fields::Set{Symbol} = Set([
+        :norm_mutation_enabled,
+        :ext_pun_mutation_enabled,
+        :int_pun_ext_mutation_enabled,
+        :use_bipenal,
+        :output_save_tick,
+        :generations,
+        :population_size,
+    ]),
+)
     default_instance = SimulationParameter()
-    return Dict(f => getfield(instance, f) 
-                for f in fieldnames(SimulationParameter) 
-                if f ∉ ignore_fields && getfield(instance, f) != getfield(default_instance, f))
+    return Dict(
+        f => getfield(instance, f) for f in fieldnames(SimulationParameter) if
+        f ∉ ignore_fields && getfield(instance, f) != getfield(default_instance, f)
+    )
 end
 
 function update_params(base_params::SimulationParameter; kwargs...)
