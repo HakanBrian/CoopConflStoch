@@ -63,7 +63,7 @@ function read_simulation(filepath::String)
 end
 
 function generate_filename_suffix(
-    param_dict::Dict{Symbol,<:Number},
+    param_dict::Dict{Symbol,Real},
     condition::String = "Filtered";
     time_point::Union{Nothing,Int} = nothing,
 )

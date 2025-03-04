@@ -9,14 +9,14 @@ using ..MainSimulation.Populations
 import ..MainSimulation.Populations: Population, population_construction
 
 using ..MainSimulation.IOHandler
-import ..MainSimulation.IOHandler: save_simulation, modify_filename
+import ..MainSimulation.IOHandler: save_simulation, generate_filename_suffix, modify_filename
 
 using ..MainSimulation.Simulations
 import ..MainSimulation.Simulations: simulation
 
 using ..MainSimulation.Statistics
 import ..MainSimulation.Statistics:
-    calculate_statistics, statistics_filtered_processed, statistics_full
+    statistics_processed, statistics_filtered_processed, statistics_full
 
 using Distributed, DataFrames, StatsBase
 
@@ -119,25 +119,25 @@ function run_simulation(
         # Generate parameter sweep
         parameters = generate_params(base_params, sweep_vars, linked_params)
     else
-        # Wrap base_params in an array to maintain consistency
-        parameters = [base_params]
+        # Wrap base_params to maintain consistency
+        parameters = base_params
     end
 
     # Run simulation and calculate statistics
-    simulation_sweep = simulation_replicate(parameters, num_replicates)
+    simulation_data = simulation_replicate(parameters, num_replicates)
 
     # Compute statistics dynamically
     simulation_sweep_stats = if is_sweep && !sweep_full
         statistics_filtered_processed(
-            simulation_sweep,
+            simulation_data,
             sweep_vars,
             base_params.output_save_tick,
             save_generations,
         )
     elseif is_sweep && sweep_full
-        statistics_full(simulation_sweep, sweep_vars)
+        statistics_full(simulation_data, sweep_vars)
     else
-        calculate_statistics(simulation_sweep)
+        statistics_processed(simulation_data, parameters)
     end
 
     # Save results if needed
