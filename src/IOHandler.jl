@@ -63,10 +63,10 @@ function read_simulation(filepath::String)
 end
 
 function generate_filename_suffix(
-    param_dict::Dict{Symbol,Real},
+    param_dict::Dict{Symbol, T},
     condition::String = "Filtered";
     time_point::Union{Nothing,Int} = nothing,
-)
+) where T <:Real
     # Lexicographic sorting
     sorted_keys = sort(collect(keys(param_dict)))
 
