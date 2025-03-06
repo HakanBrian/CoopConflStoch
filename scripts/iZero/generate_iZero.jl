@@ -5,7 +5,9 @@ using Distributed
 # Load MainSimulation
 ###############################
 
-@everywhere include("../../src/Main.jl")
+# @everywhere cd("")  # Set dir to base
+
+@everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
 @everywhere import .MainSimulation: SimulationParameter, run_simulation
 
