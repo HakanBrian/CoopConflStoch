@@ -1,6 +1,7 @@
 module SimulationParameters
 
-export SimulationParameter, update_params
+export SimulationParameter,
+    diff_from_default, update_params, generate_params, get_param_combinations
 
 mutable struct SimulationParameter
     # Game parameters
@@ -12,13 +13,12 @@ mutable struct SimulationParameter
     # Population-genetic parameters
     generations::Int64
     max_time_steps::Int64  # Behavioral equilibrium params
-    tolerance::Float64
+    tolerance::Float64  # Behavioral equilibrium params
     population_size::Int64
     group_size::Int64
     synergy::Float32
     relatedness::Float64
-    fitness_scaling_factor_a::Float32
-    fitness_scaling_factor_b::Float32
+    fitness_scaling_factor::Float64
     mutation_rate::Float64
     mutation_variance::Float64
     trait_variance::Float64
@@ -27,6 +27,8 @@ mutable struct SimulationParameter
     ext_pun_mutation_enabled::Bool
     int_pun_ext_mutation_enabled::Bool
     int_pun_self_mutation_enabled::Bool
+    # Function toggles
+    use_bipenal::Bool
     # File/simulation parameters
     output_save_tick::Int64
 end
@@ -44,8 +46,7 @@ function SimulationParameter(;
     group_size::Int64 = 10,
     synergy::Float32 = 0.0f0,
     relatedness::Float64 = 0.5,
-    fitness_scaling_factor_a::Float32 = 50.0f0,
-    fitness_scaling_factor_b::Float32 = 68.0f0,
+    fitness_scaling_factor::Float64 = 10.0,
     mutation_rate::Float64 = 0.05,
     mutation_variance::Float64 = 0.005,
     trait_variance::Float64 = 0.0,
@@ -53,15 +54,51 @@ function SimulationParameter(;
     ext_pun_mutation_enabled::Bool = true,
     int_pun_ext_mutation_enabled::Bool = true,
     int_pun_self_mutation_enabled::Bool = true,
+    use_bipenal::Bool = true,
     output_save_tick::Int64 = 10,
 )
     return SimulationParameter(
-        action0, norm0, ext_pun0, int_pun_ext0, int_pun_self0,
-        generations, max_time_steps, tolerance, population_size, group_size,
-        synergy, relatedness, fitness_scaling_factor_a, fitness_scaling_factor_b,
-        mutation_rate, mutation_variance, trait_variance,
-        norm_mutation_enabled, ext_pun_mutation_enabled, int_pun_ext_mutation_enabled, int_pun_self_mutation_enabled,
-        output_save_tick
+        action0,
+        norm0,
+        ext_pun0,
+        int_pun_ext0,
+        int_pun_self0,
+        generations,
+        max_time_steps,
+        tolerance,
+        population_size,
+        group_size,
+        synergy,
+        relatedness,
+        fitness_scaling_factor,
+        mutation_rate,
+        mutation_variance,
+        trait_variance,
+        norm_mutation_enabled,
+        ext_pun_mutation_enabled,
+        int_pun_ext_mutation_enabled,
+        int_pun_self_mutation_enabled,
+        use_bipenal,
+        output_save_tick,
+    )
+end
+
+function diff_from_default(
+    instance::SimulationParameter;
+    ignore_fields::Set{Symbol} = Set([
+        :norm_mutation_enabled,
+        :ext_pun_mutation_enabled,
+        :int_pun_ext_mutation_enabled,
+        :use_bipenal,
+        :output_save_tick,
+        :generations,
+        :population_size,
+    ]),
+)
+    default_instance = SimulationParameter()
+    return Dict(
+        f => getfield(instance, f) for f in fieldnames(SimulationParameter) if
+        f ∉ ignore_fields && getfield(instance, f) != getfield(default_instance, f)
     )
 end
 
@@ -78,6 +115,47 @@ function update_params(base_params::SimulationParameter; kwargs...)
     )
 end
 
+function generate_params(
+    base_params::SimulationParameter,
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
+    linked_params = Dict{Symbol,Symbol}(),
+)
+    # Filter out linked parameters whose source is NOT in `sweep_vars`
+    valid_linked_parameters =
+        Dict(k => v for (k, v) in linked_params if v in keys(sweep_vars))
+
+    # Sort primary keys alphabetically (excluding linked parameters)
+    primary_keys = sort(collect(setdiff(keys(sweep_vars), keys(valid_linked_parameters))))
+
+    # Generate parameter list with ordered combinations
+    parameters = vec([
+        update_params(
+            base_params;
+            NamedTuple{Tuple(primary_keys)}(values)...,
+            Dict(
+                k => values[findfirst(==(v), primary_keys)] for
+                (k, v) in valid_linked_parameters if
+                findfirst(==(v), primary_keys) !== nothing
+            )...,
+        ) for values in Iterators.product((sweep_vars[k] for k in primary_keys)...)
+    ])
+
+    return parameters
+end
+
+function get_param_combinations(sweep_vars::Dict{Symbol,Vector{<:Real}})
+    # Sort the keys alphabetically
+    sorted_keys = sort(collect(keys(sweep_vars)))
+
+    # Generate all parameter combinations in a vector of dictionaries
+    param_combinations = vec([
+        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
+        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
+    ])
+
+    return param_combinations
+end
+
 function Base.copy(parameters::SimulationParameter)
     return SimulationParameters(
         action0 = getfield(parameters, :action0),
@@ -92,8 +170,7 @@ function Base.copy(parameters::SimulationParameter)
         group_size = getfield(parameters, :group_size),
         synergy = getfield(parameters, :synergy),
         relatedness = getfield(parameters, :relatedness),
-        fitness_scaling_factor_a = getfield(parameters, :fitness_scaling_factor_a),
-        fitness_scaling_factor_b = getfield(parameters, :fitness_scaling_factor_b),
+        fitness_scaling_factor = getfield(parameters, :fitness_scaling_factor),
         mutation_rate = getfield(parameters, :mutation_rate),
         mutation_variance = getfield(parameters, :mutation_variance),
         trait_variance = getfield(parameters, :trait_variance),
@@ -104,6 +181,7 @@ function Base.copy(parameters::SimulationParameter)
             parameters,
             :int_pun_self_mutation_enabled,
         ),
+        use_bipenal = getfield(parameters, :use_bipenal),
         output_save_tick = getfield(parameters, :output_save_tick),
     )
 end
@@ -123,13 +201,8 @@ function Base.copy!(old_params::SimulationParameter, new_params::SimulationParam
     setfield!(old_params, :relatedness, getfield(new_params, :relatedness))
     setfield!(
         old_params,
-        :fitness_scaling_factor_a,
-        getfield(new_params, :fitness_scaling_factor_a),
-    )
-    setfield!(
-        old_params,
-        :fitness_scaling_factor_b,
-        getfield(new_params, :fitness_scaling_factor_b),
+        :fitness_scaling_factor,
+        getfield(new_params, :fitness_scaling_factor),
     )
     setfield!(old_params, :mutation_rate, getfield(new_params, :mutation_rate))
     setfield!(old_params, :mutation_variance, getfield(new_params, :mutation_variance))
@@ -154,6 +227,7 @@ function Base.copy!(old_params::SimulationParameter, new_params::SimulationParam
         :int_pun_self_mutation_enabled,
         getfield(new_params, :int_pun_self_mutation_enabled),
     )
+    setfield!(old_params, :use_bipenal, getfield(new_params, :use_bipenal))
     setfield!(old_params, :output_save_tick, getfield(new_params, :output_save_tick))
 
     nothing
