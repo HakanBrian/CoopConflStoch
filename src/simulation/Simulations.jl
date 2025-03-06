@@ -71,8 +71,14 @@ function simulation(pop::Population)
     )
 
     truncate_bounds = truncation_bounds(pop.parameters.mutation_variance, 0.99)
-    best_response_fn =
-        pop.parameters.use_bipenal ? best_response_bipenal : best_response_unipenal
+
+    if pop.parameters.use_bipenal
+        best_response_fn = best_response_bipenal
+    else
+        best_response_fn = best_response_unipenal
+        pop.parameters.int_pun_self0 = 0.0f0
+        pop.parameters.int_pun_self_mutation_enabled = false
+    end
 
     ############
     # Sim Loop #
