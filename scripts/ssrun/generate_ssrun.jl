@@ -5,7 +5,7 @@ using Distributed
 # Load MainSimulation
 ###############################
 
-@everywhere include(joinpath(pwd(), "src", "Main.jl"))
+@everywhere include("../../src/Main.jl")
 @everywhere using .MainSimulation
 @everywhere import .MainSimulation: SimulationParameter, run_simulation
 
@@ -32,7 +32,7 @@ base_param = SimulationParameter(
 
 run_simulation(
     base_param,
-    filepath = "data/ssrun/ssrun2",
+    filepath = "data/ssrun/ssrun",
     sweep_full = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :norm0 => Float32[0.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 7.0],
