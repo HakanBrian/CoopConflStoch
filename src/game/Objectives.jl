@@ -1,6 +1,6 @@
 module Objectives
 
-export objective, payoff, fitness, fitness_exp, fitness_exp_norm
+export objective, payoff
 
 using ..MainSimulation.Utilities
 import ..MainSimulation.Utilities:
