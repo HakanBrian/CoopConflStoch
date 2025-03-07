@@ -2,6 +2,7 @@ module IOHandler
 
 export save_simulation,
     read_simulation,
+    read_matching_simulations,
     generate_filename_suffix,
     modify_filename,
     log_metadata,
@@ -11,7 +12,7 @@ export save_simulation,
 using ..MainSimulation.SimulationParameters
 import ..MainSimulation.SimulationParameters: SimulationParameter
 
-using CSV, JSON3, Dates, DataFrames
+using CSV, JSON3, Dates, DataFrames, Glob
 
 function save_simulation(simulation::DataFrame, filepath::String)
     # Ensure the filepath has the .csv extension
@@ -60,6 +61,47 @@ function read_simulation(filepath::String)
         println("File successfully loaded from: $filepath")
         return simulation
     end
+end
+
+function read_matching_simulations(filepath::String, pattern::String)
+    # Extract directory path
+    dir_path = dirname(filepath)
+
+    # Ensure the directory exists
+    if !isdir(dir_path)
+        error("Error: Directory '$dir_path' does not exist. Please create it before saving.")
+    end
+
+    # Find matching files
+    files = glob(pattern, dir_path)
+
+    # Check if any files match
+    if isempty(files)
+        error("Error: No matching files found in '$dir_path' using pattern '$pattern'.")
+    end
+
+    println("Loading files from: $dir_path")
+
+    # Convert the glob pattern into a regex
+    regex_pattern = replace(pattern, "*" => "(.*?)")  # Convert wildcard `*` into a capture group
+    regex_pattern = Regex("^" * regex_pattern * "\$") # Ensure it matches the whole filename
+
+    # Load matching files into a dictionary with extracted keys
+    simulations = Dict{String,DataFrame}()
+
+    for file in files
+        filename = splitdir(file)[2]  # Get filename only
+        match_result = match(regex_pattern, filename)
+
+        if match_result !== nothing
+            key = match_result.captures[1]  # Extract the variable part from the match
+            simulations[key] = CSV.read(file, DataFrame)
+        else
+            error("Could not extract a key from filename '$filename' using pattern '$pattern'")
+        end
+    end
+
+    return simulations
 end
 
 function generate_filename_suffix(
