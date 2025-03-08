@@ -128,7 +128,6 @@ function generate_params(
     linked_groups = Dict()
     for (dependent, independent) in valid_linked_parameters
         if independent in keys(sweep_vars) && dependent in keys(sweep_vars)
-            # Ensure they are swept together as pairs
             linked_groups[independent] = dependent
         end
     end
@@ -155,8 +154,13 @@ function generate_params(
                 map(x -> x isa Tuple ? x[1] : x, values)
             )...,
             Dict(
-                linked_groups[k] => (values[findfirst(==(k), primary_keys)][2])
-                for k in keys(linked_groups) if findfirst(==(k), primary_keys) !== nothing
+                dep => (values[findfirst(==(indep), primary_keys)][2])
+                for (indep, dep) in linked_groups if findfirst(==(indep), primary_keys) !== nothing
+            )...,
+            Dict(
+                dep => values[findfirst(==(linked_params[dep]), primary_keys)]
+                for dep in setdiff(keys(linked_params), keys(linked_groups))
+                if findfirst(==(linked_params[dep]), primary_keys) !== nothing
             )...,
         ) for values in Iterators.product(sweep_iterables...)
     ])
