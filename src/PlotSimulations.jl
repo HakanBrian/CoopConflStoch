@@ -1,10 +1,12 @@
 module PlotSimulations
 
 export plot_sim_Plots,
-    plot_sweep_r_Plots,
+    plot_simulation_Plots,
+    plot_multiple_simulations_Plots,
     plot_sweep_rep_Plots,
     plot_sweep_rip_Plots,
     plot_sweep_rgs_Plots,
+    extract_plot_lists,
     compare_plot_lists,
     plot_sim_Plotly,
     plot_sweep_r_Plotly,
@@ -19,12 +21,13 @@ using Plots, PlotlyJS, DataFrames
 # Plots #########################################################################################################################
 ########
 
-function plot_simulation_data_Plots(
+function plot_simulation_Plots(
     df::DataFrame,
     x_var::Symbol,
     xlabel_text::String;
+    dataset_name::String = "Simulation Data",  # New argument for the dataset name
     z_var::Union{Symbol,Nothing} = nothing,
-    display_plot::Bool = false,
+    display_plot::Bool = false
 )
     # Define color palette for each trait type
     colors = Dict(
@@ -53,20 +56,22 @@ function plot_simulation_data_Plots(
     # Determine unique z values (or use a single group if z_var is nothing)
     z_values = z_var !== nothing ? sort(unique(df[!, z_var])) : [nothing]
 
-    # Dictionary to store plots for each z_val
-    plots_by_z = Dict{Any,Vector{Plots.Plot}}()
+    # Storage for plots
+    plots_list = []
 
     for z_val in z_values
         # Filter dataframe if z_var is provided
         df_subset = z_var !== nothing ? filter(row -> row[z_var] == z_val, df) : df
 
-        # Store plots for this z_value
-        plots_array = []
-
         for plot_var in plot_var_set
-            # Initialize plot
-            title_text = z_var !== nothing ? "$z_var = $z_val" : "Simulation Data"
-            p = Plots.plot(title = title_text, legend = true, fmt = :pdf)
+            # Construct the title with dataset name
+            title_text = if z_var !== nothing
+                "$dataset_name | $z_var = $z_val"
+            else
+                "$dataset_name"
+            end
+
+            p = Plots.plot(title=title_text, legend=true, fmt=:pdf)
 
             # Create mean and ribbons for each trait
             for trait in plot_var
@@ -77,56 +82,54 @@ function plot_simulation_data_Plots(
                     p,
                     df_subset[!, x_var],
                     df_subset[!, mean_col],
-                    ribbon = (df_subset[!, std_col], df_subset[!, std_col]),
-                    label = trait,
-                    color = colors[trait*" mean"],
+                    ribbon=(df_subset[!, std_col], df_subset[!, std_col]),
+                    label=trait,
+                    color=colors[trait*" mean"],
                 )
             end
 
             xlabel!(p, xlabel_text)
             ylabel!(p, "Traits")
 
-            push!(plots_array, p)
+            push!(plots_list, p)
 
             if display_plot
                 display(p)
             end
         end
-
-        # Store plots for this z_value
-        plots_by_z[z_val] = plots_array
     end
 
-    # Return a sorted vector of vectors of plots
-    sorted_keys = sort(collect(keys(plots_by_z)))  # Sort keys numerically
-    vector_plots = [plots_by_z[k] for k in sorted_keys]  # Extract in sorted order
-
-    return vector_plots
+    # If z_var is nothing, return a flat vector of Plots.Plot instead of a nested vector
+    return z_var === nothing ? plots_list : collect(Iterators.partition(plots_list, length(plot_var_set)))
 end
 
-plot_sim_Plots(
-    df::DataFrame;
+function plot_multiple_simulations_Plots(
+    dfs::Dict{String,DataFrame},
+    x_var::Symbol,
+    xlabel_text::String;
     z_var::Union{Symbol,Nothing} = nothing,
-    display_plot = false,
-) = plot_simulation_data_Plots(
-    df,
-    :generation,
-    "Generation",
-    z_var = z_var,
-    display_plot = display_plot,
+    display_plot::Bool = false
 )
+    # Dictionary to store results
+    z_var === nothing ? results = Dict{String,Vector{Plots.Plot}}() : results = Dict{String, Vector{Vector{Plots.Plot}}}()
 
-plot_sweep_r_Plots(
-    df::DataFrame;
-    z_var::Union{Symbol,Nothing} = nothing,
-    display_plot = false,
-) = plot_simulation_data_Plots(
-    df,
-    :relatedness,
-    "Relatedness",
-    z_var = z_var,
-    display_plot = display_plot,
-)
+    for (key, df) in dfs
+        println("Processing dataset: ", key)
+
+        # Pass dataset name (string key) to plot_simulation_data_Plots
+        plots = plot_simulation_Plots(
+            df, x_var, xlabel_text;
+            dataset_name=key,  # Key is now part of the plot title
+            z_var=z_var,
+            display_plot=display_plot
+        )
+
+        # Store results: a flat vector if z_var is nothing, else a nested vector
+        results[key] = plots
+    end
+
+    return results
+end
 
 function plot_sweep_heatmap_Plots(
     statistics::DataFrame,
@@ -256,6 +259,20 @@ end
 # Compare Plots #################################################################################################################
 ################
 
+function extract_plot_lists(plots_dict::Dict{String, T}) where T <: Any
+    first_value = first(values(plots_dict))  # Check structure of first dictionary entry
+
+    if first_value isa Vector{Plots.Plot}
+        # Collect all Vector{Plots.Plot} entries into a single Vector{Vector{Plots.Plot}}
+        return collect(values(plots_dict))
+    elseif first_value isa Vector{Vector{Plots.Plot}}
+        # Directly return the dictionary values as Vector{Vector{Plots.Plot}}, avoiding extra nesting
+        return collect(values(plots_dict)...)
+    else
+        throw(ArgumentError("Unexpected data structure in plots_dict"))
+    end
+end
+
 function compare_plot_lists(plot_lists::Vector{Vector{Plots.Plot}})
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
@@ -301,7 +318,7 @@ end
 # PlotlyJS ######################################################################################################################
 ###########
 
-function plot_simulation_data_Plotly(
+function plot_simulation_Plotly(
     df::DataFrame,
     x_axis_variable::Symbol,
     xlabel_text::String,
@@ -410,10 +427,10 @@ function plot_simulation_data_Plotly(
 end
 
 plot_sim_Plotly(df::DataFrame) =
-    plot_simulation_data_Plotly(df, :generation, "Generation", "Mean of Replicates")
+    plot_simulation_Plotly(df, :generation, "Generation", "Mean of Replicates")
 
 plot_sweep_r_Plotly(df::DataFrame) =
-    plot_simulation_data_Plotly(df, :relatedness, "Relatedness", "Mean of Replicates")
+    plot_simulation_Plotly(df, :relatedness, "Relatedness", "Mean of Replicates")
 
 function plot_sweep_heatmap_Plotly(
     statistics::DataFrame,
