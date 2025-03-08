@@ -152,7 +152,15 @@ function statistics_filtered_processed(
     if :ext_pun0 ∈ sorted_keys
         append!(cols_to_remove, [:ext_pun_mean_mean, :ext_pun_mean_std])
     elseif :int_pun_ext0 ∈ sorted_keys
-        append!(cols_to_remove, [:int_pun_ext_mean_mean, :int_pun_ext_mean_std, :int_pun_self_mean_mean, :int_pun_self_mean_std])
+        append!(
+            cols_to_remove,
+            [
+                :int_pun_ext_mean_mean,
+                :int_pun_ext_mean_std,
+                :int_pun_self_mean_mean,
+                :int_pun_self_mean_std,
+            ],
+        )
     end
 
     # Process each DataFrame in the statistics dictionary
