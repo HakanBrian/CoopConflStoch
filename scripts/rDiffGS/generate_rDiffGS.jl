@@ -9,7 +9,7 @@ using Distributed
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
-@everywhere import .MainSimulation: SimulationParameter, run_simulation
+@everywhere import .MainSimulation: SimulationParameter, update_params, run_simulation
 
 
 ###############################
@@ -30,6 +30,19 @@ base_params = SimulationParameter(
     int_pun_self_mutation_enabled = true,
     output_save_tick = 10,
 )
+
+run_simulation(
+    base_params,
+    filepath = "data/rDiffGS/rDiffGS",
+    save_file = true,
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.01)),
+        :group_size => [5, 50, 500],
+    ),
+)
+
+
+unipenal_params_rdgs = update_params(base_params_rdgs, :use_bipenal = false)
 
 run_simulation(
     base_params,

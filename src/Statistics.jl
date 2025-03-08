@@ -147,10 +147,23 @@ function statistics_filtered_processed(
         param_df[!, key] = getindex.(param_combinations, key)
     end
 
+    # Determine columns to remove
+    cols_to_remove = Symbol[]
+    if :ext_pun0 ∈ sorted_keys
+        append!(cols_to_remove, [:ext_pun_mean_mean, :ext_pun_mean_std])
+    elseif :int_pun_ext0 ∈ sorted_keys
+        append!(cols_to_remove, [:int_pun_ext_mean_mean, :int_pun_ext_mean_std, :int_pun_self_mean_mean, :int_pun_self_mean_std])
+    end
+
     # Process each DataFrame in the statistics dictionary
     for (key, df) in statistics_data
         # Remove `generation` column
         select!(df, Not(:generation))
+
+        # Remove redundant columns only if they exist
+        if !isempty(cols_to_remove)
+            select!(df, Not(cols_to_remove))
+        end
 
         # Add parameter columns **before existing columns**
         df = hcat(param_df, df)  # Concatenates param_df with df
