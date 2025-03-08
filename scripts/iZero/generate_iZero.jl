@@ -9,7 +9,7 @@ using Distributed
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
-@everywhere import .MainSimulation: SimulationParameter, run_simulation
+@everywhere import .MainSimulation: SimulationParameter, update_params, run_simulation
 
 
 ###############################
@@ -33,6 +33,18 @@ base_params_iz = SimulationParameter(
 
 run_simulation(
     base_params_iz,
+    save_file = true,
+    filepath = "data/iZero/iZero",
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.01)),
+    ),
+)
+
+
+unipenal_params_iz = update_params(base_params_iz, :use_bipenal = false)
+
+run_simulation(
+    unipenal_params_iz,
     save_file = true,
     filepath = "data/iZero/iZero",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
