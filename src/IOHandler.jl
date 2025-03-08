@@ -69,7 +69,9 @@ function read_matching_simulations(filepath::String, pattern::String)
 
     # Ensure the directory exists
     if !isdir(dir_path)
-        error("Error: Directory '$dir_path' does not exist. Please create it before saving.")
+        error(
+            "Error: Directory '$dir_path' does not exist. Please create it before saving.",
+        )
     end
 
     # Find matching files
@@ -97,7 +99,9 @@ function read_matching_simulations(filepath::String, pattern::String)
             key = match_result.captures[1]  # Extract the variable part from the match
             simulations[key] = CSV.read(file, DataFrame)
         else
-            error("Could not extract a key from filename '$filename' using pattern '$pattern'")
+            error(
+                "Could not extract a key from filename '$filename' using pattern '$pattern'",
+            )
         end
     end
 
@@ -105,10 +109,10 @@ function read_matching_simulations(filepath::String, pattern::String)
 end
 
 function generate_filename_suffix(
-    param_dict::Dict{Symbol, T},
+    param_dict::Dict{Symbol,T},
     condition::String = "Filtered";
     time_point::Union{Nothing,Int} = nothing,
-) where T <:Real
+) where {T<:Real}
     # Lexicographic sorting
     sorted_keys = sort(collect(keys(param_dict)))
 

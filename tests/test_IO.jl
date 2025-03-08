@@ -18,4 +18,7 @@ println(filename_full)      # Output: "simulation_T=0.5_N=100_Full.csv"
 println(filename_filtered)  # Output: "simulation_T_N_Filtered_G10.csv"
 
 # loading simulations
-sims = MainSimulation.read_matching_simulations("data/basin/", "basin_bipenal_group_size=5_relatedness=*_Full.csv")
+sims = MainSimulation.read_matching_simulations(
+    "data/basin/",
+    "basin_bipenal_group_size=5_relatedness=*_Full.csv",
+)
