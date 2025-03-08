@@ -120,24 +120,45 @@ function generate_params(
     sweep_vars::Dict{Symbol,Vector{<:Real}},
     linked_params = Dict{Symbol,Symbol}(),
 )
-    # Filter out linked parameters whose source is NOT in `sweep_vars`
+    # Identify valid linked parameters (only consider those where source exists in sweep_vars)
     valid_linked_parameters =
         Dict(k => v for (k, v) in linked_params if v in keys(sweep_vars))
 
-    # Sort primary keys alphabetically (excluding linked parameters)
-    primary_keys = sort(collect(setdiff(keys(sweep_vars), keys(valid_linked_parameters))))
+    # Identify which linked parameters should be swept together
+    linked_groups = Dict()
+    for (dependent, independent) in valid_linked_parameters
+        if independent in keys(sweep_vars) && dependent in keys(sweep_vars)
+            # Ensure they are swept together as pairs
+            linked_groups[independent] = dependent
+        end
+    end
+
+    # Sort primary keys alphabetically, excluding linked dependent parameters that are swept together
+    primary_keys = sort(collect(setdiff(keys(sweep_vars), values(linked_groups))))
+
+    # Create iterable values, ensuring linked pairs are zipped together
+    sweep_iterables = []
+    for k in primary_keys
+        if haskey(linked_groups, k)
+            dep = linked_groups[k]
+            push!(sweep_iterables, collect(zip(sweep_vars[k], sweep_vars[dep])))
+        else
+            push!(sweep_iterables, sweep_vars[k])
+        end
+    end
 
     # Generate parameter list with ordered combinations
     parameters = vec([
         update_params(
             base_params;
-            NamedTuple{Tuple(primary_keys)}(values)...,
-            Dict(
-                k => values[findfirst(==(v), primary_keys)] for
-                (k, v) in valid_linked_parameters if
-                findfirst(==(v), primary_keys) !== nothing
+            NamedTuple{Tuple(primary_keys)}(
+                map(x -> x isa Tuple ? x[1] : x, values)
             )...,
-        ) for values in Iterators.product((sweep_vars[k] for k in primary_keys)...)
+            Dict(
+                linked_groups[k] => (values[findfirst(==(k), primary_keys)][2])
+                for k in keys(linked_groups) if findfirst(==(k), primary_keys) !== nothing
+            )...,
+        ) for values in Iterators.product(sweep_iterables...)
     ])
 
     return parameters
