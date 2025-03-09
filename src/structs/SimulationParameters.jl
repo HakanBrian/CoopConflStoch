@@ -158,9 +158,9 @@ function generate_params(
                 for (indep, dep) in linked_groups if findfirst(==(indep), primary_keys) !== nothing
             )...,
             Dict(
-                dep => values[findfirst(==(linked_params[dep]), primary_keys)]
+                dep => values[1][2]
                 for dep in setdiff(keys(linked_params), keys(linked_groups))
-                if findfirst(==(linked_params[dep]), primary_keys) !== nothing
+                if findfirst(==(linked_params[dep]), collect(keys(sweep_vars))) !== nothing
             )...,
         ) for values in Iterators.product(sweep_iterables...)
     ])
