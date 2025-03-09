@@ -45,7 +45,7 @@ run_simulation(
 )
 
 
-unipenal_params_rdgs = update_params(base_params_rdgs, :use_bipenal = false)
+unipenal_params_rdgs = update_params(base_params_rdgs, use_bipenal = false)
 
 run_simulation(
     unipenal_params_rdgs,

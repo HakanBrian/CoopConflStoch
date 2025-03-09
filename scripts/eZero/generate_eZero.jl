@@ -41,7 +41,7 @@ run_simulation(
 )
 
 
-unipenal_params_ez = update_params(base_params_ez, :use_bipenal = false)
+unipenal_params_ez = update_params(base_params_ez, use_bipenal = false)
 
 run_simulation(
     unipenal_params_ez,
