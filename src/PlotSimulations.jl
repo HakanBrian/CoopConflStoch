@@ -1,7 +1,6 @@
 module PlotSimulations
 
-export plot_sim_Plots,
-    plot_simulation_Plots,
+export plot_simulation_Plots,
     plot_multiple_simulations_Plots,
     plot_sweep_rep_Plots,
     plot_sweep_rip_Plots,
@@ -23,9 +22,8 @@ using Plots, PlotlyJS, DataFrames
 
 function plot_simulation_Plots(
     df::DataFrame,
-    x_var::Symbol,
-    xlabel_text::String;
-    dataset_name::String = "Simulation Data",  # New argument for the dataset name
+    x_var::Symbol;
+    dataset_name::String = "Simulation Data",
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -88,7 +86,7 @@ function plot_simulation_Plots(
                 )
             end
 
-            xlabel!(p, xlabel_text)
+            xlabel!(p, "$x_var")
             ylabel!(p, "Traits")
 
             push!(plots_list, p)
@@ -106,8 +104,7 @@ end
 
 function plot_multiple_simulations_Plots(
     dfs::Dict{String,DataFrame},
-    x_var::Symbol,
-    xlabel_text::String;
+    x_var::Symbol;
     z_var::Union{Symbol,Nothing} = nothing,
 )
     # Dictionary to store results
@@ -120,8 +117,7 @@ function plot_multiple_simulations_Plots(
         # Pass dataset name (string key) to plot_simulation_data_Plots
         plots = plot_simulation_Plots(
             df,
-            x_var,
-            xlabel_text;
+            x_var;
             dataset_name = key,  # Key is now part of the plot title
             z_var = z_var,
             display_plot = false,
@@ -135,30 +131,30 @@ function plot_multiple_simulations_Plots(
 end
 
 function plot_sweep_heatmap_Plots(
-    statistics::DataFrame,
+    df::DataFrame,
     x_var::Symbol,
     y_var::Symbol,
     dependent_vars::Vector{Symbol};
+    dataset_name::String = "Simulation Data",
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
-    # Determine unique z values (or use a single group if z_var is nothing)
-    z_values = z_var !== nothing ? sort(unique(statistics[!, z_var])) : [nothing]
+    # Define color scheme
+    colormap = :viridis
 
-    # Dictionary to store plots for each z_val
-    plots_by_z = Dict{Any,Vector{Plots.Plot}}()
+    # Determine unique z values (or use a single group if z_var is nothing)
+    z_values = z_var !== nothing ? sort(unique(df[!, z_var])) : [nothing]
+
+    # Storage for plots
+    plots_list = []
 
     for z_val in z_values
         # Filter dataframe if z_var is provided
-        df_subset =
-            z_var !== nothing ? filter(row -> row[z_var] == z_val, statistics) : statistics
+        df_subset = z_var !== nothing ? filter(row -> row[z_var] == z_val, df) : df
 
         # Get unique sorted values for x and y axes
         x_values = sort(unique(df_subset[!, x_var]))
         y_values = sort(unique(df_subset[!, y_var]))
-
-        # Store plots in an array for this z_value
-        plots_array = []
 
         for var in dependent_vars
             # Pivot the data for the current dependent variable
@@ -167,41 +163,73 @@ function plot_sweep_heatmap_Plots(
             # Convert DataFrame to a matrix (remove `y_var` column)
             heatmap_matrix = Matrix{Float64}(heatmap_data[!, Not(y_var)])
 
+            # Construct the title
+            title_text = if z_var !== nothing
+                "$dataset_name | $z_var = $z_val"
+            else
+                "$dataset_name"
+            end
+
             # Create heatmap plot
-            title_text = z_var !== nothing ? "$z_var = $z_val" : "Heatmap of $var"
             p = Plots.heatmap(
                 x_values,
                 y_values,
                 heatmap_matrix,
-                color = :viridis,
+                color = colormap,
                 xlabel = string(x_var),
                 ylabel = string(y_var),
                 title = title_text,
-                colorbar_title = "Value",
+                colorbar_title = string(var),
                 fmt = :pdf,
             )
 
-            push!(plots_array, p)  # Store plot in array
+            push!(plots_list, p)  # Store plot in array
 
             # Conditionally display plot
             if display_plot
                 display(p)
             end
         end
-
-        # Store plots for this z_value
-        plots_by_z[z_val] = plots_array
     end
 
-    # Return a sorted vector of vectors of plots
-    sorted_keys = sort(collect(keys(plots_by_z)))  # Sort z_values numerically
-    vector_plots = [plots_by_z[k] for k in sorted_keys]  # Extract in sorted order
+    # If z_var is nothing, return a flat vector of Plots.Plot instead of a nested vector
+    return z_var === nothing ? plots_list : collect(Iterators.partition(plots_list, length(dependent_vars)))
+end
 
-    return vector_plots
+function plot_multiple_sweep_heatmap_Plots(
+    dfs::Dict{String,DataFrame},
+    x_var::Symbol,
+    y_var::Symbol,
+    dependent_vars::Vector{Symbol};
+    z_var::Union{Symbol,Nothing} = nothing,
+)
+    # Dictionary to store results
+    z_var === nothing ? results = Dict{String,Vector{Plots.Plot}}() :
+    results = Dict{String,Vector{Vector{Plots.Plot}}}()
+
+    for (key, df) in dfs
+        println("Processing dataset: ", key)
+
+        # Pass dataset name (string key) to plot_simulation_data_Plots
+        plots = plot_sweep_heatmap_Plots(
+            df,
+            x_var,
+            y_var,
+            dependent_vars;
+            dataset_name = key,
+            z_var = z_var,
+            display_plot = false,
+        )
+
+        # Store results: a flat vector if z_var is nothing, else a nested vector
+        results[key] = plots
+    end
+
+    return results
 end
 
 function plot_sweep_rep_Plots(
-    statistics::DataFrame;
+    df::Union{DataFrame, Dict{String,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -212,34 +240,56 @@ function plot_sweep_rep_Plots(
         :int_pun_self_mean_mean,
         :payoff_mean_mean,
     ]
-    plot_sweep_heatmap_Plots(
-        statistics,
-        :relatedness,
-        :ext_pun0,
-        dependent_vars,
-        z_var = z_var,
-        display_plot = display_plot,
-    )
+
+    if df isa DataFrame
+        return plot_sweep_heatmap_Plots(
+            df,
+            :relatedness,
+            :ext_pun,
+            dependent_vars,
+            z_var = z_var,
+            display_plot = display_plot,
+        )
+    elseif df isa Dict{String,DataFrame}
+        return plot_multiple_sweep_heatmap_Plots(
+            df,
+            :relatedness,
+            :ext_pun0,
+            dependent_vars,
+            z_var = z_var,
+        )
+    end
 end
 
 function plot_sweep_rip_Plots(
-    statistics::DataFrame;
+    df::Union{DataFrame, Dict{String,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
     dependent_vars =
         [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
-    plot_sweep_heatmap_Plots(
-        statistics,
-        :relatedness,
-        :int_pun_ext0,
-        dependent_vars,
-        z_var = z_var,
-        display_plot = display_plot,
-    )
+
+    if df isa DataFrame
+        return plot_sweep_heatmap_Plots(
+            df,
+            :relatedness,
+            :int_pun_ext0,
+            dependent_vars,
+            z_var = z_var,
+            display_plot = display_plot,
+        )
+    elseif df isa Dict{String,DataFrame}
+        return plot_multiple_sweep_heatmap_Plots(
+            df,
+            :relatedness,
+            :int_pun_ext0,
+            dependent_vars,
+            z_var = z_var,
+        )
+    end
 end
 
-function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
+function plot_sweep_rgs_Plots(df::DataFrame; display_plot::Bool = false)
     dependent_vars = [
         :action_mean_mean,
         :norm_mean_mean,
@@ -248,13 +298,25 @@ function plot_sweep_rgs_Plots(statistics::DataFrame; display_plot::Bool = false)
         :int_pun_self_mean_mean,
         :payoff_mean_mean,
     ]
-    plot_sweep_heatmap_Plots(
-        statistics,
-        :relatedness,
-        :group_size,
-        dependent_vars,
-        display_plot = display_plot,
-    )
+
+    if df isa DataFrame
+        return plot_sweep_heatmap_Plots(
+            df,
+            :relatedness,
+            :group_size,
+            dependent_vars,
+            z_var = nothing,
+            display_plot = display_plot,
+        )
+    elseif df isa Dict{String,DataFrame}
+        return plot_multiple_sweep_heatmap_Plots(
+            df,
+            :relatedness,
+            :group_size,
+            dependent_vars,
+            z_var = nothing,
+        )
+    end
 end
 
 
@@ -276,7 +338,11 @@ function extract_plot_lists(plots_dict::Dict{String,T}) where {T<:Any}
     end
 end
 
-function compare_plot_lists(plot_lists::Vector{Vector{Plots.Plot}})
+function compare_plot_lists(
+    plot_lists::Vector{Vector{Plots.Plot}};
+    xlim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    ylim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+)
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
 
@@ -311,6 +377,14 @@ function compare_plot_lists(plot_lists::Vector{Vector{Plots.Plot}})
             clims = clims_global,
             fmt = :pdf,
         )
+
+        # Apply axis limits if specified
+        if xlim !== nothing
+            xlims!(p, xlim)
+        end
+        if ylim !== nothing
+            ylims!(p, ylim)
+        end
 
         display(p)
     end

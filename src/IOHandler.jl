@@ -63,46 +63,39 @@ function read_simulation(filepath::String)
     end
 end
 
-function read_matching_simulations(filepath::String, pattern::String)
+function read_matching_simulations(filepath::String, pattern::String; extract_section::Int=2)
     # Extract directory path
     dir_path = dirname(filepath)
 
     # Ensure the directory exists
     if !isdir(dir_path)
-        error(
-            "Error: Directory '$dir_path' does not exist. Please create it before saving.",
-        )
+        error("Error: Directory '$dir_path' does not exist.")
     end
 
     # Find matching files
     files = glob(pattern, dir_path)
 
-    # Check if any files match
+    # Check if files were found
     if isempty(files)
         error("Error: No matching files found in '$dir_path' using pattern '$pattern'.")
     end
 
     println("Loading files from: $dir_path")
 
-    # Convert the glob pattern into a regex
-    regex_pattern = replace(pattern, "*" => "(.*?)")  # Convert wildcard `*` into a capture group
-    regex_pattern = Regex("^" * regex_pattern * "\$") # Ensure it matches the whole filename
-
-    # Load matching files into a dictionary with extracted keys
+    # Load matching files into a dictionary with extracted section as key
     simulations = Dict{String,DataFrame}()
 
     for file in files
-        filename = splitdir(file)[2]  # Get filename only
-        match_result = match(regex_pattern, filename)
+        filename = splitdir(file)[2]  # Extract filename from full path
+        parts = split(filename, "_")  # Split filename by underscores
 
-        if match_result !== nothing
-            key = match_result.captures[1]  # Extract the variable part from the match
-            simulations[key] = CSV.read(file, DataFrame)
-        else
-            error(
-                "Could not extract a key from filename '$filename' using pattern '$pattern'",
-            )
+        # Ensure the requested section index is valid
+        if extract_section > length(parts) - 1
+            error("Error: Requested section $extract_section does not exist in filename '$filename'.")
         end
+
+        key = parts[extract_section]  # Extract the desired section
+        simulations[key] = CSV.read(file, DataFrame)
     end
 
     return simulations
