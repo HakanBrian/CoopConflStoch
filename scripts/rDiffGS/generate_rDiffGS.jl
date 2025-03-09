@@ -16,7 +16,7 @@ using Distributed
 # Run Simulation
 ###############################
 
-base_params = SimulationParameter(
+base_params_rdgs = SimulationParameter(
     action0 = 0.1f0,
     norm0 = 2.0f0,
     ext_pun0 = 0.1f0,
@@ -32,7 +32,7 @@ base_params = SimulationParameter(
 )
 
 run_simulation(
-    base_params,
+    base_params_rdgs,
     filepath = "data/rDiffGS/rDiffGS",
     save_file = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
@@ -45,7 +45,7 @@ run_simulation(
 unipenal_params_rdgs = update_params(base_params_rdgs, use_bipenal = false)
 
 run_simulation(
-    base_params,
+    unipenal_params_rdgs,
     filepath = "data/rDiffGS/rDiffGS",
     save_file = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(

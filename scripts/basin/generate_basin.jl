@@ -62,10 +62,10 @@ run_simulation(
     sweep_full = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
-        :ext_pun => Float32[0.1, 0.5, 1.5],
+        :ext_pun0 => Float32[0.1, 0.5, 1.5],
         :group_size => [5, 50, 500],
     ),
-    linked_params = Dict(:ext_pun => :group_size),
+    linked_params = Dict(:ext_pun0 => :group_size),
 )
 
 # fixed internal punishment
@@ -98,10 +98,10 @@ run_simulation(
     sweep_full = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
-        :ext_pun => Float32[0.1, 0.5, 1.5],
+        :ext_pun0 => Float32[0.1, 0.5, 1.5],
         :group_size => [5, 50, 500],
     ),
-    linked_params = Dict(:ext_pun => :group_size),
+    linked_params = Dict(:ext_pun0 => :group_size),
 )
 
 # higher internal punishment
