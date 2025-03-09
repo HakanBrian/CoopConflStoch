@@ -289,7 +289,7 @@ function plot_sweep_rip_Plots(
     end
 end
 
-function plot_sweep_rgs_Plots(df::DataFrame; display_plot::Bool = false)
+function plot_sweep_rgs_Plots(df::Union{DataFrame, Dict{String,DataFrame}}; display_plot::Bool = false)
     dependent_vars = [
         :action_mean_mean,
         :norm_mean_mean,

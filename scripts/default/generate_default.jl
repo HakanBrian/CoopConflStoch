@@ -9,7 +9,7 @@ using Distributed
 
 @everywhere include(joinpath(pwd(), "src", "Main.jl"))
 @everywhere using .MainSimulation
-@everywhere import .MainSimulation: SimulationParameter, run_simulation
+@everywhere import .MainSimulation: SimulationParameter, update_params, run_simulation
 
 
 ###############################
@@ -40,8 +40,9 @@ run_simulation(
     ),
 )
 
+rep_params = update_params(base_params, ext_pun0 = 0.0f0, ext_pun_mutation_enabled = false)
 run_simulation(
-    base_params,
+    rep_params,
     save_file = true,
     filepath = "data/default/default.csv",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
@@ -50,8 +51,9 @@ run_simulation(
     ),
 )
 
+rip_params = update_params(base_params, int_pun_ext_mutation_enabled = false, int_pun_self_mutation_enabled = false)
 run_simulation(
-    base_params,
+    rip_params,
     save_file = true,
     filepath = "data/default/default.csv",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
@@ -69,6 +71,6 @@ run_simulation(
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.1)),
         :group_size =>
-            [collect(range(5, 50, step = 5))..., collect(range(50, 500, step = 50))...],
+            [collect(range(5, 50, step = 5))..., collect(range(100, 500, step = 50))...],
     ),
 )
