@@ -120,27 +120,23 @@ function generate_params(
     sweep_vars::Dict{Symbol,Vector{<:Real}},
     linked_params = Dict{Symbol,Symbol}(),
 )
-    # Identify valid linked parameters (only consider those where source exists in sweep_vars)
-    valid_linked_parameters =
-        Dict(k => v for (k, v) in linked_params if v in keys(sweep_vars))
-
-    # Identify which linked parameters should be swept together
-    linked_groups = Dict()
-    for (dependent, independent) in valid_linked_parameters
-        if independent in keys(sweep_vars) && dependent in keys(sweep_vars)
-            linked_groups[independent] = dependent
-        end
+    # Convert linked_params into a lookup dictionary (independent => dependents)
+    linked_groups = Dict{Symbol,Set{Symbol}}()
+    for (dependent, independent) in linked_params
+        push!(get!(linked_groups, independent, Set()), dependent)
     end
 
-    # Sort primary keys alphabetically, excluding linked dependent parameters that are swept together
-    primary_keys = sort(collect(setdiff(keys(sweep_vars), values(linked_groups))))
+    # Sort keys alphabetically, excluding linked dependent parameters that are swept together
+    primary_keys = sort(collect(setdiff(keys(sweep_vars), keys(linked_params))))
+    secondary_keys = sort(collect(setdiff(keys(sweep_vars), primary_keys)))
+    tertiary_keys = sort(collect(setdiff(keys(linked_params), secondary_keys)))
 
-    # Create iterable values, ensuring linked pairs are zipped together
+    # Generate sweep iterables, ensuring dependencies are zipped
     sweep_iterables = []
     for k in primary_keys
         if haskey(linked_groups, k)
-            dep = linked_groups[k]
-            push!(sweep_iterables, collect(zip(sweep_vars[k], sweep_vars[dep])))
+            dep_set = sort(collect(linked_groups[k]))  # Ensure ordered dependencies
+            push!(sweep_iterables, collect(zip(sweep_vars[k], collect(zip((sweep_vars[d] for d in dep_set)...)))))
         else
             push!(sweep_iterables, sweep_vars[k])
         end
@@ -154,16 +150,21 @@ function generate_params(
                 map(x -> x isa Tuple ? x[1] : x, values)
             )...,
             Dict(
-                dep => (values[findfirst(==(indep), primary_keys)][2])
-                for (indep, dep) in linked_groups if findfirst(==(indep), primary_keys) !== nothing
+                dep => begin
+                    indep = linked_params[dep]
+                    if length(sweep_vars[dep]) != length(sweep_vars[indep])  # Error if length of secondary values do not match primary values
+                        error("Length mismatch: $(dep) (length $(length(sweep_vars[dep]))) does not match $(indep) (length $(length(sweep_vars[indep])))")
+                    end
+                    values[findfirst(==(indep), primary_keys)][2][findfirst(==(dep), secondary_keys)]
+                end
+                for dep in secondary_keys
             )...,
             Dict(
-                dep => values[1][2]
-                for dep in setdiff(keys(linked_params), keys(linked_groups))
-                if findfirst(==(linked_params[dep]), collect(keys(sweep_vars))) !== nothing
+                dep => values[findfirst(==(linked_params[linked_params[dep]]), primary_keys)][2][findfirst(==(linked_params[dep]), secondary_keys)]
+                for dep in tertiary_keys
             )...,
         ) for values in Iterators.product(sweep_iterables...)
-    ])
+    ])   
 
     return parameters
 end
