@@ -63,7 +63,11 @@ function read_simulation(filepath::String)
     end
 end
 
-function read_matching_simulations(filepath::String, pattern::String; extract_section::Int=2)
+function read_matching_simulations(
+    filepath::String,
+    pattern::String;
+    extract_section::Int = 2,
+)
     # Extract directory path
     dir_path = dirname(filepath)
 
@@ -91,7 +95,9 @@ function read_matching_simulations(filepath::String, pattern::String; extract_se
 
         # Ensure the requested section index is valid
         if extract_section > length(parts) - 1
-            error("Error: Requested section $extract_section does not exist in filename '$filename'.")
+            error(
+                "Error: Requested section $extract_section does not exist in filename '$filename'.",
+            )
         end
 
         key = parts[extract_section]  # Extract the desired section

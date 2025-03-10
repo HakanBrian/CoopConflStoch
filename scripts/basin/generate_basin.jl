@@ -69,7 +69,11 @@ run_simulation(
 )
 
 # fixed internal punishment
-fixed_int_pun = update_params(base_param, int_pun_ext_mutation_enabled = false, int_pun_self_mutation_enabled = false)
+fixed_int_pun = update_params(
+    base_param,
+    int_pun_ext_mutation_enabled = false,
+    int_pun_self_mutation_enabled = false,
+)
 run_simulation(
     fixed_int_pun,
     filepath = "data/basin/fixed_int_pun/fixed_int_pun",
@@ -127,7 +131,11 @@ run_simulation(
 )
 
 # no internal punishment
-no_int_pun = update_params(base_param, int_pun_ext_mutation_enabled = false, int_pun_self_mutation_enabled = false)
+no_int_pun = update_params(
+    base_param,
+    int_pun_ext_mutation_enabled = false,
+    int_pun_self_mutation_enabled = false,
+)
 run_simulation(
     no_int_pun,
     filepath = "data/basin/no_int_pun/no_int_pun",
@@ -136,7 +144,12 @@ run_simulation(
 )
 
 # no punishment
-no_pun = update_params(base_param, ext_pun_mutation_enabled = false, int_pun_ext_mutation_enabled = false, int_pun_self_mutation_enabled = false)
+no_pun = update_params(
+    base_param,
+    ext_pun_mutation_enabled = false,
+    int_pun_ext_mutation_enabled = false,
+    int_pun_self_mutation_enabled = false,
+)
 run_simulation(
     no_pun,
     filepath = "data/basin/no_pun/no_pun",

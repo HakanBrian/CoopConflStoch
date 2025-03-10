@@ -193,7 +193,8 @@ function plot_sweep_heatmap_Plots(
     end
 
     # If z_var is nothing, return a flat vector of Plots.Plot instead of a nested vector
-    return z_var === nothing ? plots_list : collect(Iterators.partition(plots_list, length(dependent_vars)))
+    return z_var === nothing ? plots_list :
+           collect(Iterators.partition(plots_list, length(dependent_vars)))
 end
 
 function plot_multiple_sweep_heatmap_Plots(
@@ -229,7 +230,7 @@ function plot_multiple_sweep_heatmap_Plots(
 end
 
 function plot_sweep_rep_Plots(
-    df::Union{DataFrame, Dict{String,DataFrame}};
+    df::Union{DataFrame,Dict{String,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -262,7 +263,7 @@ function plot_sweep_rep_Plots(
 end
 
 function plot_sweep_rip_Plots(
-    df::Union{DataFrame, Dict{String,DataFrame}};
+    df::Union{DataFrame,Dict{String,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -289,7 +290,10 @@ function plot_sweep_rip_Plots(
     end
 end
 
-function plot_sweep_rgs_Plots(df::Union{DataFrame, Dict{String,DataFrame}}; display_plot::Bool = false)
+function plot_sweep_rgs_Plots(
+    df::Union{DataFrame,Dict{String,DataFrame}};
+    display_plot::Bool = false,
+)
     dependent_vars = [
         :action_mean_mean,
         :norm_mean_mean,

@@ -51,7 +51,11 @@ run_simulation(
     ),
 )
 
-rip_params = update_params(base_params, int_pun_ext_mutation_enabled = false, int_pun_self_mutation_enabled = false)
+rip_params = update_params(
+    base_params,
+    int_pun_ext_mutation_enabled = false,
+    int_pun_self_mutation_enabled = false,
+)
 run_simulation(
     rip_params,
     save_file = true,

@@ -136,7 +136,12 @@ function generate_params(
     for k in primary_keys
         if haskey(linked_groups, k)
             dep_set = sort(collect(linked_groups[k]))  # Ensure ordered dependencies
-            push!(sweep_iterables, collect(zip(sweep_vars[k], collect(zip((sweep_vars[d] for d in dep_set)...)))))
+            push!(
+                sweep_iterables,
+                collect(
+                    zip(sweep_vars[k], collect(zip((sweep_vars[d] for d in dep_set)...))),
+                ),
+            )
         else
             push!(sweep_iterables, sweep_vars[k])
         end
@@ -146,25 +151,30 @@ function generate_params(
     parameters = vec([
         update_params(
             base_params;
-            NamedTuple{Tuple(primary_keys)}(
-                map(x -> x isa Tuple ? x[1] : x, values)
-            )...,
+            NamedTuple{Tuple(primary_keys)}(map(x -> x isa Tuple ? x[1] : x, values))...,
             Dict(
                 dep => begin
                     indep = linked_params[dep]
                     if length(sweep_vars[dep]) != length(sweep_vars[indep])  # Error if length of secondary values do not match primary values
-                        error("Length mismatch: $(dep) (length $(length(sweep_vars[dep]))) does not match $(indep) (length $(length(sweep_vars[indep])))")
+                        error(
+                            "Length mismatch: $(dep) (length $(length(sweep_vars[dep]))) does not match $(indep) (length $(length(sweep_vars[indep])))",
+                        )
                     end
-                    values[findfirst(==(indep), primary_keys)][2][findfirst(==(dep), secondary_keys)]
-                end
-                for dep in secondary_keys
+                    values[findfirst(==(indep), primary_keys)][2][findfirst(
+                        ==(dep),
+                        secondary_keys,
+                    )]
+                end for dep in secondary_keys
             )...,
             Dict(
-                dep => values[findfirst(==(linked_params[linked_params[dep]]), primary_keys)][2][findfirst(==(linked_params[dep]), secondary_keys)]
-                for dep in tertiary_keys
+                dep => values[findfirst(
+                    ==(linked_params[linked_params[dep]]),
+                    primary_keys,
+                )][2][findfirst(==(linked_params[dep]), secondary_keys)] for
+                dep in tertiary_keys
             )...,
         ) for values in Iterators.product(sweep_iterables...)
-    ])   
+    ])
 
     return parameters
 end
