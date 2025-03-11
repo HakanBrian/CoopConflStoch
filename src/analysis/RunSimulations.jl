@@ -131,12 +131,13 @@ function run_simulation(
     simulation_sweep_stats = if is_sweep && !sweep_full
         statistics_filtered_processed(
             simulation_data,
-            sweep_vars,
             base_params.output_save_tick,
+            sweep_vars,
+            linked_params,
             save_generations,
         )
     elseif is_sweep && sweep_full
-        statistics_full(simulation_data, sweep_vars)
+        statistics_full(simulation_data, sweep_vars, linked_params)
     else
         statistics_processed(simulation_data, parameters)
     end

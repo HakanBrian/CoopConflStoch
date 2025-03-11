@@ -4,7 +4,7 @@ export statistics_processed, statistics_filtered_processed, statistics_full
 
 using ..MainSimulation.SimulationParameters
 import ..MainSimulation.SimulationParameters:
-    SimulationParameter, diff_from_default, get_param_combinations
+    SimulationParameter, diff_from_default, generate_params
 
 using ..MainSimulation.IOHandler
 import ..MainSimulation.IOHandler: generate_filename_suffix
@@ -44,8 +44,9 @@ end
 
 function statistics_filtered(
     df::DataFrame,
-    sweep_vars::Dict{Symbol,Vector{<:Real}},
     output_save_tick::Int,
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
+    linked_params = Dict{Symbol,Symbol}(),
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
     # Determine the number of parameters in df
@@ -75,7 +76,7 @@ function statistics_filtered(
     filtered_data = Dict{String,DataFrame}()
 
     # Get all parameter combinations
-    param_combinations = get_param_combinations(sweep_vars)
+    param_combinations = generate_params(SimulationParameter(),  sweep_vars, linked_params, combo = true)
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params
@@ -129,8 +130,9 @@ end
 
 function statistics_filtered_processed(
     df::DataFrame,
-    sweep_vars::Dict{Symbol,Vector{<:Real}},
     output_save_tick::Int,
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
+    linked_params = Dict{Symbol,Symbol}(),
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
     # Calculate statistics for each parameter combination
@@ -139,7 +141,7 @@ function statistics_filtered_processed(
 
     # Generate all parameter combinations
     sorted_keys = sort(collect(keys(sweep_vars)))
-    param_combinations = get_param_combinations(sweep_vars)
+    param_combinations = generate_params(SimulationParameter(),  sweep_vars, linked_params, combo = true)
 
     # Convert `param_combinations` into a DataFrame
     param_df = DataFrame()
@@ -181,7 +183,11 @@ function statistics_filtered_processed(
     return statistics_data
 end
 
-function statistics_full(df::DataFrame, sweep_vars::Dict{Symbol,Vector{<:Real}})
+function statistics_full(
+    df::DataFrame,
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
+    linked_params = Dict{Symbol,Symbol}(),
+)
     # Determine the number of parameters
     num_params = maximum(df.param_id)
 
@@ -189,7 +195,7 @@ function statistics_full(df::DataFrame, sweep_vars::Dict{Symbol,Vector{<:Real}})
     independent_data = Dict{String,DataFrame}()
 
     # Generate all parameter combinations
-    param_combinations = get_param_combinations(sweep_vars)
+    param_combinations = generate_params(SimulationParameter(),  sweep_vars, linked_params, combo = true)
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params

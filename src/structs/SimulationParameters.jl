@@ -1,7 +1,7 @@
 module SimulationParameters
 
 export SimulationParameter,
-    diff_from_default, update_params, generate_params, get_param_combinations
+    diff_from_default, update_params, generate_params
 
 mutable struct SimulationParameter
     # Game parameters
@@ -149,7 +149,7 @@ function generate_params(
     end
 
     param_combinations = vec([
-        NamedTuple(
+        Dict(
             vcat(
                 Dict(
                     indep => values[findfirst(
@@ -193,19 +193,6 @@ function generate_params(
     ])
 
     return parameters
-end
-
-function get_param_combinations(sweep_vars::Dict{Symbol,Vector{<:Real}})
-    # Sort the keys alphabetically
-    sorted_keys = sort(collect(keys(sweep_vars)))
-
-    # Generate all parameter combinations in a vector of dictionaries
-    param_combinations = vec([
-        Dict(k => v for (k, v) in zip(sorted_keys, values)) for
-        values in Iterators.product((sweep_vars[k] for k in sorted_keys)...)
-    ])
-
-    return param_combinations
 end
 
 function Base.copy(parameters::SimulationParameter)
