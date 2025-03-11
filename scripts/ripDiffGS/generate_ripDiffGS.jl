@@ -6,11 +6,8 @@ using Distributed
 ###############################
 
 # @everywhere cd("")  # Set dir to base
-
-@everywhere begin
-    push!(LOAD_PATH, abspath("src"))
-    using MainSimulation
-end
+@everywhere push!(LOAD_PATH, abspath("src"))
+@everywhere using MainSimulation
 
 
 ###############################
