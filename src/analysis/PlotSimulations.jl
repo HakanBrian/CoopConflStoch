@@ -401,9 +401,8 @@ end
 
 function plot_simulation_Plotly(
     df::DataFrame,
-    x_axis_variable::Symbol,
-    xlabel_text::String,
-    title_text::String,
+    x_var::Symbol;
+    dataset_name::String = "Simulation Data",
 )
     # Initialize plot
     p = PlotlyJS.Plot()
@@ -431,7 +430,7 @@ function plot_simulation_Plotly(
         std_col = Symbol(trait * "_mean_std")
 
         df[!, hover_col] =
-            xlabel_text .* ": " .* string.(df[!, x_axis_variable]) .* "<br>" .* trait .*
+            "$(x_axis_x_varvariable)" .* ": " .* string.(df[!, x_var]) .* "<br>" .* trait .*
             " Mean: " .* string.(df[!, mean_col]) .* "<br>Std Dev: " .*
             string.(df[!, std_col])
     end
@@ -446,7 +445,7 @@ function plot_simulation_Plotly(
         add_trace!(
             p,
             PlotlyJS.scatter(
-                x = df[!, x_axis_variable],
+                x = df[!, x_var],
                 y = df[!, mean_col],
                 mode = "lines",
                 line_color = colors[trait],
@@ -460,7 +459,7 @@ function plot_simulation_Plotly(
         add_trace!(
             p,
             PlotlyJS.scatter(
-                x = df[!, x_axis_variable],
+                x = df[!, x_var],
                 y = df[!, mean_col] .+ df[!, std_col],
                 mode = "lines",
                 line_color = colors[trait],
@@ -477,7 +476,7 @@ function plot_simulation_Plotly(
         add_trace!(
             p,
             PlotlyJS.scatter(
-                x = df[!, x_axis_variable],
+                x = df[!, x_var],
                 y = df[!, mean_col] .- df[!, std_col],
                 mode = "lines",
                 line_color = colors[trait],
@@ -494,8 +493,8 @@ function plot_simulation_Plotly(
     # Layout for replicate means
     relayout!(
         p,
-        title = title_text,
-        xaxis_title = xlabel_text,
+        title = dataset_name,
+        xaxis_title = "$(x_var)",
         yaxis_title = "Traits",
         width = 600,
         height = 400,
@@ -506,12 +505,6 @@ function plot_simulation_Plotly(
     # Display plot
     display(p)
 end
-
-plot_sim_Plotly(df::DataFrame) =
-    plot_simulation_Plotly(df, :generation, "Generation", "Mean of Replicates")
-
-plot_sweep_r_Plotly(df::DataFrame) =
-    plot_simulation_Plotly(df, :relatedness, "Relatedness", "Mean of Replicates")
 
 function plot_sweep_heatmap_Plotly(
     statistics::DataFrame,
