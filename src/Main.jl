@@ -14,10 +14,10 @@ include("simulation/Reproductions.jl")
 include("simulation/Mutations.jl")
 include("simulation/Simulations.jl")
 
-include("IOHandler.jl")
-include("Statistics.jl")
-include("RunSimulations.jl")
-include("PlotSimulations.jl")
+include("analysis/IOHandler.jl")
+include("analysis/Statistics.jl")
+include("analysis/RunSimulations.jl")
+include("analysis/PlotSimulations.jl")
 
 # Load submodules
 using .SimulationParameters
