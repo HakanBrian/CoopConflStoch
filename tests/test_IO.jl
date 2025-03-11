@@ -1,7 +1,10 @@
 using BenchmarkTools, Revise
 
-include("../src/Main.jl")
-using .MainSimulation
+push!(LOAD_PATH, abspath("src"));
+using MainSimulation
+
+# Apply changes
+Revise.revise()
 
 
 #############

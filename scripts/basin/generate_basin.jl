@@ -7,9 +7,10 @@ using Distributed
 
 # @everywhere cd("")  # Set dir to base
 
-@everywhere include(joinpath(pwd(), "src", "Main.jl"))
-@everywhere using .MainSimulation
-@everywhere import .MainSimulation: SimulationParameter, update_params, run_simulation
+@everywhere begin
+    push!(LOAD_PATH, abspath("src"));
+    using MainSimulation
+end
 
 
 ###############################
