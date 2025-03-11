@@ -1,47 +1,64 @@
 module MainSimulation
 
-
+# Include submodules
 include("structs/SimulationParameters.jl")
-using .SimulationParameters
-
 include("structs/Populations.jl")
-using .Populations
-
 include("structs/Exponentials.jl")
-using .Exponentials
 
 include("game/Utilities.jl")
-using .Utilities
-
 include("game/Objectives.jl")
-using .Objectives
-
 include("game/BehavEqs.jl")
-using .BehavEqs
 
 include("simulation/SocialInteractions.jl")
-using .SocialInteractions
-
 include("simulation/Reproductions.jl")
-using .Reproductions
-
 include("simulation/Mutations.jl")
-using .Mutations
-
 include("simulation/Simulations.jl")
-using .Simulations
 
 include("IOHandler.jl")
-using .IOHandler
-
 include("Statistics.jl")
-using .Statistics
-
 include("RunSimulations.jl")
-using .RunSimulations
-
 include("PlotSimulations.jl")
+
+# Load submodules
+using .SimulationParameters
+using .Populations
+using .Exponentials
+
+using .Utilities
+using .Objectives
+using .BehavEqs
+
+using .SocialInteractions
+using .Reproductions
+using .Mutations
+using .Simulations
+
+using .IOHandler
+using .Statistics
+using .RunSimulations
 using .PlotSimulations
 
+# Export submodules
+export SimulationParameters
+export Populations
+export Exponentials
 
-end # module Main
+export Utilities
+export Objectives
+export BehavEqs
+
+export SocialInteractions
+export Reproductions
+export Mutations
+export Simulations
+
+export IOHandler
+export Statistics
+export RunSimulations
+export PlotSimulations
+
+# Re-export functions and types so they are available at the top level
+export SimulationParameter, update_params
+export run_simulation
+
+end # module MainSimulation
