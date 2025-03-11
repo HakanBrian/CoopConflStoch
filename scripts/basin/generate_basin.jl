@@ -38,8 +38,9 @@ base_param = SimulationParameter(
 # external and bipenal internal punishment
 run_simulation(
     base_param,
-    filepath = "data/basin/ext_int_pun/ext_int_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/ext_int_pun/ext_int_pun",
     sweep_vars = sweep_rgs,
 )
 
@@ -47,8 +48,9 @@ run_simulation(
 unipenal_param = update_params(base_param, use_bipenal = false)
 run_simulation(
     unipenal_param,
-    filepath = "data/basin/ext_int_pun/ext_int_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/ext_int_pun/ext_int_pun",
     sweep_vars = sweep_rgs,
 )
 
@@ -56,8 +58,9 @@ run_simulation(
 fixed_ext_pun = update_params(base_param, ext_pun_mutation_enabled = false)
 run_simulation(
     fixed_ext_pun,
-    filepath = "data/basin/fixed_ext_pun/fixed_ext_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/fixed_ext_pun/fixed_ext_pun",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
         :ext_pun0 => Float32[0.1, 0.5, 1.5],
@@ -74,8 +77,9 @@ fixed_int_pun = update_params(
 )
 run_simulation(
     fixed_int_pun,
-    filepath = "data/basin/fixed_int_pun/fixed_int_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/fixed_int_pun/fixed_int_pun",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
         :int_pun_ext0 => Float32[0.1, 0.5, 1.5],
@@ -88,16 +92,18 @@ run_simulation(
 fixed_norm = update_params(base_param, norm_mutation_enabled = false)
 run_simulation(
     fixed_norm,
-    filepath = "data/basin/fixed_norm/fixed_norm",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/fixed_norm/fixed_norm",
     sweep_vars = sweep_rgs,
 )
 
 # higher external punishment
 run_simulation(
     base_param,
-    filepath = "data/basin/higher_ext_pun/higher_ext_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/higher_ext_pun/higher_ext_pun",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
         :ext_pun0 => Float32[0.1, 0.5, 1.5],
@@ -109,8 +115,9 @@ run_simulation(
 # higher internal punishment
 run_simulation(
     base_param,
-    filepath = "data/basin/higher_int_pun/higher_int_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/higher_int_pun/higher_int_pun",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
         :int_pun_ext0 => Float32[0.1, 0.5, 1.5],
@@ -123,8 +130,9 @@ run_simulation(
 no_ext_pun = update_params(base_param, ext_pun_mutation_enabled = false)
 run_simulation(
     no_ext_pun,
-    filepath = "data/basin/no_ext_pun/no_ext_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/no_ext_pun/no_ext_pun",
     sweep_vars = sweep_rgs,
 )
 
@@ -136,8 +144,9 @@ no_int_pun = update_params(
 )
 run_simulation(
     no_int_pun,
-    filepath = "data/basin/no_int_pun/no_int_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/no_int_pun/no_int_pun",
     sweep_vars = sweep_rgs,
 )
 
@@ -150,8 +159,9 @@ no_pun = update_params(
 )
 run_simulation(
     no_pun,
-    filepath = "data/basin/no_pun/no_pun",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/no_pun/no_pun",
     sweep_vars = sweep_rgs,
 )
 
@@ -159,7 +169,8 @@ run_simulation(
 stoch_init = update_params(base_param, trait_variance = 0.1)
 run_simulation(
     stoch_init,
-    filepath = "data/basin/stoch_init/stoch_init",
+    num_replicates = 20,
     sweep_full = true,
+    filepath = "data/basin/stoch_init/stoch_init",
     sweep_vars = sweep_rgs,
 )
