@@ -118,7 +118,8 @@ end
 function generate_params(
     base_params::SimulationParameter,
     sweep_vars::Dict{Symbol,Vector{<:Real}},
-    linked_params = Dict{Symbol,Symbol}(),
+    linked_params = Dict{Symbol,Symbol}();
+    combo::Bool = false,
 )
     # Convert linked_params into a lookup dictionary (independent => dependents)
     linked_groups = Dict{Symbol,Set{Symbol}}()
@@ -126,7 +127,7 @@ function generate_params(
         push!(get!(linked_groups, independent, Set()), dependent)
     end
 
-    # Sort keys alphabetically, excluding linked dependent parameters that are swept together
+    # Sort keys alphabetically
     primary_keys = sort(collect(setdiff(keys(sweep_vars), keys(linked_params))))
     secondary_keys = sort(collect(setdiff(keys(sweep_vars), primary_keys)))
     tertiary_keys = sort(collect(setdiff(keys(linked_params), secondary_keys)))
@@ -147,33 +148,48 @@ function generate_params(
         end
     end
 
-    # Generate parameter list with ordered combinations
-    parameters = vec([
-        update_params(
-            base_params;
-            NamedTuple{Tuple(primary_keys)}(map(x -> x isa Tuple ? x[1] : x, values))...,
-            Dict(
-                dep => begin
-                    indep = linked_params[dep]
-                    if length(sweep_vars[dep]) != length(sweep_vars[indep])  # Error if length of secondary values do not match primary values
-                        error(
-                            "Length mismatch: $(dep) (length $(length(sweep_vars[dep]))) does not match $(indep) (length $(length(sweep_vars[indep])))",
-                        )
-                    end
-                    values[findfirst(==(indep), primary_keys)][2][findfirst(
-                        ==(dep),
-                        secondary_keys,
-                    )]
-                end for dep in secondary_keys
-            )...,
-            Dict(
-                dep => values[findfirst(
-                    ==(linked_params[linked_params[dep]]),
-                    primary_keys,
-                )][2][findfirst(==(linked_params[dep]), secondary_keys)] for
-                dep in tertiary_keys
-            )...,
+    param_combinations = vec([
+        NamedTuple(
+            vcat(
+                Dict(
+                    indep => values[findfirst(
+                        ==(indep),
+                        primary_keys,
+                    )][1] for
+                    indep in primary_keys
+                )...,
+                Dict(
+                    dep => begin
+                        indep = linked_params[dep]
+                        if length(sweep_vars[dep]) != length(sweep_vars[indep])  # Error if length of secondary values do not match primary values
+                            error(
+                                "Length mismatch: $(dep) (length $(length(sweep_vars[dep]))) does not match $(indep) (length $(length(sweep_vars[indep])))",
+                            )
+                        end
+                        values[findfirst(==(indep), primary_keys)][2][findfirst(
+                            ==(dep),
+                            secondary_keys,
+                        )]
+                    end for dep in secondary_keys
+                )...,
+                Dict(
+                    dep => values[findfirst(
+                        ==(linked_params[linked_params[dep]]),
+                        primary_keys,
+                    )][2][findfirst(==(linked_params[dep]), secondary_keys)] for
+                    dep in tertiary_keys
+                )...,
+            )
         ) for values in Iterators.product(sweep_iterables...)
+    ])
+
+    if combo
+        return param_combinations
+    end
+
+    parameters = vec([
+        update_params(base_params; param_combination...) 
+        for param_combination in param_combinations
     ])
 
     return parameters
