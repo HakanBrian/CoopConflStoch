@@ -114,7 +114,11 @@ function update_params(base_params::SimulationParameter; kwargs...)
     )
 end
 
-function resolve_dependency(var::Symbol, sweep_vars::Dict{Symbol,Vector{<:Real}}, linked_params::Dict{Symbol,Symbol})
+function resolve_dependency(
+    var::Symbol,
+    sweep_vars::Dict{Symbol,Vector{<:Real}},
+    linked_params::Dict{Symbol,Symbol},
+)
     seen = Set{Symbol}()  # Track visited nodes to avoid cycles
 
     while haskey(linked_params, var)
@@ -155,11 +159,22 @@ function generate_params(
             dep_set = sort(collect(linked_groups[k]))  # Ensure ordered dependencies
             push!(
                 sweep_iterables,
-                collect(zip(
-                    sweep_vars[k],
-                    collect(zip(
-                        (sweep_vars[d ∈ keys(sweep_vars) ? d : resolve_dependency(d, sweep_vars, linked_params)] for d in dep_set)...)
-                    ))
+                collect(
+                    zip(
+                        sweep_vars[k],
+                        collect(
+                            zip(
+                                (
+                                    sweep_vars[d ∈ keys(sweep_vars) ? d :
+                                               resolve_dependency(
+                                        d,
+                                        sweep_vars,
+                                        linked_params,
+                                    )] for d in dep_set
+                                )...,
+                            ),
+                        ),
+                    ),
                 ),
             )
         else
@@ -171,15 +186,19 @@ function generate_params(
     param_combinations = vec([
         merge(
             Dict(
-                indep => values[findfirst(==(indep), primary_keys)][1] for 
+                indep => values[findfirst(==(indep), primary_keys)][1] for
                 indep in primary_keys
             ),
             Dict(
                 dep => begin
                     sorted_deps = sort(collect(linked_groups[indep]))
-                    values[findfirst(==(indep), primary_keys)][2][findfirst(==(dep), sorted_deps)]
-                end for indep in sort(collect(keys(linked_groups))) for dep in sort(collect(linked_groups[indep]))
-            )
+                    values[findfirst(==(indep), primary_keys)][2][findfirst(
+                        ==(dep),
+                        sorted_deps,
+                    )]
+                end for indep in sort(collect(keys(linked_groups))) for
+                dep in sort(collect(linked_groups[indep]))
+            ),
         ) for values in Iterators.product(sweep_iterables...)
     ])
 
