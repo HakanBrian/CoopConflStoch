@@ -76,7 +76,8 @@ function statistics_filtered(
     filtered_data = Dict{String,DataFrame}()
 
     # Get all parameter combinations
-    param_combinations = generate_params(SimulationParameter(),  sweep_vars, linked_params, combo = true)
+    param_combinations =
+        generate_params(SimulationParameter(), sweep_vars, linked_params, combo = true)
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params
@@ -141,7 +142,8 @@ function statistics_filtered_processed(
 
     # Generate all parameter combinations
     sorted_keys = sort(collect(keys(sweep_vars)))
-    param_combinations = generate_params(SimulationParameter(),  sweep_vars, linked_params, combo = true)
+    param_combinations =
+        generate_params(SimulationParameter(), sweep_vars, linked_params, combo = true)
 
     # Convert `param_combinations` into a DataFrame
     param_df = DataFrame()
@@ -195,7 +197,8 @@ function statistics_full(
     independent_data = Dict{String,DataFrame}()
 
     # Generate all parameter combinations
-    param_combinations = generate_params(SimulationParameter(),  sweep_vars, linked_params, combo = true)
+    param_combinations =
+        generate_params(SimulationParameter(), sweep_vars, linked_params, combo = true)
 
     # Ensure we have enough parameter sets
     if length(param_combinations) != num_params

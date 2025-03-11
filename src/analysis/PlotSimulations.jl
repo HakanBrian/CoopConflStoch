@@ -429,9 +429,8 @@ function plot_simulation_Plotly(
         std_col = Symbol(trait * "_mean_std")
 
         df[!, hover_col] =
-            "$(x_var)" .* ": " .* string.(df[!, x_var]) .* "<br>" .* trait .*
-            " Mean: " .* string.(df[!, mean_col]) .* "<br>Std Dev: " .*
-            string.(df[!, std_col])
+            "$(x_var)" .* ": " .* string.(df[!, x_var]) .* "<br>" .* trait .* " Mean: " .*
+            string.(df[!, mean_col]) .* "<br>Std Dev: " .* string.(df[!, std_col])
     end
 
     # Plot replicate means with ribbons for standard deviation

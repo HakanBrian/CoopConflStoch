@@ -1,7 +1,6 @@
 module SimulationParameters
 
-export SimulationParameter,
-    diff_from_default, update_params, generate_params
+export SimulationParameter, diff_from_default, update_params, generate_params
 
 mutable struct SimulationParameter
     # Game parameters
@@ -152,10 +151,7 @@ function generate_params(
         Dict(
             vcat(
                 Dict(
-                    indep => values[findfirst(
-                        ==(indep),
-                        primary_keys,
-                    )][1] for
+                    indep => values[findfirst(==(indep), primary_keys)][1] for
                     indep in primary_keys
                 )...,
                 Dict(
@@ -179,7 +175,7 @@ function generate_params(
                     )][2][findfirst(==(linked_params[dep]), secondary_keys)] for
                     dep in tertiary_keys
                 )...,
-            )
+            ),
         ) for values in Iterators.product(sweep_iterables...)
     ])
 
@@ -188,8 +184,8 @@ function generate_params(
     end
 
     parameters = vec([
-        update_params(base_params; param_combination...) 
-        for param_combination in param_combinations
+        update_params(base_params; param_combination...) for
+        param_combination in param_combinations
     ])
 
     return parameters

@@ -8,7 +8,7 @@ using Distributed
 # @everywhere cd("")  # Set dir to base
 
 @everywhere begin
-    push!(LOAD_PATH, abspath("src"));
+    push!(LOAD_PATH, abspath("src"))
     using MainSimulation
 end
 
