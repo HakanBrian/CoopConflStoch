@@ -7,8 +7,7 @@ export plot_simulation_Plots,
     plot_sweep_rgs_Plots,
     extract_plot_lists,
     compare_plot_lists,
-    plot_sim_Plotly,
-    plot_sweep_r_Plotly,
+    plot_simulation_Plotly,
     plot_sweep_rep_Plotly,
     plot_sweep_rip_Plotly,
     plot_sweep_rgs_Plotly
@@ -430,7 +429,7 @@ function plot_simulation_Plotly(
         std_col = Symbol(trait * "_mean_std")
 
         df[!, hover_col] =
-            "$(x_axis_x_varvariable)" .* ": " .* string.(df[!, x_var]) .* "<br>" .* trait .*
+            "$(x_var)" .* ": " .* string.(df[!, x_var]) .* "<br>" .* trait .*
             " Mean: " .* string.(df[!, mean_col]) .* "<br>Std Dev: " .*
             string.(df[!, std_col])
     end
