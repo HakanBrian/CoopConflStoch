@@ -108,10 +108,10 @@ function read_matching_simulations(
 end
 
 function generate_filename_suffix(
-    param_dict::Dict{Symbol,T},
+    param_dict::Dict{Any,Any},
     condition::String = "Filtered";
     time_point::Union{Nothing,Int} = nothing,
-) where {T<:Real}
+)
     # Lexicographic sorting
     sorted_keys = sort(collect(keys(param_dict)))
 
