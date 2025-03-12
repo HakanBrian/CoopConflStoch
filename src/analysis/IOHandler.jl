@@ -108,7 +108,7 @@ function read_matching_simulations(
 end
 
 function generate_filename_suffix(
-    param_dict::Dict{Any,Any},
+    param_dict::Dict{<:Any,<:Any},
     condition::String = "Filtered";
     time_point::Union{Nothing,Int} = nothing,
 )
