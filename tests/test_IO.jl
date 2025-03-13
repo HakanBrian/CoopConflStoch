@@ -22,6 +22,7 @@ println(filename_filtered)  # Output: "simulation_T_N_Filtered_G10.csv"
 
 # loading simulations
 sims = MainSimulation.read_matching_simulations(
-    "data/basin/",
-    "basin_bipenal_group_size=5_relatedness=*_Full.csv",
+    "data/eZero/",
+    pattern_template = "eZero_{punishment}_relatedness_Filtered_G100.csv",
+    extract_keys = ["punishment"],
 )

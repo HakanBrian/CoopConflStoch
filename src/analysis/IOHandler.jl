@@ -77,9 +77,6 @@ function read_matching_simulations(
         error("Error: Directory '$dir_path' does not exist.")
     end
 
-    # Replace "default" in pattern_template with the lowest folder name
-    pattern_template = replace(pattern_template, "default" => folder_name)
-
     # Convert pattern_template to glob pattern
     glob_pattern = replace(pattern_template, r"\{(\w+)\}" => "*")
 
@@ -106,7 +103,7 @@ function read_matching_simulations(
         for key in extract_keys
             # Dynamically adjust regex based on the key
             pattern = if key == "punishment"
-                Regex("$(folder_name)_([^_]+)")  # Replace "default" dynamically
+                Regex("$(folder_name)_([^_]+)")  # Replace "punishment" dynamically
             else
                 Regex("$key=([^_]+)")  # General case for key=value format
             end
