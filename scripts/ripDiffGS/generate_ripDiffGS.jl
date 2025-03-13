@@ -55,5 +55,4 @@ run_simulation(
         :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
         :group_size => [5, 50, 500],
     ),
-    linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
 )
