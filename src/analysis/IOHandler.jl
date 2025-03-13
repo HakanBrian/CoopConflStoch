@@ -64,44 +64,60 @@ function read_simulation(filepath::String)
 end
 
 function read_matching_simulations(
-    filepath::String,
-    pattern::String;
-    extract_section::Int = 2,
+    filepath::String;
+    pattern_template::String,
+    extract_keys::Vector{String}
 )
-    # Extract directory path
+    # Extract the lowest folder in the filepath
     dir_path = dirname(filepath)
+    folder_name = splitpath(dir_path)[end]  # Get the last folder in the path
 
     # Ensure the directory exists
     if !isdir(dir_path)
         error("Error: Directory '$dir_path' does not exist.")
     end
 
+    # Replace "default" in pattern_template with the lowest folder name
+    pattern_template = replace(pattern_template, "default" => folder_name)
+
+    # Convert pattern_template to glob pattern
+    glob_pattern = replace(pattern_template, r"\{(\w+)\}" => "*")
+
     # Find matching files
-    files = glob(pattern, dir_path)
+    files = glob(glob_pattern, dir_path)
 
     # Check if files were found
     if isempty(files)
-        error("Error: No matching files found in '$dir_path' using pattern '$pattern'.")
+        error("Error: No matching files found in '$dir_path' using pattern '$glob_pattern'.")
     end
 
     println("Loading files from: $dir_path")
 
-    # Load matching files into a dictionary with extracted section as key
-    simulations = Dict{String,DataFrame}()
+    # Load matching files into a dictionary
+    simulations = Dict{Tuple{Vararg{String}},DataFrame}()
 
     for file in files
         filename = splitdir(file)[2]  # Extract filename from full path
-        parts = split(filename, "_")  # Split filename by underscores
 
-        # Ensure the requested section index is valid
-        if extract_section > length(parts) - 1
-            error(
-                "Error: Requested section $extract_section does not exist in filename '$filename'.",
-            )
+        # Extract values based on keys in extract_keys
+        key_values = []
+        for key in extract_keys
+            # Dynamically adjust regex based on the key
+            pattern = if key == "punishment"
+                Regex("$(folder_name)_([^_]+)")  # Replace "default" dynamically
+            else
+                Regex("$key=([^_]+)")  # General case for key=value format
+            end
+
+            m = match(pattern, filename)
+            if m === nothing
+                error("Error: Could not extract '$key' from filename '$filename'.")
+            end
+            push!(key_values, m.captures[1])  # Store extracted value
         end
 
-        key = parts[extract_section]  # Extract the desired section
-        simulations[key] = CSV.read(file, DataFrame)
+        # Store DataFrame using tuple of extracted values as key
+        simulations[Tuple(key_values)] = CSV.read(file, DataFrame)
     end
 
     return simulations

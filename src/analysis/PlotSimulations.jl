@@ -102,7 +102,7 @@ function plot_simulation_Plots(
 end
 
 function plot_multiple_simulations_Plots(
-    dfs::Dict{String,DataFrame},
+    dfs::Dict{<:Any,DataFrame},
     x_var::Symbol;
     z_var::Union{Symbol,Nothing} = nothing,
 )
@@ -110,20 +110,22 @@ function plot_multiple_simulations_Plots(
     z_var === nothing ? results = Dict{String,Vector{Plots.Plot}}() :
     results = Dict{String,Vector{Vector{Plots.Plot}}}()
 
-    for (key, df) in dfs
-        println("Processing dataset: ", key)
+    for (key_tuple, df) in dfs
+        # Convert tuple key into a string
+        key_str = join(key_tuple, "_")  # e.g., ("5", "0.1") -> "5_0.1"
+        println("Processing dataset: ", key_str)
 
         # Pass dataset name (string key) to plot_simulation_data_Plots
         plots = plot_simulation_Plots(
             df,
             x_var;
-            dataset_name = key,  # Key is now part of the plot title
+            dataset_name = key_str,  # Use string key in the plot title
             z_var = z_var,
             display_plot = false,
         )
 
         # Store results: a flat vector if z_var is nothing, else a nested vector
-        results[key] = plots
+        results[key_str] = plots
     end
 
     return results
@@ -197,7 +199,7 @@ function plot_sweep_heatmap_Plots(
 end
 
 function plot_multiple_sweep_heatmap_Plots(
-    dfs::Dict{String,DataFrame},
+    dfs::Dict{<:Any,DataFrame},
     x_var::Symbol,
     y_var::Symbol,
     dependent_vars::Vector{Symbol};
@@ -207,8 +209,10 @@ function plot_multiple_sweep_heatmap_Plots(
     z_var === nothing ? results = Dict{String,Vector{Plots.Plot}}() :
     results = Dict{String,Vector{Vector{Plots.Plot}}}()
 
-    for (key, df) in dfs
-        println("Processing dataset: ", key)
+    for (key_tuple, df) in dfs
+        # Convert tuple key into a string
+        key_str = join(key_tuple, "_")  # e.g., ("5", "0.1") -> "5_0.1"
+        println("Processing dataset: ", key_str)
 
         # Pass dataset name (string key) to plot_simulation_data_Plots
         plots = plot_sweep_heatmap_Plots(
@@ -216,20 +220,20 @@ function plot_multiple_sweep_heatmap_Plots(
             x_var,
             y_var,
             dependent_vars;
-            dataset_name = key,
+            dataset_name = key_str,
             z_var = z_var,
             display_plot = false,
         )
 
         # Store results: a flat vector if z_var is nothing, else a nested vector
-        results[key] = plots
+        results[key_str] = plots
     end
 
     return results
 end
 
 function plot_sweep_rep_Plots(
-    df::Union{DataFrame,Dict{String,DataFrame}};
+    df::Union{DataFrame,Dict{<:Any,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -250,7 +254,7 @@ function plot_sweep_rep_Plots(
             z_var = z_var,
             display_plot = display_plot,
         )
-    elseif df isa Dict{String,DataFrame}
+    elseif df isa Dict{<:Any,DataFrame}
         return plot_multiple_sweep_heatmap_Plots(
             df,
             :relatedness,
@@ -262,7 +266,7 @@ function plot_sweep_rep_Plots(
 end
 
 function plot_sweep_rip_Plots(
-    df::Union{DataFrame,Dict{String,DataFrame}};
+    df::Union{DataFrame,Dict{<:Any,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
 )
@@ -278,7 +282,7 @@ function plot_sweep_rip_Plots(
             z_var = z_var,
             display_plot = display_plot,
         )
-    elseif df isa Dict{String,DataFrame}
+    elseif df isa Dict{<:Any,DataFrame}
         return plot_multiple_sweep_heatmap_Plots(
             df,
             :relatedness,
@@ -290,7 +294,7 @@ function plot_sweep_rip_Plots(
 end
 
 function plot_sweep_rgs_Plots(
-    df::Union{DataFrame,Dict{String,DataFrame}};
+    df::Union{DataFrame,Dict{<:Any,DataFrame}};
     display_plot::Bool = false,
 )
     dependent_vars = [
@@ -311,7 +315,7 @@ function plot_sweep_rgs_Plots(
             z_var = nothing,
             display_plot = display_plot,
         )
-    elseif df isa Dict{String,DataFrame}
+    elseif df isa Dict{<:Any,DataFrame}
         return plot_multiple_sweep_heatmap_Plots(
             df,
             :relatedness,
@@ -327,15 +331,24 @@ end
 # Compare Plots #################################################################################################################
 ################
 
-function extract_plot_lists(plots_dict::Dict{String,T}) where {T<:Any}
-    first_value = first(values(plots_dict))  # Check structure of first dictionary entry
+function extract_plot_lists(
+    plots_dict::Dict{String,T}; 
+    sort_key::Bool = false,
+) where {T<:Any}
+    # Determine the order of keys: sorted or original order
+    keys_order = sort_key ? 
+        sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[end])) : 
+        collect(keys(plots_dict))
+
+    # Extract values in chosen order
+    plot_lists = [plots_dict[k] for k in keys_order]
+
+    first_value = first(plot_lists)  # Check structure of first dictionary entry
 
     if first_value isa Vector{Plots.Plot}
-        # Collect all Vector{Plots.Plot} entries into a single Vector{Vector{Plots.Plot}}
-        return collect(values(plots_dict))
+        return plot_lists
     elseif first_value isa Vector{Vector{Plots.Plot}}
-        # Directly return the dictionary values as Vector{Vector{Plots.Plot}}, avoiding extra nesting
-        return collect(values(plots_dict)...)
+        return vcat(plot_lists...)  # Flatten nested structure
     else
         throw(ArgumentError("Unexpected data structure in plots_dict"))
     end
