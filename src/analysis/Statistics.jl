@@ -138,7 +138,7 @@ function statistics_filtered_processed(
 )
     # Calculate statistics for each parameter combination
     statistics_data =
-        statistics_filtered(df, sweep_vars, output_save_tick, save_generations)
+        statistics_filtered(df, output_save_tick, sweep_vars, linked_params, save_generations)
 
     # Generate all parameter combinations
     sorted_keys = sort(collect(keys(sweep_vars)))
