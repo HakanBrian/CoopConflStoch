@@ -332,12 +332,13 @@ end
 ################
 
 function extract_plot_lists(
-    plots_dict::Dict{String,T}; 
+    plots_dict::Dict{String,T};
     sort_key::Bool = false,
 ) where {T<:Any}
     # Determine the order of keys: sorted or original order
-    keys_order = sort_key ? 
-        sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[end])) : 
+    keys_order =
+        sort_key ?
+        sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[end])) :
         collect(keys(plots_dict))
 
     # Extract values in chosen order

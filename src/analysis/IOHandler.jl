@@ -66,7 +66,7 @@ end
 function read_matching_simulations(
     filepath::String;
     pattern_template::String,
-    extract_keys::Vector{String}
+    extract_keys::Vector{String},
 )
     # Extract the lowest folder in the filepath
     dir_path = dirname(filepath)
@@ -88,7 +88,9 @@ function read_matching_simulations(
 
     # Check if files were found
     if isempty(files)
-        error("Error: No matching files found in '$dir_path' using pattern '$glob_pattern'.")
+        error(
+            "Error: No matching files found in '$dir_path' using pattern '$glob_pattern'.",
+        )
     end
 
     println("Loading files from: $dir_path")

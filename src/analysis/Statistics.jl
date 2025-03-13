@@ -137,8 +137,13 @@ function statistics_filtered_processed(
     save_generations::Union{Nothing,Vector{<:Real}} = nothing,
 )
     # Calculate statistics for each parameter combination
-    statistics_data =
-        statistics_filtered(df, output_save_tick, sweep_vars, linked_params, save_generations)
+    statistics_data = statistics_filtered(
+        df,
+        output_save_tick,
+        sweep_vars,
+        linked_params,
+        save_generations,
+    )
 
     # Generate all parameter combinations
     sorted_keys = sort(collect(keys(sweep_vars)))
