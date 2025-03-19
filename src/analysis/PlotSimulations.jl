@@ -5,6 +5,7 @@ export plot_simulation_Plots,
     plot_sweep_rep_Plots,
     plot_sweep_rip_Plots,
     plot_sweep_rgs_Plots,
+    rotate_plot_lists,
     extract_plot_lists,
     compare_plot_lists,
     plot_simulation_Plotly,
@@ -330,6 +331,13 @@ end
 ################
 # Compare Plots #################################################################################################################
 ################
+
+function rotate_plot_lists(plots::Dict{String,Vector{Vector{Plots.Plot}}})
+    rotated_vectors = collect(zip(values(plots)...))
+    rotated_dict = Dict(string(v) => collect(i) for (i, v) in zip(rotated_vectors, collect(unique(plots["bipenal"].group_size))))
+
+    return rotated_dict
+end
 
 function extract_plot_lists(
     plots_dict::Dict{String,T};
