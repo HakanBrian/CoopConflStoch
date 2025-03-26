@@ -1,6 +1,6 @@
 module Statistics
 
-export statistics_processed, statistics_filtered_processed, statistics_full
+export statistics_processed, statistics_filtered_processed, statistics_full, normalize_payoff!, adjust_payoff!
 
 using ..MainSimulation.SimulationParameters
 import ..MainSimulation.SimulationParameters:
@@ -36,9 +36,15 @@ function calculate_statistics(df::DataFrame)
 end
 
 function statistics_processed(df::DataFrame, parameters::SimulationParameter)
+    # Find different parameters
     param_diff = diff_from_default(parameters)
+
+    # Generate the filename suffix
     key = generate_filename_suffix(param_diff, "Full")
+
+    # Calculate statistics for the DataFrame
     data = Dict{String,DataFrame}(key => calculate_statistics(df))
+
     return data
 end
 
@@ -238,6 +244,20 @@ function statistics_full(
     filter!(kv -> !isempty(kv.second), independent_data)
 
     return independent_data
+end
+
+function normalize_payoff!(dfs_dict::Dict{Tuple{Vararg{String}}, DataFrame})
+    # Normalize payoff by dividing by the group size
+    foreach(key -> dfs_dict[key].payoff_mean_mean /= parse(Float64, key[1]), keys(dfs_dict))
+
+    nothing
+end
+
+function adjust_payoff!(df_numer::DataFrame, df_denom::DataFrame)
+    # Adjust payoff to be the ratio of the two payoffs
+    df_numer.payoff_mean_mean ./= df_denom.payoff_mean_mean
+
+    nothing
 end
 
 end # module Statistics
