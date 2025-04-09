@@ -1,6 +1,7 @@
 module Statistics
 
-export statistics_processed, statistics_filtered_processed, statistics_full, normalize_payoff!, adjust_payoff!
+export statistics_processed,
+    statistics_filtered_processed, statistics_full, normalize_payoff!, adjust_payoff!
 
 using ..MainSimulation.SimulationParameters
 import ..MainSimulation.SimulationParameters:
@@ -246,7 +247,10 @@ function statistics_full(
     return independent_data
 end
 
-function normalize_payoff!(dfs_dict::Dict{Tuple{Vararg{String}}, DataFrame}; group_size::Int64 = nothing)
+function normalize_payoff!(
+    dfs_dict::Dict{Tuple{Vararg{String}},DataFrame};
+    group_size::Int64 = nothing,
+)
     for (key, df) in dfs_dict
         parsed = try
             parse(Float64, key[1])

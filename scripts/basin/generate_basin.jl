@@ -45,7 +45,8 @@ run_simulation(
 )
 
 # external and unipenal internal punishment
-unipenal_param = update_params(base_param, use_bipenal = false, int_pun_self_mutation_enabled = false)
+unipenal_param =
+    update_params(base_param, use_bipenal = false, int_pun_self_mutation_enabled = false)
 run_simulation(
     unipenal_param,
     num_replicates = 20,

@@ -49,7 +49,11 @@ run_simulation(
     ),
 )
 
-nip_param = update_params(base_param, int_pun_ext_mutation_enabled = false, int_pun_self_mutation_enabled = false)
+nip_param = update_params(
+    base_param,
+    int_pun_ext_mutation_enabled = false,
+    int_pun_self_mutation_enabled = false,
+)
 run_simulation(
     nip_param,
     filepath = "data/ssrun/no_int_pun/no_int_pun",
