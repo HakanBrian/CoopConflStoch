@@ -246,9 +246,25 @@ function statistics_full(
     return independent_data
 end
 
-function normalize_payoff!(dfs_dict::Dict{Tuple{Vararg{String}}, DataFrame})
-    # Normalize payoff by dividing by the group size
-    foreach(key -> dfs_dict[key].payoff_mean_mean /= parse(Float64, key[1]), keys(dfs_dict))
+function normalize_payoff!(dfs_dict::Dict{Tuple{Vararg{String}}, DataFrame}; group_size::Int64 = nothing)
+    for (key, df) in dfs_dict
+        parsed = try
+            parse(Float64, key[1])
+        catch
+            nothing
+        end
+
+        if parsed !== nothing
+            df.payoff_mean_mean ./= parsed
+            df.payoff_mean_std ./= parsed
+        elseif group_size === nothing
+            df.payoff_mean_mean ./= df.group_size
+            df.payoff_mean_std ./= df.group_size
+        else
+            df.payoff_mean_mean ./= group_size
+            df.payoff_mean_std ./= group_size
+        end
+    end
 
     nothing
 end
@@ -256,6 +272,7 @@ end
 function adjust_payoff!(df_numer::DataFrame, df_denom::DataFrame)
     # Adjust payoff to be the ratio of the two payoffs
     df_numer.payoff_mean_mean ./= df_denom.payoff_mean_mean
+    df_numer.payoff_mean_std ./= df_denom.payoff_mean_std
 
     nothing
 end
