@@ -338,7 +338,7 @@ function extract_plot_lists(
     # Determine the order of keys: sorted or original order
     keys_order =
         sort_key ?
-        sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[end])) :
+        sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[2])) :
         collect(keys(plots_dict))
 
     # Extract values in chosen order
@@ -367,21 +367,24 @@ function compare_plot_lists(
     @assert all(length(p) == num_plots for p in plot_lists) "All plot lists must have the same number of plots!"
 
     for i in 1:num_plots
-        # Gather all corresponding plots from each list
         plots_i = [plots[i] for plots in plot_lists]
 
-        # Determine global limits for x, y, and z across all plots in this index
+        # Determine which index to use for limits
+        limits_index = (i == 4 && num_plots == 5) ? 3 : i
+        limits_plots = [plots[limits_index] for plots in plot_lists]
+
+        # Compute global axis limits using the selected plots
         xlims_global = (
-            minimum(Plots.xlims(p)[1] for p in plots_i),
-            maximum(Plots.xlims(p)[2] for p in plots_i),
+            minimum(Plots.xlims(p)[1] for p in limits_plots),
+            maximum(Plots.xlims(p)[2] for p in limits_plots),
         )
         ylims_global = (
-            minimum(Plots.ylims(p)[1] for p in plots_i),
-            maximum(Plots.ylims(p)[2] for p in plots_i),
+            minimum(Plots.ylims(p)[1] for p in limits_plots),
+            maximum(Plots.ylims(p)[2] for p in limits_plots),
         )
         clims_global = (
-            minimum(Plots.zlims(p)[1] for p in plots_i),
-            maximum(Plots.zlims(p)[2] for p in plots_i),
+            minimum(Plots.zlims(p)[1] for p in limits_plots),
+            maximum(Plots.zlims(p)[2] for p in limits_plots),
         )
 
         # Create a grid layout based on the number of plot sets
@@ -395,7 +398,7 @@ function compare_plot_lists(
             fmt = :pdf,
         )
 
-        # Apply axis limits if specified
+        # Apply optional axis overrides
         if xlim !== nothing
             xlims!(p, xlim)
         end
