@@ -249,7 +249,7 @@ end
 
 function normalize_payoff!(
     dfs_dict::Dict{Tuple{Vararg{String}},DataFrame};
-    group_size::Int64 = nothing,
+    group_size::Union{Int64,Nothing} = nothing,
 )
     for (key, df) in dfs_dict
         parsed = try
