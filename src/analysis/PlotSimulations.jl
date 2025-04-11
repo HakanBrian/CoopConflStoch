@@ -369,19 +369,25 @@ function compare_plot_lists(
     for i in 1:num_plots
         plots_i = [plots[i] for plots in plot_lists]
 
-        # Determine which index to use for limits
-        limits_index = (i == 4 && num_plots == 5) ? 3 : i
-        limits_plots = [plots[limits_index] for plots in plot_lists]
-
-        # Compute global axis limits using the selected plots
+        # Use the current plots for x and y axis limits
         xlims_global = (
-            minimum(Plots.xlims(p)[1] for p in limits_plots),
-            maximum(Plots.xlims(p)[2] for p in limits_plots),
+            minimum(Plots.xlims(p)[1] for p in plots_i),
+            maximum(Plots.xlims(p)[2] for p in plots_i),
         )
         ylims_global = (
-            minimum(Plots.ylims(p)[1] for p in limits_plots),
-            maximum(Plots.ylims(p)[2] for p in limits_plots),
+            minimum(Plots.ylims(p)[1] for p in plots_i),
+            maximum(Plots.ylims(p)[2] for p in plots_i),
         )
+
+        # Special clims logic
+        if i == 4 && num_plots == 5
+            limits_index = 3
+        elseif i == 5 && num_plots == 6
+            limits_index = 4 
+        else
+            limits_index = i
+        end
+        limits_plots = [plots[limits_index] for plots in plot_lists]
         clims_global = (
             minimum(Plots.zlims(p)[1] for p in limits_plots),
             maximum(Plots.zlims(p)[2] for p in limits_plots),
