@@ -402,6 +402,11 @@ function compare_plot_lists(
             ylims = ylims_global,
             clims = clims_global,
             fmt = :pdf,
+            xlabel = "",
+            ylabel = "",
+            title = "",
+            colorbar_title = "",
+            legend = false,
         )
 
         # Apply optional axis overrides
