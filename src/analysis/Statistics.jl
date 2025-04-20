@@ -1,7 +1,11 @@
 module Statistics
 
 export statistics_processed,
-    statistics_filtered_processed, statistics_full, normalize_payoff!, adjust_payoff!
+    statistics_filtered_processed,
+    statistics_full,
+    normalize_payoff!,
+    adjust_payoff!,
+    adjust_all_payoffs!
 
 using ..MainSimulation.SimulationParameters
 import ..MainSimulation.SimulationParameters:
@@ -273,12 +277,25 @@ function normalize_payoff!(
     nothing
 end
 
-function adjust_payoff!(df_numer::DataFrame, df_denom::DataFrame)
+function adjust_payoff!(df_adjust::DataFrame, df_ref::DataFrame)
     # Adjust payoff to be the ratio of the two payoffs
-    df_numer.payoff_mean_mean ./= df_denom.payoff_mean_mean
-    df_numer.payoff_mean_std ./= df_denom.payoff_mean_std
+    df_adjust.payoff_mean_mean ./= df_ref.payoff_mean_mean
+    df_adjust.payoff_mean_std ./= df_ref.payoff_mean_std
 
     nothing
+end
+
+function adjust_all_payoffs!(
+    dict_adjust::Dict{Tuple{Vararg{String}},DataFrame},
+    dict_ref::Dict{Tuple{Vararg{String}},DataFrame},
+)
+    for key in keys(dict_adjust)
+        if haskey(dict_ref, key)
+            adjust_payoff!(dict_adjust[key], dict_ref[key])
+        else
+            @warn "Key $key not found in denominator dictionary"
+        end
+    end
 end
 
 end # module Statistics

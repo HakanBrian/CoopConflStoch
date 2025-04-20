@@ -383,7 +383,7 @@ function compare_plot_lists(
         if i == 4 && num_plots == 5
             limits_index = 3
         elseif i == 5 && num_plots == 6
-            limits_index = 4 
+            limits_index = 4
         else
             limits_index = i
         end
