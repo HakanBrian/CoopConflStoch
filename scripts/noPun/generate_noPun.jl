@@ -41,7 +41,7 @@ run_simulation(
 
 # rep/rip
 run_simulation(
-    rep_params,
+    base_params,
     save_file = true,
     filepath = "data/noPun/reip",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
@@ -65,7 +65,7 @@ run_simulation(
 
 # rDiffGS
 run_simulation(
-    base_params_rdgs,
+    base_params,
     filepath = "data/noPun/rDiffGS",
     save_file = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
@@ -76,7 +76,7 @@ run_simulation(
 
 # repDiffGS
 run_simulation(
-    base_params_rdgs,
+    base_params,
     num_replicates = 20,
     save_file = true,
     filepath = "data/noPun/repDiffGS",
@@ -87,9 +87,9 @@ run_simulation(
     ),
 )
 
-#ripDiffGS
+# ripDiffGS
 run_simulation(
-    base_params_rdgs,
+    base_params,
     num_replicates = 20,
     save_file = true,
     filepath = "data/noPun/ripDiffGS",
