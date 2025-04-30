@@ -33,7 +33,7 @@ base_params = SimulationParameter(
 run_simulation(
     base_params,
     save_file = true,
-    filepath = "data/noPun/r",
+    filepath = "data/noPun/noPun_r",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
     ),
@@ -43,7 +43,7 @@ run_simulation(
 run_simulation(
     base_params,
     save_file = true,
-    filepath = "data/noPun/reip",
+    filepath = "data/noPun/noPun_reip",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
         :ext_pun0 => zeros(Float32, 21),
@@ -55,7 +55,7 @@ run_simulation(
     base_params,
     num_replicates = 20,
     save_file = true,
-    filepath = "data/noPun/rgs",
+    filepath = "data/noPun/noPun_rgs",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.1)),
         :group_size =>
@@ -66,7 +66,7 @@ run_simulation(
 # rDiffGS
 run_simulation(
     base_params,
-    filepath = "data/noPun/rDiffGS",
+    filepath = "data/noPun/noPun_rDiffGS",
     save_file = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
@@ -79,7 +79,7 @@ run_simulation(
     base_params,
     num_replicates = 20,
     save_file = true,
-    filepath = "data/noPun/repDiffGS",
+    filepath = "data/noPun/noPun_repDiffGS",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
         :ext_pun0 => zeros(Float32, 21),
@@ -92,10 +92,10 @@ run_simulation(
     base_params,
     num_replicates = 20,
     save_file = true,
-    filepath = "data/noPun/ripDiffGS",
+    filepath = "data/noPun/noPun_ripDiffGS",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :int_pun_ext0 => zeros(Float32, 101),
+        :int_pun_ext0 => zeros(Float32, 21),
         :group_size => [10, 50, 500],
     ),
     linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
