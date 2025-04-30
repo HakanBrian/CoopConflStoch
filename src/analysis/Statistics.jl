@@ -282,11 +282,13 @@ function adjust_payoff!(df_adjust::DataFrame, df_ref::DataFrame)
     adjust_payoff_mean = df_adjust.payoff_mean_mean ./ df_ref.payoff_mean_mean
 
     # Apply uncertainty propagation
-    adjust_payoff_std = abs.(adjust_payoff_mean) .* sqrt.(
-        (df_adjust.payoff_mean_std ./ df_adjust.payoff_mean_mean).^2 .+
-        (df_ref.payoff_mean_std ./ df_ref.payoff_mean_mean).^2
-    )
-    
+    adjust_payoff_std =
+        abs.(adjust_payoff_mean) .*
+        sqrt.(
+            (df_adjust.payoff_mean_std ./ df_adjust.payoff_mean_mean) .^ 2 .+
+            (df_ref.payoff_mean_std ./ df_ref.payoff_mean_mean) .^ 2
+        )
+
     # Store result
     df_adjust.payoff_mean_mean .= adjust_payoff_mean
     df_adjust.payoff_mean_std .= adjust_payoff_std
