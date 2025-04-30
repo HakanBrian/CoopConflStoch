@@ -257,18 +257,18 @@ function normalize_payoff!(
 )
     for (key, df) in dfs_dict
         parsed = try
-            parse(Float64, key[1])
+            parse(Float64, key[1])  # Convert string key to float
         catch
             nothing
         end
 
-        if parsed !== nothing
+        if parsed !== nothing  # Group size povided in key
             df.payoff_mean_mean ./= parsed
             df.payoff_mean_std ./= parsed
-        elseif group_size === nothing
+        elseif group_size === nothing  # Group size provided in data
             df.payoff_mean_mean ./= df.group_size
             df.payoff_mean_std ./= df.group_size
-        else
+        else  # Group size explicitely provided
             df.payoff_mean_mean ./= group_size
             df.payoff_mean_std ./= group_size
         end
@@ -279,8 +279,17 @@ end
 
 function adjust_payoff!(df_adjust::DataFrame, df_ref::DataFrame)
     # Adjust payoff to be the ratio of the two payoffs
-    df_adjust.payoff_mean_mean ./= df_ref.payoff_mean_mean
-    df_adjust.payoff_mean_std ./= df_ref.payoff_mean_std
+    adjust_payoff_mean = df_adjust.payoff_mean_mean ./ df_ref.payoff_mean_mean
+
+    # Apply uncertainty propagation
+    adjust_payoff_std = abs.(adjust_payoff_mean) .* sqrt.(
+        (df_adjust.payoff_mean_std ./ df_adjust.payoff_mean_mean).^2 .+
+        (df_ref.payoff_mean_std ./ df_ref.payoff_mean_mean).^2
+    )
+    
+    # Store result
+    df_adjust.payoff_mean_mean .= adjust_payoff_mean
+    df_adjust.payoff_mean_std .= adjust_payoff_std
 
     nothing
 end
