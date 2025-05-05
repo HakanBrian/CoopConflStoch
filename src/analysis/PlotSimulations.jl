@@ -356,10 +356,13 @@ function extract_plot_lists(
 end
 
 function compare_plot_lists(
-    plot_lists::Vector{Vector{Plots.Plot}};
+    plot_lists::Vector{Vector{T}};
     xlim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
     ylim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
-)
+    display_plot::Bool = true,
+    save_fig::Bool = false,
+    fig_name::Union{Nothing,String} = nothing,
+) where {T<:Plots.Plot}
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
 
@@ -417,7 +420,13 @@ function compare_plot_lists(
             ylims!(p, ylim)
         end
 
-        display(p)
+        # Display or Save
+        if display_plot
+            display(p)
+        end
+        if save_fig
+            Plots.pdf(p, "$(fig_name)_$(i)")
+        end
     end
 end
 
