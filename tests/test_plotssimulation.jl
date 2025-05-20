@@ -52,3 +52,11 @@ plots_dict = MainSimulation.plot_multiple_simulations_Plots(
 plots_list = MainSimulation.extract_plot_lists(plots_dict)
 
 MainSimulation.compare_plot_lists(plots_list)
+
+
+# Heatmap smoothing issue
+using Plots, PlotlyJS
+plotlyjs()
+gr()
+p = Plots.heatmap(rand(24, 24))
+Plots.pdf(p, "heatmap_plotly")

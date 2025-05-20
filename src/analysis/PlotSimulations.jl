@@ -362,6 +362,7 @@ function compare_plot_lists(
     display_plot::Bool = true,
     save_fig::Bool = false,
     fig_name::Union{Nothing,String} = nothing,
+    fmt::Union{Nothing,String} = "pdf",
 ) where {T<:Plots.Plot}
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
@@ -425,7 +426,7 @@ function compare_plot_lists(
             display(p)
         end
         if save_fig
-            Plots.pdf(p, "$(fig_name)_$(i)")
+            Plots.savefig(p, "$(fig_name)_$(i).$(fmt)")
         end
     end
 end
