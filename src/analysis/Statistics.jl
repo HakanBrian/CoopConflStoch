@@ -301,8 +301,9 @@ function adjust_all_payoffs!(
     dict_ref::Dict{Tuple{Vararg{String}},DataFrame},
 )
     for key in keys(dict_adjust)
-        if haskey(dict_ref, key)
-            adjust_payoff!(dict_adjust[key], dict_ref[key])
+        ref_key = key[1:2]
+        if haskey(dict_ref, ref_key)
+            adjust_payoff!(dict_adjust[key], dict_ref[ref_key])
         else
             @warn "Key $key not found in denominator dictionary"
         end
