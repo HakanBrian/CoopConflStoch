@@ -46,13 +46,16 @@ run_simulation(
     sweep_full = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :norm0 => Float32[0.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 7.0],
+        :int_pun_ext0 => Float32[0.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 7.0],
     ),
+    linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
 )
 
 nip_param = update_params(
     base_param,
     int_pun_ext_mutation_enabled = false,
     int_pun_self_mutation_enabled = false,
+    generations = 1500000,
 )
 run_simulation(
     nip_param,
@@ -60,5 +63,6 @@ run_simulation(
     sweep_full = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :norm0 => Float32[0.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 7.0],
+        :ext_pun0 => Float32[0.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 7.0],
     ),
 )

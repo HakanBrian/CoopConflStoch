@@ -36,8 +36,8 @@ run_simulation(
     filepath = "data/ripDiffGS/ripDiffGS",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
-        :group_size => [5, 50, 500],
+        :int_pun_ext0 => collect(range(0.0f0, 5.0f0, step = 0.25f0)),
+        :group_size => [10, 50, 500],
     ),
     linked_params = Dict(:int_pun_self0 => :int_pun_ext0),
 )
@@ -52,7 +52,7 @@ run_simulation(
     filepath = "data/ripDiffGS/ripDiffGS",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :int_pun_ext0 => collect(range(0.0f0, 1.0f0, step = 0.05f0)),
-        :group_size => [5, 50, 500],
+        :int_pun_ext0 => collect(range(0.0f0, 5.0f0, step = 0.25f0)),
+        :group_size => [10, 50, 500],
     ),
 )

@@ -32,6 +32,7 @@ base_param = SimulationParameter(
     ext_pun_mutation_enabled = true,
     int_pun_ext_mutation_enabled = true,
     int_pun_self_mutation_enabled = true,
+    use_bipenal = false,
     output_save_tick = 20,
 )
 

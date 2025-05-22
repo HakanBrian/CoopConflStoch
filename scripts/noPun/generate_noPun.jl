@@ -29,6 +29,23 @@ base_params = SimulationParameter(
     output_save_tick = 10,
 )
 
+# ssrun
+ssrun_param = update_params(
+    base_params,
+    action0 = 0.0f0,
+    norm0 = 0.0f0,
+    generations = 1500000,
+    relatedness = 0.5,
+    use_bipenal = false,
+    output_save_tick = 20
+)
+run_simulation(
+    ssrun_param,
+    save_file = true,
+    filepath = "data/noPun/noPun_ssrun",
+    sweep_full = true,
+)
+
 # r
 run_simulation(
     base_params,
