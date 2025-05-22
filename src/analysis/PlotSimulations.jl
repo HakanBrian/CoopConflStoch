@@ -5,8 +5,8 @@ export plot_simulation_Plots,
     plot_sweep_rep_Plots,
     plot_sweep_rip_Plots,
     plot_sweep_rgs_Plots,
-    extract_plot_lists,
     compare_plot_lists,
+    basin_group_plot
     plot_simulation_Plotly,
     plot_sweep_rep_Plotly,
     plot_sweep_rip_Plotly,
@@ -48,6 +48,7 @@ function plot_simulation_Plots(
         ["ext_pun", "int_pun_ext", "int_pun_self"],
         ["ext_pun"],
         ["action", "norm"],
+        ["payoff"],
     ]
 
     # Determine unique z values (or use a single group if z_var is nothing)
@@ -331,15 +332,17 @@ end
 # Compare Plots #################################################################################################################
 ################
 
+function order_plot_key(plots_dict::Dict{String,T}) where {T<:Any}
+    return sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[2]))
+end
+
 function extract_plot_lists(
     plots_dict::Dict{String,T};
     sort_key::Bool = false,
 ) where {T<:Any}
     # Determine the order of keys: sorted or original order
     keys_order =
-        sort_key ?
-        sort(collect(keys(plots_dict)), by = key -> parse(Float64, split(key, "_")[2])) :
-        collect(keys(plots_dict))
+        sort_key ? order_plot_key(plots_dict) : collect(keys(plots_dict))
 
     # Extract values in chosen order
     plot_lists = [plots_dict[k] for k in keys_order]
@@ -355,16 +358,21 @@ function extract_plot_lists(
     end
 end
 
-function compare_plot_lists(
+function clim_index(i, num_plots)
+    if i == 4 && num_plots == 5
+        return 3
+    elseif i == 5 && num_plots == 6
+        return 4
+    else
+        return i
+    end
+end
+
+function normalize_limits!(
     plot_lists::Vector{Vector{T}};
     xlim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
     ylim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
-    display_plot::Bool = true,
-    save_fig::Bool = false,
-    fig_name::Union{Nothing,String} = nothing,
-    fmt::Union{Nothing,String} = "pdf",
 ) where {T<:Plots.Plot}
-    num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
 
     # Ensure all plot lists have the same number of plots
@@ -384,49 +392,132 @@ function compare_plot_lists(
         )
 
         # Special clims logic
-        if i == 4 && num_plots == 5
-            limits_index = 3
-        elseif i == 5 && num_plots == 6
-            limits_index = 4
-        else
-            limits_index = i
-        end
+        limits_index = clim_index(i, num_plots)
         limits_plots = [plots[limits_index] for plots in plot_lists]
         clims_global = (
             minimum(Plots.zlims(p)[1] for p in limits_plots),
             maximum(Plots.zlims(p)[2] for p in limits_plots),
         )
 
-        # Create a grid layout based on the number of plot sets
-        p = Plots.plot(
-            plots_i...;
-            layout = (1, num_sets),
-            size = (600 * num_sets, 400),
-            xlims = xlims_global,
-            ylims = ylims_global,
-            clims = clims_global,
-            fmt = :pdf,
-            xlabel = "",
-            ylabel = "",
-            title = "",
-            colorbar_title = "",
-            legend = false,
-        )
+        # Apply settings to each individual plot
+        for p in plots_i
+            Plots.plot!(
+                p;
+                size = (600, 400),
+                xlims = xlims_global,
+                ylims = ylims_global,
+                clims = clims_global,
+                xlabel = "",
+                ylabel = "",
+                title = "",
+                colorbar_title = "",
+                legend = false,
+            )
 
-        # Apply optional axis overrides
-        if xlim !== nothing
-            xlims!(p, xlim)
+            # Apply optional axis overrides
+            if xlim !== nothing
+                xlims!(p, xlim)
+            end
+            if ylim !== nothing
+                ylims!(p, ylim)
+            end
         end
-        if ylim !== nothing
-            ylims!(p, ylim)
+    end
+end
+
+function compare_plot_lists(
+    plot_lists::Union{Vector{Vector{T}},Dict{String,Vector{T}}};
+    xlim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    ylim::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    sort_key::Bool = true,
+    composite::Bool = true,
+    display_plot::Bool = true,
+    save_fig::Bool = false,
+    save_index::Int = 1,
+    fig_name::Union{Nothing,String} = nothing,
+    fmt::Union{Nothing,String} = "pdf",
+) where {T<:Plots.Plot}
+    # Convert to Vector
+    if typeof(plot_lists) === Dict{String,Vector{T}}
+        plot_lists = extract_plot_lists(plot_lists; sort_key)
+    end
+
+    # Set global limits to the same plots in each set
+    normalize_limits!(
+        plot_lists;
+        xlim,
+        ylim,
+    )
+
+    num_sets = length(plot_lists)  # Number of sets of plots
+    num_plots = length(plot_lists[1])  # Number of plots per set
+
+    for i in 1:num_plots
+        if composite
+            plots_i = [plots[i] for plots in plot_lists]
+
+            p = Plots.plot(
+                plots_i...;
+                layout = (1, num_sets),
+                size = (600 * num_sets, 400),
+            )
+        else
+            p = plot_lists[save_index][i]
         end
 
-        # Display or Save
+        # Display
         if display_plot
             display(p)
         end
+
+        # Save
         if save_fig
+            # Extract the directory part
+            dir_path = dirname(fig_name)
+
+            # Create the directory if it doesn't exist
+            isdir(dir_path) || mkpath(dir_path)
+
+            # Save the figure with suffix and extension
             Plots.savefig(p, "$(fig_name)_$(i).$(fmt)")
+        end
+    end
+end
+
+function basin_group_plot(
+    simualation::Dict{Tuple{Vararg{String}}, DataFrame},
+    group_size::Int;
+    display_plot::Bool = true,
+    save_fig::Bool = false,
+    fig_name::String = "",
+)
+    # Select simulations with specific group size
+    sim_gs = Dict(k => v for (k, v) in simualation if k[1] == "$(group_size)")
+
+    # Generate the plots per simulation
+    sim_gs_plots_dict = plot_multiple_simulations_Plots(sim_gs, :generation)
+
+    if display_plot
+        compare_plot_lists(sim_gs_plots_dict)
+    end
+
+    if save_fig
+        dict_keys = order_plot_key(sim_gs_plots_dict)
+
+        for i in eachindex(dict_keys)
+            k = dict_keys[i]
+
+            filepath = string(fig_name, "_", k)
+
+            compare_plot_lists(
+                sim_gs_plots_dict,
+                composite = false,
+                display_plot = false,
+                save_fig = true,
+                save_index = i,
+                fig_name = filepath,
+                fmt = "pdf"
+            )
         end
     end
 end
