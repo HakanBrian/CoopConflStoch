@@ -6,7 +6,7 @@ export plot_simulation_Plots,
     plot_sweep_rip_Plots,
     plot_sweep_rgs_Plots,
     compare_plot_lists,
-    basin_group_plot
+    basin_group_plot,
     plot_simulation_Plotly,
     plot_sweep_rep_Plotly,
     plot_sweep_rip_Plotly,
