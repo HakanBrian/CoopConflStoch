@@ -5,7 +5,6 @@ export save_simulation,
     read_matching_simulations,
     generate_filename_suffix,
     modify_filename,
-    update_dataset_params!,
     process_simulation
 
 using ..MainSimulation.SimulationParameters
@@ -161,17 +160,6 @@ function modify_filename(filepath::String, key::String)
 
     # Ensure forward slashes for consistency
     return replace(new_filepath, "\\" => "/")
-end
-
-function update_dataset_params!(df::DataFrame)
-    rename!(df, :a_mean_mean => :norm_mean_mean)
-    rename!(df, :a_mean_std => :norm_mean_std)
-    rename!(df, :p_mean_mean => :ext_pun_mean_mean)
-    rename!(df, :p_mean_std => :ext_pun_mean_std)
-    rename!(df, :T_ext_mean_mean => :int_pun_ext_mean_mean)
-    rename!(df, :T_ext_mean_std => :int_pun_ext_mean_std)
-    rename!(df, :T_self_mean_mean => :int_pun_self_mean_mean)
-    rename!(df, :T_self_mean_std => :int_pun_self_mean_std)
 end
 
 function process_simulation(
