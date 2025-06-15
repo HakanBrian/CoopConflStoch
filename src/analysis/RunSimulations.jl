@@ -157,9 +157,6 @@ function run_simulation(
     else
         return simulation_sweep_stats
     end
-
-    # Clear memory
-    GC.gc()
 end
 
 end # module RunSimulations
