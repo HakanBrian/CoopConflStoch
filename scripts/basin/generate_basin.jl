@@ -65,7 +65,7 @@ run_simulation(
     filepath = "data/basin/fixed_ext_pun/fixed_ext_pun",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
-        :ext_pun0 => Float32[0.1, 0.5, 1.5],
+        :ext_pun0 => Float32[1.0, 1.0, 1.0],
         :group_size => [5, 50, 500],
     ),
     linked_params = Dict(:ext_pun0 => :group_size),
@@ -84,7 +84,7 @@ run_simulation(
     filepath = "data/basin/fixed_int_pun/fixed_int_pun",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.25)),
-        :int_pun_ext0 => Float32[0.1, 0.5, 1.5],
+        :int_pun_ext0 => Float32[1.0, 1.0, 1.0],
         :group_size => [5, 50, 500],
     ),
     linked_params = Dict(:int_pun_ext0 => :group_size, :int_pun_self0 => :int_pun_ext0),
