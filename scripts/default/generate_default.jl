@@ -69,9 +69,19 @@ run_simulation(
     base_params,
     num_replicates = 20,
     save_file = true,
-    filepath = "data/default/default.csv",
+    filepath = "data/default/default_linear.csv",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
         :group_size => collect(range(50, 500, step = 50)),
+    ),
+)
+run_simulation(
+    base_params,
+    num_replicates = 20,
+    save_file = true,
+    filepath = "data/default/default_log.csv",
+    sweep_vars = Dict{Symbol,Vector{<:Real}}(
+        :relatedness => collect(range(0, 1.0, step = 0.05)),
+        :group_size => round.(Int, exp.(range(log(5), log(500), length=10))),
     ),
 )
