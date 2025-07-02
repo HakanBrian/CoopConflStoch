@@ -71,7 +71,7 @@ run_simulation(
     save_file = true,
     filepath = "data/default/default.csv",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
-        :relatedness => collect(range(0, 1.0, step = 0.1)),
+        :relatedness => collect(range(0, 1.0, step = 0.05)),
         :group_size =>
             [collect(range(5, 50, step = 5))..., collect(range(100, 500, step = 50))...],
     ),
