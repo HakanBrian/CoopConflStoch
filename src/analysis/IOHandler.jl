@@ -66,9 +66,8 @@ function read_matching_simulations(
     pattern_template::String,
     extract_keys::Vector{String},
 )
-    # Extract the lowest folder in the filepath
+    # Extract the directory of filepath
     dir_path = dirname(filepath)
-    folder_name = splitpath(dir_path)[end]  # Get the last folder in the path
 
     # Ensure the directory exists
     if !isdir(dir_path)
@@ -88,33 +87,18 @@ function read_matching_simulations(
         )
     end
 
+    # Convert to regex with named captures
+    regex_pattern = replace(pattern_template, r"\{(\w+)\}" => s"(?<\1>[^_]+)")
+    regex = Regex("^" * regex_pattern * "\$")
+
     println("Loading files from: $dir_path")
 
     # Load matching files into a dictionary
     simulations = Dict{Tuple{Vararg{String}},DataFrame}()
 
     for file in files
-        filename = splitdir(file)[2]  # Extract filename from full path
-
-        # Extract values based on keys in extract_keys
-        key_values = []
-        for key in extract_keys
-            # Dynamically adjust regex based on the key
-            pattern = if key == "punishment"
-                Regex("$(folder_name)_([^_]+)")  # Replace "punishment" dynamically
-            else
-                Regex("$key=([^_]+)")  # General case for key=value format
-            end
-
-            m = match(pattern, filename)
-            if m === nothing
-                error("Error: Could not extract '$key' from filename '$filename'.")
-            end
-            push!(key_values, m.captures[1])  # Store extracted value
-        end
-
-        # Store DataFrame using tuple of extracted values as key
-        simulations[Tuple(key_values)] = CSV.read(file, DataFrame)
+        m = match(regex, basename(file))
+        simulations[Tuple(string.(m.captures))] = CSV.read(file, DataFrame)
     end
 
     return simulations
