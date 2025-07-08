@@ -140,7 +140,7 @@ function plot_sweep_heatmap_Plots(
     dataset_name::String = "Simulation Data",
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
-    extra_args=NamedTuple(),
+    extra_args = NamedTuple(),
 )
     # Define color scheme
     colormap = :viridis
@@ -207,7 +207,7 @@ function plot_multiple_sweep_heatmap_Plots(
     y_var::Symbol,
     dependent_vars::Vector{Symbol};
     z_var::Union{Symbol,Nothing} = nothing,
-    extra_args=NamedTuple(),
+    extra_args = NamedTuple(),
 )
     # Dictionary to store results
     z_var === nothing ? results = Dict{String,Vector{Plots.Plot}}() :
@@ -241,7 +241,7 @@ function plot_sweep_rep_Plots(
     df::Union{DataFrame,Dict{<:Any,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
-    extra_args=NamedTuple(),
+    extra_args = NamedTuple(),
 )
     dependent_vars = [
         :action_mean_mean,
@@ -277,7 +277,7 @@ function plot_sweep_rip_Plots(
     df::Union{DataFrame,Dict{<:Any,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
-    extra_args=NamedTuple(),
+    extra_args = NamedTuple(),
 )
     dependent_vars =
         [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
@@ -307,7 +307,7 @@ end
 function plot_sweep_rgs_Plots(
     df::Union{DataFrame,Dict{<:Any,DataFrame}};
     display_plot::Bool = false,
-    extra_args=NamedTuple(),
+    extra_args = NamedTuple(),
 )
     dependent_vars = [
         :action_mean_mean,
@@ -354,8 +354,7 @@ function extract_plot_lists(
     sort_key::Bool = false,
 ) where {T<:Any}
     # Determine the order of keys: sorted or original order
-    keys_order =
-        sort_key ? order_plot_key(plots_dict) : collect(keys(plots_dict))
+    keys_order = sort_key ? order_plot_key(plots_dict) : collect(keys(plots_dict))
 
     # Extract values in chosen order
     plot_lists = [plots_dict[k] for k in keys_order]
@@ -456,11 +455,7 @@ function compare_plot_lists(
     end
 
     # Set global limits to the same plots in each set
-    normalize_limits!(
-        plot_lists;
-        xlim,
-        ylim,
-    )
+    normalize_limits!(plot_lists; xlim, ylim)
 
     num_sets = length(plot_lists)  # Number of sets of plots
     num_plots = length(plot_lists[1])  # Number of plots per set
@@ -469,11 +464,7 @@ function compare_plot_lists(
         if composite
             plots_i = [plots[i] for plots in plot_lists]
 
-            p = Plots.plot(
-                plots_i...;
-                layout = (1, num_sets),
-                size = (600 * num_sets, 400),
-            )
+            p = Plots.plot(plots_i...; layout = (1, num_sets), size = (600 * num_sets, 400))
         else
             p = plot_lists[save_index][i]
         end
@@ -498,7 +489,7 @@ function compare_plot_lists(
 end
 
 function basin_group_plot(
-    simualation::Dict{Tuple{Vararg{String}}, DataFrame},
+    simualation::Dict{Tuple{Vararg{String}},DataFrame},
     group_size::Int;
     display_plot::Bool = true,
     save_fig::Bool = false,

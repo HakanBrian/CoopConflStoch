@@ -37,7 +37,7 @@ ssrun_param = update_params(
     generations = 1500000,
     relatedness = 0.5,
     use_bipenal = false,
-    output_save_tick = 20
+    output_save_tick = 20,
 )
 run_simulation(
     ssrun_param,
@@ -87,7 +87,7 @@ run_simulation(
     filepath = "data/noPun/noPun_rgs_log",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :group_size => round.(Int, exp.(range(log(5), log(500), length=10))),
+        :group_size => round.(Int, exp.(range(log(5), log(500), length = 10))),
     ),
 )
 

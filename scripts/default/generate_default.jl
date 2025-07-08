@@ -82,6 +82,6 @@ run_simulation(
     filepath = "data/default/default_log.csv",
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.05)),
-        :group_size => round.(Int, exp.(range(log(5), log(500), length=10))),
+        :group_size => round.(Int, exp.(range(log(5), log(500), length = 10))),
     ),
 )

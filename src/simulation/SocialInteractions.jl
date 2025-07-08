@@ -25,7 +25,7 @@ function filter_out_val!(
             count += 1
         end
     end
-    return view(buffer, 1:count-1)  # Return a view of the filtered buffer
+    return view(buffer, 1:(count-1))  # Return a view of the filtered buffer
 end
 
 function probabilistic_round(x::Float64)::Int64
@@ -75,7 +75,7 @@ function shuffle_and_group(
         groups[i, :] .= focal_individual_index
 
         # Assign random individuals to the group
-        groups[i, end-num_random+1:end] =
+        groups[i, (end-num_random+1):end] =
             in_place_sample!(candidates_filtered_view, num_random)
     end
 

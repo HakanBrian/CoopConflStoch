@@ -27,6 +27,8 @@ eZero = MainSimulation.read_matching_simulations(
     extract_keys = ["punishment"],
 )
 
-eip = MainSimulation.read_matching_simulations("data/basin/ext_int_pun/",
-        pattern_template = "ext_int_pun_unipenal_group_size={group_size}_relatedness={relatedness}_Full.csv",
-        extract_keys = ["group_size", "relatedness"])
+eip = MainSimulation.read_matching_simulations(
+    "data/basin/ext_int_pun/",
+    pattern_template = "ext_int_pun_unipenal_group_size={group_size}_relatedness={relatedness}_Full.csv",
+    extract_keys = ["group_size", "relatedness"],
+)
