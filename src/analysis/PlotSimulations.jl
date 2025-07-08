@@ -140,6 +140,7 @@ function plot_sweep_heatmap_Plots(
     dataset_name::String = "Simulation Data",
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
+    extra_args=NamedTuple(),
 )
     # Define color scheme
     colormap = :viridis
@@ -176,13 +177,14 @@ function plot_sweep_heatmap_Plots(
             p = Plots.heatmap(
                 x_values,
                 y_values,
-                heatmap_matrix,
+                heatmap_matrix;
                 color = colormap,
                 xlabel = string(x_var),
                 ylabel = string(y_var),
                 title = title_text,
                 colorbar_title = string(var),
                 fmt = :pdf,
+                extra_args...,
             )
 
             push!(plots_list, p)  # Store plot in array
@@ -205,6 +207,7 @@ function plot_multiple_sweep_heatmap_Plots(
     y_var::Symbol,
     dependent_vars::Vector{Symbol};
     z_var::Union{Symbol,Nothing} = nothing,
+    extra_args=NamedTuple(),
 )
     # Dictionary to store results
     z_var === nothing ? results = Dict{String,Vector{Plots.Plot}}() :
@@ -224,6 +227,7 @@ function plot_multiple_sweep_heatmap_Plots(
             dataset_name = key_str,
             z_var = z_var,
             display_plot = false,
+            extra_args = extra_args,
         )
 
         # Store results: a flat vector if z_var is nothing, else a nested vector
@@ -237,6 +241,7 @@ function plot_sweep_rep_Plots(
     df::Union{DataFrame,Dict{<:Any,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
+    extra_args=NamedTuple(),
 )
     dependent_vars = [
         :action_mean_mean,
@@ -251,17 +256,19 @@ function plot_sweep_rep_Plots(
             df,
             :relatedness,
             :ext_pun,
-            dependent_vars,
+            dependent_vars;
             z_var = z_var,
             display_plot = display_plot,
+            extra_args = extra_args,
         )
     elseif df isa Dict{<:Any,DataFrame}
         return plot_multiple_sweep_heatmap_Plots(
             df,
             :relatedness,
             :ext_pun0,
-            dependent_vars,
+            dependent_vars;
             z_var = z_var,
+            extra_args = extra_args,
         )
     end
 end
@@ -270,6 +277,7 @@ function plot_sweep_rip_Plots(
     df::Union{DataFrame,Dict{<:Any,DataFrame}};
     z_var::Union{Symbol,Nothing} = nothing,
     display_plot::Bool = false,
+    extra_args=NamedTuple(),
 )
     dependent_vars =
         [:action_mean_mean, :norm_mean_mean, :ext_pun_mean_mean, :payoff_mean_mean]
@@ -279,17 +287,19 @@ function plot_sweep_rip_Plots(
             df,
             :relatedness,
             :int_pun_ext0,
-            dependent_vars,
+            dependent_vars;
             z_var = z_var,
             display_plot = display_plot,
+            extra_args = extra_args,
         )
     elseif df isa Dict{<:Any,DataFrame}
         return plot_multiple_sweep_heatmap_Plots(
             df,
             :relatedness,
             :int_pun_ext0,
-            dependent_vars,
+            dependent_vars;
             z_var = z_var,
+            extra_args = extra_args,
         )
     end
 end
@@ -297,6 +307,7 @@ end
 function plot_sweep_rgs_Plots(
     df::Union{DataFrame,Dict{<:Any,DataFrame}};
     display_plot::Bool = false,
+    extra_args=NamedTuple(),
 )
     dependent_vars = [
         :action_mean_mean,
@@ -312,17 +323,19 @@ function plot_sweep_rgs_Plots(
             df,
             :relatedness,
             :group_size,
-            dependent_vars,
+            dependent_vars;
             z_var = nothing,
             display_plot = display_plot,
+            extra_args = extra_args,
         )
     elseif df isa Dict{<:Any,DataFrame}
         return plot_multiple_sweep_heatmap_Plots(
             df,
             :relatedness,
             :group_size,
-            dependent_vars,
+            dependent_vars;
             z_var = nothing,
+            extra_args = extra_args,
         )
     end
 end
@@ -516,7 +529,6 @@ function basin_group_plot(
                 save_fig = true,
                 save_index = i,
                 fig_name = filepath,
-                fmt = "pdf"
             )
         end
     end
