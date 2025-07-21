@@ -35,7 +35,7 @@ run_simulation(
     save_file = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
-        :group_size => [5, 50, 500],
+        :group_size => [10, 50, 500],
     ),
 )
 
@@ -48,6 +48,6 @@ run_simulation(
     save_file = true,
     sweep_vars = Dict{Symbol,Vector{<:Real}}(
         :relatedness => collect(range(0, 1.0, step = 0.01)),
-        :group_size => [5, 50, 500],
+        :group_size => [10, 50, 500],
     ),
 )
