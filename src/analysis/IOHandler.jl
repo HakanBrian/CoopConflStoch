@@ -98,7 +98,11 @@ function read_matching_simulations(
 
     for file in files
         m = match(regex, basename(file))
-        simulations[Tuple(string.(m.captures))] = CSV.read(file, DataFrame)
+        if typeof(m) === Nothing
+            continue
+        else
+            simulations[Tuple(string.(m.captures))] = CSV.read(file, DataFrame)
+        end
     end
 
     return simulations
