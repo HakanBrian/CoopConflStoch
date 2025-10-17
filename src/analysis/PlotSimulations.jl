@@ -19,6 +19,22 @@ using Plots, PlotlyJS, DataFrames
 # Plots #########################################################################################################################
 ########
 
+function adaptive_downsample(
+    data::Vector{<:Any};
+    max_points::Int=1000,
+)
+    n = length(data)
+    step = max(1, Int(ceil(n / max_points)))
+
+    # ensure last row is kept even if not aligned with the step
+    keep = collect(1:step:n)
+    if keep[end] != n
+        push!(keep, n)
+    end
+
+    return data[keep]
+end
+
 function plot_simulation_Plots(
     df::DataFrame,
     x_var::Symbol;
@@ -78,9 +94,9 @@ function plot_simulation_Plots(
 
                 Plots.plot!(
                     p,
-                    df_subset[!, x_var],
-                    df_subset[!, mean_col],
-                    ribbon = (df_subset[!, std_col], df_subset[!, std_col]),
+                    adaptive_downsample(df_subset[!, x_var]),
+                    adaptive_downsample(df_subset[!, mean_col]),
+                    ribbon = (adaptive_downsample(df_subset[!, std_col]), adaptive_downsample(df_subset[!, std_col])),
                     label = trait,
                     color = colors[trait*" mean"],
                 )
@@ -494,6 +510,7 @@ function basin_group_plot(
     display_plot::Bool = true,
     save_fig::Bool = false,
     fig_name::String = "",
+    fmt::Union{Nothing,String} = "pdf",
 )
     # Select simulations with specific group size
     sim_gs = Dict(k => v for (k, v) in simualation if k[1] == "$(group_size)")
@@ -520,6 +537,7 @@ function basin_group_plot(
                 save_fig = true,
                 save_index = i,
                 fig_name = filepath,
+                fmt = fmt,
             )
         end
     end
