@@ -12,7 +12,7 @@ export plot_simulation_Plots,
     plot_sweep_rip_Plotly,
     plot_sweep_rgs_Plotly
 
-using Plots, PlotlyJS, DataFrames
+using Plots, Plots.PlotMeasures, PlotlyJS, DataFrames, Printf
 
 
 ########
@@ -33,6 +33,20 @@ function adaptive_downsample(
     end
 
     return data[keep]
+end
+
+function clean_exp(t)
+    s = @sprintf("%.2g", t)
+
+    # If no scientific notation, return as-is
+    occursin('e', s) || return s
+
+    coeff, exp = split(s, 'e')
+
+    # Remove leading zeros in exponent, keep + or -
+    exp_clean = replace(exp, r"^([+-])0+" => s"\1")
+
+    return coeff * "e" * exp_clean
 end
 
 function plot_simulation_Plots(
@@ -87,18 +101,30 @@ function plot_simulation_Plots(
 
             p = Plots.plot(title = title_text, legend = true, fmt = :pdf)
 
+            xs = adaptive_downsample(df_subset[!, x_var])
+            xmax = extrema(xs)
+            xt = range(0, xmax[2], length=4)  # exactly 4 tick positions)
+
             # Create mean and ribbons for each trait
             for trait in plot_var
                 mean_col = Symbol(trait * "_mean_mean")
                 std_col = Symbol(trait * "_mean_std")
 
-                Plots.plot!(
+                plot!(
                     p,
-                    adaptive_downsample(df_subset[!, x_var]),
+                    xs,
                     adaptive_downsample(df_subset[!, mean_col]),
-                    ribbon = (adaptive_downsample(df_subset[!, std_col]), adaptive_downsample(df_subset[!, std_col])),
+                    ribbon = (
+                        adaptive_downsample(df_subset[!, std_col]),
+                        adaptive_downsample(df_subset[!, std_col]),
+                    ),
                     label = trait,
-                    color = colors[trait*" mean"],
+                    color = colors[trait * " mean"],
+                    xticks = xt,
+                    xformatter = t -> clean_exp(t),
+                    tickfont = font(12),
+                    right_margin = 25px,
+                    framestyle = :box,
                 )
             end
 
@@ -199,6 +225,8 @@ function plot_sweep_heatmap_Plots(
                 ylabel = string(y_var),
                 title = title_text,
                 colorbar_title = string(var),
+                tickfont = font(12),
+                right_margin = 20px,
                 fmt = :pdf,
                 extra_args...,
             )
@@ -431,7 +459,7 @@ function normalize_limits!(
         for p in plots_i
             Plots.plot!(
                 p;
-                size = (600, 400),
+                size = (346, 231),
                 xlims = xlims_global,
                 ylims = ylims_global,
                 clims = clims_global,
@@ -480,7 +508,11 @@ function compare_plot_lists(
         if composite
             plots_i = [plots[i] for plots in plot_lists]
 
-            p = Plots.plot(plots_i...; layout = (1, num_sets), size = (600 * num_sets, 400))
+            p = Plots.plot(
+                    plots_i...;
+                    layout = (1, num_sets),
+                    size = (346 * num_sets, 231),
+                )
         else
             p = plot_lists[save_index][i]
         end
