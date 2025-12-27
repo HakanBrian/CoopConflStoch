@@ -49,3 +49,39 @@ println(
     "New population with payoff 4: ",
     count(payoff -> payoff == 4.0f0, population.payoff),
 )
+
+
+# Overflow testing of fitness probabilities 
+
+# Create sample population
+param = MainSimulation.SimulationParameter(
+    action0 = 0.5f0,
+    norm0 = 0.5f0,
+    ext_pun0 = 0.0f0,
+    generations = 10,
+    population_size = 1000,
+    group_size = 500,
+    mutation_rate = 0.0,
+    trait_variance = 0.01,
+)
+population = MainSimulation.population_construction(param)
+MainSimulation.social_interactions!(population, MainSimulation.best_response_unipenal)
+
+population.payoff
+
+using Statistics
+var(population.payoff)
+
+
+# Create a list of indices corresponding to individuals
+indices_list = 1:population.parameters.population_size
+
+# Calculate fitness for all individuals in the population
+fitnesses_1 = map(i -> MainSimulation.fitness_exp_norm(population, i), indices_list)
+fitnesses_2 = map(i -> MainSimulation.fitness_exp(population, i), indices_list)
+
+# Sample indices with the given fitness weights
+normalized_probs = MainSimulation.normalize_exponentials(fitnesses_1)
+
+# Complete a round of reproduction
+MainSimulation.reproduce!(population)
