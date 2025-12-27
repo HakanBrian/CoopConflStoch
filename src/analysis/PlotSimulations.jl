@@ -19,10 +19,7 @@ using Plots, Plots.PlotMeasures, PlotlyJS, DataFrames, Printf
 # Plots #########################################################################################################################
 ########
 
-function adaptive_downsample(
-    data::Vector{<:Any};
-    max_points::Int=1000,
-)
+function adaptive_downsample(data::Vector{<:Any}; max_points::Int = 1000)
     n = length(data)
     step = max(1, Int(ceil(n / max_points)))
 
@@ -103,7 +100,7 @@ function plot_simulation_Plots(
 
             xs = adaptive_downsample(df_subset[!, x_var])
             xmax = extrema(xs)
-            xt = range(0, xmax[2], length=4)  # exactly 4 tick positions)
+            xt = range(0, xmax[2], length = 4)  # exactly 4 tick positions)
 
             # Create mean and ribbons for each trait
             for trait in plot_var
@@ -119,7 +116,7 @@ function plot_simulation_Plots(
                         adaptive_downsample(df_subset[!, std_col]),
                     ),
                     label = trait,
-                    color = colors[trait * " mean"],
+                    color = colors[trait*" mean"],
                     xticks = xt,
                     xformatter = t -> clean_exp(t),
                     tickfont = font(12),
@@ -508,11 +505,7 @@ function compare_plot_lists(
         if composite
             plots_i = [plots[i] for plots in plot_lists]
 
-            p = Plots.plot(
-                    plots_i...;
-                    layout = (1, num_sets),
-                    size = (346 * num_sets, 231),
-                )
+            p = Plots.plot(plots_i...; layout = (1, num_sets), size = (346 * num_sets, 231))
         else
             p = plot_lists[save_index][i]
         end
