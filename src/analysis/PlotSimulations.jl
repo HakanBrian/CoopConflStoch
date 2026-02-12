@@ -12,7 +12,7 @@ export plot_simulation_Plots,
     plot_sweep_rip_Plotly,
     plot_sweep_rgs_Plotly
 
-using Plots, Plots.PlotMeasures, PlotlyJS, DataFrames, Printf
+using Plots, Plots.PlotMeasures, PlotlyJS, DataFrames, Printf, LaTeXStrings
 
 
 ########
@@ -69,6 +69,15 @@ function plot_simulation_Plots(
         "payoff mean" => :orange4,
     )
 
+    paper_label = Dict(
+        "action" => L"\alpha",
+        "norm" => "a",
+        "ext_pun" => "p",
+        "int_pun_ext" => L"\tau",
+        "int_pun_self" => "",
+        "payoff" => "u",
+    )
+
     # Define dependent variables to plot
     plot_var_set = [
         ["action", "norm", "ext_pun", "int_pun_ext", "int_pun_self", "payoff"],
@@ -104,6 +113,8 @@ function plot_simulation_Plots(
 
             # Create mean and ribbons for each trait
             for trait in plot_var
+                lab = get(paper_label, trait, trait)
+
                 mean_col = Symbol(trait * "_mean_mean")
                 std_col = Symbol(trait * "_mean_std")
 
@@ -115,7 +126,8 @@ function plot_simulation_Plots(
                         adaptive_downsample(df_subset[!, std_col]),
                         adaptive_downsample(df_subset[!, std_col]),
                     ),
-                    label = trait,
+                    legendfontsize = 10,
+                    label = lab,
                     color = colors[trait*" mean"],
                     xticks = xt,
                     xformatter = t -> clean_exp(t),
@@ -464,7 +476,6 @@ function normalize_limits!(
                 ylabel = "",
                 title = "",
                 colorbar_title = "",
-                legend = false,
             )
 
             # Apply optional axis overrides
