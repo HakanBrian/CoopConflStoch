@@ -70,8 +70,8 @@ function plot_simulation_Plots(
     )
 
     paper_label = Dict(
-        "action" => L"\alpha",
-        "norm" => "a",
+        "action" => "a",
+        "norm" => L"\alpha",
         "ext_pun" => "p",
         "int_pun_ext" => L"\tau",
         "int_pun_self" => "",
