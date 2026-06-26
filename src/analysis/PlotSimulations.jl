@@ -541,7 +541,7 @@ function compare_plot_lists(
 end
 
 function basin_group_plot(
-    simualation::Dict{Tuple{Vararg{String}},DataFrame},
+    simulation::Dict{Tuple{Vararg{String}},DataFrame},
     group_size::Int;
     display_plot::Bool = true,
     save_fig::Bool = false,
