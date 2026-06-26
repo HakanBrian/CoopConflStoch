@@ -74,11 +74,10 @@ function statistics_filtered(
     pct_generations = filter(x -> x isa Float64, save_generations)
 
     # Convert percentage-based values to absolute generations (ensuring they are Int64)
-    percent_generations =
-        Int64.([
-            round(Int64, p * total_generations / output_save_tick) * output_save_tick for
-            p in pct_generations
-        ])
+    percent_generations = Int64.([
+        round(Int64, p * total_generations / output_save_tick) * output_save_tick for
+        p in pct_generations
+    ])
 
     # Combine absolute and percentage-based generations, ensuring uniqueness and Int64 type
     generations_to_select = unique(Int64.(vcat(abs_generations, percent_generations)))
@@ -283,8 +282,7 @@ function adjust_payoff!(df_adjust::DataFrame, df_ref::DataFrame)
 
     # Apply uncertainty propagation
     adjust_payoff_std =
-        abs.(adjust_payoff_mean) .*
-        sqrt.(
+        abs.(adjust_payoff_mean) .* sqrt.(
             (df_adjust.payoff_mean_std ./ df_adjust.payoff_mean_mean) .^ 2 .+
             (df_ref.payoff_mean_std ./ df_ref.payoff_mean_mean) .^ 2,
         )

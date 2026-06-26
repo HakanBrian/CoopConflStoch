@@ -549,7 +549,10 @@ function basin_group_plot(
     fmt::Union{Nothing,String} = "pdf",
 )
     # Select simulations with specific group size
-    sim_gs = Dict(k => v for (k, v) in simulation if k[1] == "$(group_size)" && k[2] in ("0.75", "0.25"))
+    sim_gs = Dict(
+        k => v for
+        (k, v) in simulation if k[1] == "$(group_size)" && k[2] in ("0.75", "0.25")
+    )
 
     # Generate the plots per simulation
     sim_gs_plots_dict = plot_multiple_simulations_Plots(sim_gs, :generation)
